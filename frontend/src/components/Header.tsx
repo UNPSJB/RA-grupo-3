@@ -16,8 +16,9 @@ export const Header: React.FC<HeaderProps> = ({ title = 'Mi Aplicación' }) => {
   return (
     <header style={{ 
         backgroundColor: '#0a562eff',
-        padding: '20px',
-        color: 'white' 
+        padding: '10px',
+        color: 'white',
+        flex: '10px'
         }}>
       <h1>{title}</h1>
       <nav>
