@@ -1,10 +1,13 @@
-import { Header } from '../src/components/Header.tsx'
+import { Navbar } from '../src/components/Navbar.tsx'
+import { Tabla } from '../src/components/Tabla.tsx'
 
 function App() {
   return (
-    
-    <div><Header title='Sistema Encuestas'/>Horsepower Selector</div>
-  );
+  <div>
+      <Navbar/>
+      <Tabla/>
+  </div>
+  )
 }
 
-export default App;
+export default App
