@@ -1,2 +1,0 @@
-aca va a ir el backend con los archivos de python y algunas cosas
-recuerden crear un entorno virtual y agregarlo al .gitignore
