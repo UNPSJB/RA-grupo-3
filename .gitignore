@@ -192,3 +192,4 @@ sketch
 # End of https://www.toptal.com/developers/gitignore/api/python,react
 #-------------------------------------------------------------------------------------
 #Hasta aca lo de Fastapi
+requirements.txt
