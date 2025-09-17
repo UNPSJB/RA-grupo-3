@@ -5,6 +5,9 @@ from fastapi import FastAPI
 from src.database import engine
 from src.models import ModeloBase
 
+from src.encuestas.router import router as encuestas_router
+
+from fastapi.middleware.cors import CORSMiddleware
 
 load_dotenv()
 
@@ -20,3 +23,13 @@ async def db_creation_lifespan(app: FastAPI):
 
 app = FastAPI(root_path=ROOT_PATH, lifespan=db_creation_lifespan)
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"], 
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Rutas
+app.include_router(encuestas_router)
