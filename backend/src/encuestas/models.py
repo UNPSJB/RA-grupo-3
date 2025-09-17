@@ -16,8 +16,8 @@ class Encuesta(ModeloBase):
     __tablename__ = "encuesta" #cambio de nombre a encuesta singular por un tema de buenas practicas
 
 
-    # filtro para saber en que año de la carrera pertenece la encuesta
-    # restringido a poner entre 1 y 6 años (osea primero a sexto por las dudas)
+# filtro para saber en que año de la carrera pertenece la encuesta
+# restringido a poner entre 1 y 6 años (osea primero a sexto por las dudas)
     __table_args__ = (
         CheckConstraint("anio_carrera BETWEEN 1 AND 6", name="ck_encuesta_anio_carrera"),
         )
@@ -43,4 +43,4 @@ class Encuesta(ModeloBase):
 # para saber si esta completa la encuesta
     esta_completa: Mapped[bool] = mapped_column(Boolean, default=False)
  
-    # Faltaria la relación con las preguntas
+# Faltaria la relación con las preguntas
