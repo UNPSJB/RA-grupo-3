@@ -1,13 +1,18 @@
 from datetime import datetime
-from sqlalchemy import Integer, String, DateTime, Boolean, Enum, CheckConstraint #agregado datetime, Enum, checkconstraint y boolean
+from sqlalchemy import Integer, String, DateTime, Boolean, CheckConstraint
+from sqlalchemy import Enum as SQLEnum
 from sqlalchemy.sql import func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from src.models import ModeloBase
 
-from enum import Enum
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from src.pregunta.models import Pregunta
+
+from enum import Enum as PyEnum
 
 
-class TipoCuatrimestre(str, Enum):
+class TipoCuatrimestre(str, PyEnum):
     PRIMERO = "primero"
     SEGUNDO = "segundo"
     ANUAL = "anual"
@@ -31,7 +36,7 @@ class Encuesta(ModeloBase):
 
 # para filtrar por cuatrimestre
     cursada: Mapped[TipoCuatrimestre] = mapped_column(
-        Enum(TipoCuatrimestre, name="cuatrimestre_enum"), nullable=False
+        SQLEnum(TipoCuatrimestre, name="cuatrimestre_enum"), nullable=False
     )
 
 # fecha de inicio y de fin para cuando se pone activa la encuesta o se cierra
@@ -45,5 +50,5 @@ class Encuesta(ModeloBase):
  
 # Faltaria la relación con las preguntas
 
-    preguntas: Mapped[list["Pregunta"]] = relationship(
+    preguntas: Mapped[list['Pregunta']] = relationship(
         back_populates="encuesta", cascade="all, delete-orphan")
