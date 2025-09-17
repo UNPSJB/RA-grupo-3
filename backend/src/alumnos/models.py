@@ -10,6 +10,6 @@ class Alumno(ModeloBase):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     nombre: Mapped[str] = mapped_column(String, index=True)
     email: Mapped[str] = mapped_column(String, unique=True, index=True)
-    encuestas: Mapped[Optional[List["src.mascotas.models.Mascota"]]] = relationship(
+    encuestas: Mapped[Optional[List["src.models.alumnos"]]] = relationship(
         "src.mascotas.models.Mascota", back_populates="tutor"
     )
