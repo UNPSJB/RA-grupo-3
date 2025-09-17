@@ -44,3 +44,6 @@ class Encuesta(ModeloBase):
     esta_completa: Mapped[bool] = mapped_column(Boolean, default=False)
  
 # Faltaria la relación con las preguntas
+
+    preguntas: Mapped[list["Pregunta"]] = relationship(
+        back_populates="encuesta", cascade="all, delete-orphan")
