@@ -1,4 +1,5 @@
 from pydantic import BaseModel
+from src.pregunta.schemas import Pregunta
 
 
 class EncuestaBase(BaseModel):
@@ -12,3 +13,7 @@ class Encuesta(EncuestaBase):
     id: int
 
     model_config = {"from_attributes": True}
+
+#para devolver la encuesta junto con sus preguntas
+class EncuestaConPreguntas(Encuesta):
+    preguntas: list[Pregunta] = []
