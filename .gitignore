@@ -193,3 +193,7 @@ sketch
 #-------------------------------------------------------------------------------------
 #Hasta aca lo de Fastapi
 requirements.txt
+#BDD
+mi-db-sqlite.db
+*.pyc
+__pycache__/

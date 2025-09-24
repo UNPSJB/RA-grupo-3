@@ -9,6 +9,7 @@ interface Opcion {
 interface PreguntaData {
   texto: string;
   tipo: 'REDACCION' | 'MULTIPLE_CHOICE';
+  encuesta_id: number;
   opciones: Opcion[];
 }
 
@@ -16,6 +17,7 @@ const CrearPregunta: React.FC = () => {
   const [pregunta, setPregunta] = useState<PreguntaData>({
     texto: '',
     tipo: 'REDACCION',
+    encuesta_id: 1, //harcodeado de momento
     opciones: []
   });
   
@@ -72,6 +74,7 @@ const CrearPregunta: React.FC = () => {
         setPregunta({
           texto: '',
           tipo: 'REDACCION',
+          encuesta_id:1,
           opciones: []
         });
       } else {
@@ -105,6 +108,19 @@ return (
         )}
 
         <Form onSubmit={enviarPregunta} className="fs-5">
+          {/* ID de encuesta */}
+          <Form.Group className="mb-4">
+            <Form.Label className="text-light fw-bold">ID Encuesta *</Form.Label>
+            <Form.Control
+              type="number"
+              value={pregunta.encuesta_id}
+              onChange={(e) => setPregunta(prev => ({ ...prev, encuesta_id: parseInt(e.target.value) }))}
+              min="1"
+              required
+              className="bg-secondary text-light border-secondary"
+            />
+          </Form.Group>
+
           {/* Texto de la pregunta */}
           <Form.Group className="mb-4">
             <Form.Label className="text-light fw-bold">Texto de la Pregunta *</Form.Label>

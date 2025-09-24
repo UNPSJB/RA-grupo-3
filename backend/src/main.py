@@ -10,6 +10,7 @@ from src.encuestas import models as encuestas_models  # noqa: F401
 from src.pregunta import models as pregunta_models  # noqa: F401
 
 from src.encuestas.router import router as encuestas_router
+from src.pregunta.router import router as pregunta_router
 
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -37,3 +38,4 @@ app.add_middleware(
 
 # Rutas
 app.include_router(encuestas_router)
+app.include_router(pregunta_router)
