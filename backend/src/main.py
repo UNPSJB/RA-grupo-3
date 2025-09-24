@@ -5,10 +5,6 @@ from fastapi import FastAPI
 from src.database import engine
 from src.models import ModeloBase
 
-# Import models so SQLAlchemy registers tables before create_all
-from src.encuestas import models as encuestas_models  # noqa: F401
-from src.pregunta import models as pregunta_models  # noqa: F401
-
 from src.encuestas.router import router as encuestas_router
 
 from fastapi.middleware.cors import CORSMiddleware

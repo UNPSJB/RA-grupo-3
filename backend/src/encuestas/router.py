@@ -11,3 +11,4 @@ router = APIRouter(prefix="/encuestas", tags=["encuestas"])
 @router.post('/', response_model=schemas.Encuesta)
 def crear_encuesta(encuesta: schemas.EncuestaCreate, db: Session = Depends(get_db)):
     return services.crear_encuesta(db, encuesta)
+
