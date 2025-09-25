@@ -1,0 +1,203 @@
+/* ---------- Botones ---------- */
+button,
+.btn {
+    background-color: #1976d2;
+    color: #ffffff;
+    border: none;
+    border-radius: 6px;
+    padding: 10px 22px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background 0.2s, box-shadow 0.2s, transform 0.1s;
+    box-shadow: 0 2px 6px rgba(25, 118, 210, 0.18);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+}
+
+button:hover,
+button:focus,
+.btn:hover,
+.btn:focus {
+    background-color: #1565c0;
+    box-shadow: 0 6px 14px rgba(25, 118, 210, 0.2);
+    outline: none;
+    transform: translateY(-1px);
+}
+
+button:active,
+.btn:active {
+    background-color: #0d47a1;
+    transform: translateY(0);
+}
+
+button:disabled,
+.btn:disabled {
+    background-color: #bdbdbd;
+    color: #757575;
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
+.btn--compact {
+    padding: 6px 12px;
+    font-size: 0.9rem;
+}
+
+/* ---------- Navbar ---------- */
+
+.navbar {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.navbar__button {
+    margin: 0px;
+}
+
+/* ---------- Tabla ---------- */
+
+.tabla-wrapper {
+    position: relative;
+}
+
+.tabla-encuestas {
+    width: min(92%, 900px);
+    margin: 2.5rem auto;
+    border-collapse: collapse;
+    background: #ffffff;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 12px 28px rgba(13, 71, 161, 0.12);
+}
+
+.tabla-encuestas thead {
+    background: #1565c0;
+    color: #ffffff;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.tabla-encuestas th,
+.tabla-encuestas td {
+    padding: 1rem 1.25rem;
+    text-align: left;
+}
+
+.tabla-encuestas tbody tr {
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.tabla-encuestas tbody tr:last-child {
+    border-bottom: none;
+}
+
+.tabla-encuestas tbody tr:hover {
+    background-color: #f1f5fb;
+}
+
+.tabla-encuestas__sort-btn {
+    margin-left: 0.75rem;
+    padding: 6px 12px;
+    font-size: 0.85rem;
+    background-color: rgba(255, 255, 255, 0.18);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+}
+
+.tabla-encuestas__sort-btn:hover,
+.tabla-encuestas__sort-btn:focus {
+    background-color: rgba(255, 255, 255, 0.3);
+    border-color: rgba(255, 255, 255, 0.6);
+}
+
+.tabla-encuestas__acciones button {
+    background-color: #43a047;
+}
+
+.tabla-encuestas__acciones button:hover {
+    background-color: #2e7d32;
+}
+
+.tabla-alert {
+    position: fixed;
+    top: 1.5rem;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #43a047;
+    color: #ffffff;
+    padding: 0.9rem 1.75rem;
+    border-radius: 999px;
+    box-shadow: 0 12px 24px rgba(67, 160, 71, 0.25);
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    z-index: 1000;
+}
+
+/* ---------- Layout general ---------- */
+
+.app {
+    font-family: 'Roboto', 'Segoe UI', sans-serif;
+    min-height: 100vh;
+    background: #f4f7fb;
+}
+
+.app-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.5rem;
+    padding: 1.5rem 3rem;
+    background-color: #1565c0;
+    color: #ffffff;
+    box-shadow: 0 10px 24px rgba(13, 71, 161, 0.2);
+    flex-wrap: wrap;
+}
+
+.app-header__branding {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.75rem 1.25rem;
+    background-color: #ffffff;
+    border: 1px solid #000000;
+    border-radius: 12px;
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.08);
+    margin-right: auto;
+}
+
+.app-header__logo {
+    height: 64px;
+    object-fit: contain;
+    background-color: #ffffff;
+}
+
+.app-header__title {
+    margin: 0;
+    font-size: clamp(1.8rem, 2vw + 1rem, 2.4rem);
+    font-weight: 600;
+    color: #0d47a1;
+}
+
+.app-main {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 2.5rem 1.5rem 3.5rem;
+}
+
+@media (max-width: 768px) {
+    .app-header {
+        justify-content: center;
+        text-align: center;
+    }
+
+    .app-header__branding {
+        margin-right: 0;
+    }
+
+    .navbar {
+        justify-content: center;
+    }
+}
