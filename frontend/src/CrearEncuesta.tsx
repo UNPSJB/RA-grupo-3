@@ -14,7 +14,7 @@ const CrearEncuesta: React.FC = () => {
         descripcion: descripcion
       };
 
-      await axios.post('http://localhost:8000/encuestas', encuestaData);
+      await axios.post('http://localhost:8000/encuestas/', encuestaData);
       
       // Limpiar formulario después de enviar
       setTitulo('');
