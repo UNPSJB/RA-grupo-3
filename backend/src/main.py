@@ -6,6 +6,7 @@ from src.database import engine
 from src.models import ModeloBase
 
 from src.encuestas.router import router as encuestas_router
+from src.pregunta.router import router as pregunta_router
 
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -32,4 +33,7 @@ app.add_middleware(
 )
 
 # Rutas
+
 app.include_router(encuestas_router)
+app.include_router(pregunta_router)
+

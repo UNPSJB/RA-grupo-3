@@ -1,8 +1,11 @@
+
 import React from 'react';
 import { Navbar } from './components/Navbar.tsx';
 import { Tabla } from './components/Tabla.tsx';
 import logo from './img/Logo50Color_conletras.png';
 import './Styles/Styles.css';
+//import 'bootstrap/dist/css/bootstrap.min.csks'; Dos nuevas lineas de emi
+//import CrearPregunta from './CrearPregunta';
 
 const App: React.FC = () => {
   return (
@@ -11,6 +14,7 @@ const App: React.FC = () => {
         <div className="app-header__branding">
           <img className="app-header__logo" src={logo} alt="Logo Universidad" />
           <h1 className="app-header__title">Encuestas UNPSJB</h1>
+          {/* <CrearPregunta /> */}
         </div>
         <Navbar />
       </header>

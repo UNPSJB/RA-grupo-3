@@ -1,9 +1,12 @@
-from pydantic import BaseModel
+from src.pregunta.schemas import Pregunta
+from src.encuestas.models import TipoCuatrimestre
 
 
 class EncuestaBase(BaseModel):
     titulo: str
     descripcion: str
+    anio_carrera: int  #agregue esto porque el model lo requiere
+    cursada: TipoCuatrimestre # y esto tambien
 
 class EncuestaCreate(EncuestaBase):
     pass
