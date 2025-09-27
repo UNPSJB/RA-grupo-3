@@ -4,6 +4,7 @@ from sqlalchemy import Integer, String, Enum, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from src.models import ModeloBase  # tu base declarativa
 import enum
+from src.encuestas.models import Encuesta
 
 class TipoPregunta(enum.Enum):
     MULTIPLE_CHOICE = "MULTIPLE_CHOICE"
@@ -16,7 +17,7 @@ class Pregunta(ModeloBase):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     texto: Mapped[str] = mapped_column(String(500), nullable=False)
     tipo: Mapped[TipoPregunta] = mapped_column(Enum(TipoPregunta), nullable=False)
-    encuesta_id: Mapped[int] = mapped_column(ForeignKey("encuesta.id"))
+    encuesta_id: Mapped[int] = mapped_column(ForeignKey("encuestas.id"))
     # Relaciones
     opciones: Mapped[Optional[List["Opcion"]]] = relationship(
         "Opcion", back_populates="pregunta", cascade="all, delete-orphan"

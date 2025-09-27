@@ -9,13 +9,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from src.pregunta.models import Pregunta
 
-from enum import Enum as PyEnum
 
-
-class TipoCuatrimestre(str, PyEnum):
-    PRIMERO = "primero"
-    SEGUNDO = "segundo"
-    ANUAL = "anual"
 
 class Encuesta(ModeloBase):
     __tablename__ = "encuesta" #cambio de nombre a encuesta singular por un tema de buenas practicas
@@ -57,10 +51,24 @@ from sqlalchemy import Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from src.models import ModeloBase
 
+from typing import Optional, List
+
+from enum import Enum as PyEnum
+
 class Encuesta(ModeloBase):
     __tablename__ = "encuestas"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     titulo: Mapped[str] = mapped_column(String, index=True)
     descripcion: Mapped[str] = mapped_column(String, index=True)
+    anio_carrera: Mapped[str] = mapped_column(String, index=True)
+    cursada: Mapped[str] = mapped_column(String, index=True)
     # Faltaria la relación con las preguntas
+    preguntas: Mapped[Optional[List["src.pregunta.models.Pregunta"]]] = relationship(
+        "src.pregunta.models.Pregunta", back_populates="encuesta"
+    )
+
+class TipoCuatrimestre(str, PyEnum):
+    PRIMERO = "primero"
+    SEGUNDO = "segundo"
+    ANUAL = "anual"

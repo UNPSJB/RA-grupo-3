@@ -1,3 +1,4 @@
+from pydantic import BaseModel
 from src.pregunta.schemas import Pregunta
 from src.encuestas.models import TipoCuatrimestre
 
@@ -13,7 +14,10 @@ class EncuestaCreate(EncuestaBase):
 
 class Encuesta(EncuestaBase):
     id: int
-
+    titulo: str
+    descripcion: str
+    anio_carrera: int
+    cursada: TipoCuatrimestre
     model_config = {"from_attributes": True}
 
 """#para devolver la encuesta junto con sus preguntas

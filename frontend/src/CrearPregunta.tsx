@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Container, Row, Col, Card, Form, Button, Alert, Badge } from 'react-bootstrap';
+import { Card, Form, Button, Alert, Badge } from 'react-bootstrap';
 
 // Tipos TypeScript
 interface Opcion {
