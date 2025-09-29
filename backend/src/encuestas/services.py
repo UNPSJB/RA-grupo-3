@@ -10,3 +10,6 @@ def crear_encuesta(db: Session, encuesta: schemas.EncuestaCreate) -> schemas.Enc
     db.commit()
     db.refresh(_encuesta)
     return _encuesta
+
+def listar_encuestas(db: Session) -> List[Encuesta]:
+    return db.execute(select(Encuesta)).scalars().all()

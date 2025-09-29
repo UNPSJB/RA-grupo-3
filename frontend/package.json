@@ -15,6 +15,7 @@
     "bootstrap": "^5.3.8",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
+    "react-router-dom": "^7.9.3",
     "tailwind": "^2.3.1"
   },
   "devDependencies": {
