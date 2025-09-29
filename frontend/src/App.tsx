@@ -4,8 +4,7 @@ import { Navbar } from './components/Navbar.tsx';
 import { Tabla } from './components/Tabla.tsx';
 import logo from './img/Logo50Color_conletras.png';
 import './Styles/Styles.css';
-//import 'bootstrap/dist/css/bootstrap.min.csks'; Dos nuevas lineas de emi
-//import CrearPregunta from './CrearPregunta';
+
 
 const App: React.FC = () => {
   return (

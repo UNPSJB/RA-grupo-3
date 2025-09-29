@@ -1,4 +1,4 @@
-"""from datetime import datetime
+from datetime import datetime
 from sqlalchemy import Integer, String, DateTime, Boolean, CheckConstraint
 from sqlalchemy import Enum as SQLEnum
 from sqlalchemy.sql import func
@@ -52,15 +52,3 @@ class Encuesta(ModeloBase):
 
     preguntas: Mapped[list['Pregunta']] = relationship(
         back_populates="encuesta", cascade="all, delete-orphan")
-"""
-from sqlalchemy import Integer, String
-from sqlalchemy.orm import Mapped, mapped_column, relationship
-from src.models import ModeloBase
-
-class Encuesta(ModeloBase):
-    __tablename__ = "encuestas"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
-    titulo: Mapped[str] = mapped_column(String, index=True)
-    descripcion: Mapped[str] = mapped_column(String, index=True)
-    # Faltaria la relación con las preguntas
