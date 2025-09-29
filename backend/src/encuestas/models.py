@@ -9,13 +9,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from src.pregunta.models import Pregunta
 
-from enum import Enum as PyEnum
 
-
-class TipoCuatrimestre(str, PyEnum):
-    PRIMERO = "primero"
-    SEGUNDO = "segundo"
-    ANUAL = "anual"
 
 class Encuesta(ModeloBase):
     __tablename__ = "encuesta" #cambio de nombre a encuesta singular por un tema de buenas practicas

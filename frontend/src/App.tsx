@@ -1,10 +1,13 @@
-
 import React from 'react';
+import { Routes, Route } from 'react-router-dom';
 import { Navbar } from './components/Navbar.tsx';
-import { Tabla } from './components/Tabla.tsx';
+import EncuestasPage from './pages/EncuestasPage.tsx';
+import EstadisticasPage from './pages/EstadisticasPage.tsx';
+import CuentaPage from './pages/CuentaPage.tsx';
 import logo from './img/Logo50Color_conletras.png';
+//import CrearPregunta from './pages/CrearPregunta.tsx';
+import CrearEncuesta from './pages/CrearEncuesta.tsx';
 import './Styles/Styles.css';
-
 
 const App: React.FC = () => {
   return (
@@ -13,12 +16,19 @@ const App: React.FC = () => {
         <div className="app-header__branding">
           <img className="app-header__logo" src={logo} alt="Logo Universidad" />
           <h1 className="app-header__title">Encuestas UNPSJB</h1>
-          {/* <CrearPregunta /> */}
         </div>
         <Navbar />
       </header>
       <main className="app-main">
-        <Tabla />
+        <Routes>
+          <Route path='/'/>
+          <Route path='/encuestas' element = {<EncuestasPage/>}/>
+          <Route path='/estadisticas' element = {<EstadisticasPage/>}/>
+          <Route path='/cuenta' element = {<CuentaPage/>}/>
+          <Route path='/completarEncuesta' element = {<EncuestasPage/>}/>
+          {/* <Route path='/crearPregunta' element = {<CrearPregunta/>}/> */}
+          <Route path='/crearEncuesta' element = {<CrearEncuesta/>}/>
+        </Routes>
       </main>
     </div>
   );

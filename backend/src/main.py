@@ -15,7 +15,6 @@ load_dotenv()
 ENV = os.getenv("ENV")
 ROOT_PATH = os.getenv(f"ROOT_PATH_{ENV.upper()}")
 
-
 @asynccontextmanager
 async def db_creation_lifespan(app: FastAPI):
     ModeloBase.metadata.create_all(bind=engine)
