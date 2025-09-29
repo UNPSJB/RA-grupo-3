@@ -30,12 +30,6 @@ class Encuesta(EncuestaBase):
     cursada: TipoCuatrimestre
     model_config = {"from_attributes": True}
 
-<<<<<<< HEAD
 
 class EncuestaConPreguntas(Encuesta):
     preguntas: list[Pregunta] = Field(default_factory=list)
-=======
-"""#para devolver la encuesta junto con sus preguntas
-class EncuestaConPreguntas(Encuesta):
-    preguntas: list[Pregunta] = []"""
->>>>>>> aa33c2973574089f1a101fe82c29d7cd784e78df
