@@ -5,6 +5,7 @@ from pydantic import BaseModel, Field
 
 from src.encuestas.models import TipoCuatrimestre
 from src.pregunta.schemas import Pregunta
+from src.encuestas.models import TipoCuatrimestre
 
 
 class EncuestaBase(BaseModel):
@@ -23,9 +24,18 @@ class EncuestaCreate(EncuestaBase):
 
 class Encuesta(EncuestaBase):
     id: int
-
+    titulo: str
+    descripcion: str
+    anio_carrera: int
+    cursada: TipoCuatrimestre
     model_config = {"from_attributes": True}
 
+<<<<<<< HEAD
 
 class EncuestaConPreguntas(Encuesta):
     preguntas: list[Pregunta] = Field(default_factory=list)
+=======
+"""#para devolver la encuesta junto con sus preguntas
+class EncuestaConPreguntas(Encuesta):
+    preguntas: list[Pregunta] = []"""
+>>>>>>> aa33c2973574089f1a101fe82c29d7cd784e78df

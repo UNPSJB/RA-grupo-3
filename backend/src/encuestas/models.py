@@ -1,4 +1,4 @@
-from datetime import datetime
+"""from datetime import datetime
 from sqlalchemy import Integer, String, DateTime, Boolean, CheckConstraint
 from sqlalchemy import Enum as SQLEnum
 from sqlalchemy.sql import func
@@ -9,13 +9,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from src.pregunta.models import Pregunta
 
-from enum import Enum as PyEnum
 
-
-class TipoCuatrimestre(str, PyEnum):
-    PRIMERO = "primero"
-    SEGUNDO = "segundo"
-    ANUAL = "anual"
 
 class Encuesta(ModeloBase):
     __tablename__ = "encuesta" #cambio de nombre a encuesta singular por un tema de buenas practicas
@@ -32,11 +26,11 @@ class Encuesta(ModeloBase):
     descripcion: Mapped[str] = mapped_column(String, index=True)
 
 # año para filtrar por que año de la carrera corresponde la encuesta
-    anio_carrera: Mapped[int] = mapped_column(Integer, nullable=False)
+    anio_carrera: Mapped[int] = mapped_column(Integer, nullable=True)
 
 # para filtrar por cuatrimestre
     cursada: Mapped[TipoCuatrimestre] = mapped_column(
-        SQLEnum(TipoCuatrimestre, name="cuatrimestre_enum"), nullable=False
+        SQLEnum(TipoCuatrimestre, name="cuatrimestre_enum"), nullable=True
     )
 
 # fecha de inicio y de fin para cuando se pone activa la encuesta o se cierra
@@ -52,3 +46,29 @@ class Encuesta(ModeloBase):
 
     preguntas: Mapped[list['Pregunta']] = relationship(
         back_populates="encuesta", cascade="all, delete-orphan")
+"""
+from sqlalchemy import Integer, String
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+from src.models import ModeloBase
+
+from typing import Optional, List
+
+from enum import Enum as PyEnum
+
+class Encuesta(ModeloBase):
+    __tablename__ = "encuestas"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    titulo: Mapped[str] = mapped_column(String, index=True)
+    descripcion: Mapped[str] = mapped_column(String, index=True)
+    anio_carrera: Mapped[str] = mapped_column(String, index=True)
+    cursada: Mapped[str] = mapped_column(String, index=True)
+    # Faltaria la relación con las preguntas
+    preguntas: Mapped[Optional[List["src.pregunta.models.Pregunta"]]] = relationship(
+        "src.pregunta.models.Pregunta", back_populates="encuesta"
+    )
+
+class TipoCuatrimestre(str, PyEnum):
+    PRIMERO = "primero"
+    SEGUNDO = "segundo"
+    ANUAL = "anual"
