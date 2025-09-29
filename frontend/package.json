@@ -1,38 +1,45 @@
 {
-  "name": "frontend",
-  "private": true,
-  "version": "0.0.0",
+  "name": "ra-grupo-3",
+  "version": "1.0.0",
+  "description": "El proyecto se enmarca en el desarrollo de un sistema de reportes académicos para la Facultad de Ingeniería, con el objetivo de permitir la visualización de indicadores de gestión, a partir de la administración de diferentes instrumentos de relevamiento, como encuestas para estudiantes e informes de cátedra.",
+  "main": "index.js",
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
-    "lint": "eslint .",
-    "preview": "vite preview"
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/UNPSJB/RA-grupo-3.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/UNPSJB/RA-grupo-3/issues"
+  },
+  "homepage": "https://github.com/UNPSJB/RA-grupo-3#readme",
   "dependencies": {
-    "@material-tailwind/react": "^2.1.10",
-    "antd": "^5.27.4",
-    "axios": "^1.12.2",
-    "bootstrap": "^5.3.8",
-    "react": "^19.1.1",
-    "react-bootstrap": "^2.10.10",
-    "react-dom": "^19.1.1",
-    "react-router-dom": "^7.9.3",
-    "tailwind": "^2.3.1"
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^7.9.3"
   },
   "devDependencies": {
-    "@eslint/js": "^9.33.0",
-    "@types/react": "^19.1.13",
-    "@types/react-bootstrap": "^1.0.1",
-    "@types/react-dom": "^19.1.7",
-    "@vitejs/plugin-react-swc": "^4.0.0",
-    "eslint": "^9.33.0",
-    "eslint-plugin-react-hooks": "^5.2.0",
-    "eslint-plugin-react-refresh": "^0.4.20",
-    "globals": "^16.3.0",
+
+    "@typescript-eslint/eslint-plugin": "^8.18.2",
+    "@typescript-eslint/parser": "^8.18.2",
+    "@vitejs/plugin-react": "^4.3.4",
+    "@vitejs/plugin-react-swc": "^4.1.0",
+    "autoprefixer": "^10.4.21",
+    "eslint": "^9.18.0",
+    "eslint-plugin-react-hooks": "^5.1.0",
+    "eslint-plugin-react-refresh": "^0.4.16",
+    "postcss": "^8.5.6",
     "tailwindcss": "^3.4.17",
-    "typescript": "~5.8.3",
-    "typescript-eslint": "^8.39.1",
-    "vite": "^7.1.2"
+    "typescript": "^5.7.3",
+    "vite": "^7.1.5"
+
   }
 }

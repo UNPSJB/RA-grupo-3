@@ -5,7 +5,7 @@ import EncuestasPage from './pages/EncuestasPage.tsx';
 import EstadisticasPage from './pages/EstadisticasPage.tsx';
 import CuentaPage from './pages/CuentaPage.tsx';
 import logo from './img/Logo50Color_conletras.png';
-import CrearPregunta from './pages/CrearPregunta.tsx';
+//import CrearPregunta from './pages/CrearPregunta.tsx';
 import CrearEncuesta from './pages/CrearEncuesta.tsx';
 import './Styles/Styles.css';
 
@@ -26,7 +26,7 @@ const App: React.FC = () => {
           <Route path='/estadisticas' element = {<EstadisticasPage/>}/>
           <Route path='/cuenta' element = {<CuentaPage/>}/>
           <Route path='/completarEncuesta' element = {<EncuestasPage/>}/>
-          <Route path='/crearPregunta' element = {<CrearPregunta/>}/>
+          {/* <Route path='/crearPregunta' element = {<CrearPregunta/>}/> */}
           <Route path='/crearEncuesta' element = {<CrearEncuesta/>}/>
         </Routes>
       </main>
