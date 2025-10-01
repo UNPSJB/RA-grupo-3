@@ -4,11 +4,16 @@ from sqlalchemy import Enum as SQLEnum
 from sqlalchemy.sql import func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from src.models import ModeloBase
+from enum import Enum
 
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from src.pregunta.models import Pregunta
 
+class TipoCuatrimestre(str, Enum):
+        PRIMERO = "primero"
+        SEGUNDO = "segundo"
+        ANUAL = "anual"
 
 
 class Encuesta(ModeloBase):
