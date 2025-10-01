@@ -21,8 +21,8 @@ async def db_creation_lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(root_path=ROOT_PATH, lifespan=db_creation_lifespan)
-
+#app = FastAPI(root_path=ROOT_PATH, lifespan=db_creation_lifespan)
+app = FastAPI(lifespan=db_creation_lifespan)  # Sin root_path
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173"], 

@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field
 
 from src.encuestas.models import TipoCuatrimestre
 from src.pregunta.schemas import Pregunta
-from pydantic import BaseModel
+
 
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:

@@ -1,30 +1,33 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 const CrearEncuesta: React.FC = () => {
-  const [titulo, setTitulo] = useState<string>('');
-  const [descripcion, setDescripcion] = useState<string>('');
-  const [anioCarrera, setAnioCarrera] = useState<string>('1');
-  const [cursada, setCursada] = useState<string>('primero');
+  const navigate = useNavigate();
+  const [titulo, setTitulo] = useState<string>("");
+  const [descripcion, setDescripcion] = useState<string>("");
+  const [anioCarrera, setAnioCarrera] = useState<string>("1");
+  const [cursada, setCursada] = useState<string>("primero");
   const [loading, setLoading] = useState<boolean>(false);
-  const [message, setMessage] = useState<string>('');
+  const [message, setMessage] = useState<string>("");
+  const [encuestaCreada, setEncuestaCreada] = useState<number | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setMessage('');
-    
+    setMessage("");
+
     try {
       const encuestaData = {
         titulo: titulo,
         descripcion: descripcion,
-        anio_carrera: parseInt(anioCarrera), // Convertir a número
-        cursada: cursada
+        anio_carrera: parseInt(anioCarrera),
+        cursada: cursada,
       };
 
-      const response = await fetch('http://localhost:8000/encuestas/', {
-        method: 'POST',
+      const response = await fetch("http://localhost:8000/encuestas/", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify(encuestaData),
       });
@@ -33,110 +36,197 @@ const CrearEncuesta: React.FC = () => {
         throw new Error(`Error ${response.status}: ${response.statusText}`);
       }
 
-      
-      
-      // Limpiar formulario después de enviar
-      setTitulo('');
-      setDescripcion('');
-      setAnioCarrera('1');
-      setCursada('primero');
-      
-      setMessage('Encuesta creada exitosamente!');
-      
+      const data = await response.json();
+      setEncuestaCreada(data.id);
+      setMessage("¡Encuesta creada exitosamente!");
     } catch (error) {
-      console.error('Error al crear encuesta:', error);
-      setMessage(`Error: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+      console.error("Error al crear encuesta:", error);
+      setMessage(
+        `Error: ${error instanceof Error ? error.message : "Error desconocido"}`
+      );
     } finally {
       setLoading(false);
     }
   };
 
+  const handleAgregarPreguntas = () => {
+    if (encuestaCreada) {
+      navigate("/crearPregunta", {
+        state: {
+          encuestaId: encuestaCreada,
+          encuestaTitulo: titulo,
+          encuestaDescripcion: descripcion,
+        },
+      });
+    }
+  };
+
+  const handleCrearOtra = () => {
+    setTitulo("");
+    setDescripcion("");
+    setAnioCarrera("1");
+    setCursada("primero");
+    setEncuestaCreada(null);
+    setMessage("");
+  };
+
   return (
-    <div style={{ padding: '20px' }}>
-      <h2>Crear Nueva Encuesta</h2>
-      
+    <div className="p-6 max-w-2xl mx-auto">
+      <h2 className="text-2xl font-bold mb-6 text-gray-800">
+        Crear Nueva Encuesta
+      </h2>
+
       {message && (
-        <div style={{ 
-          padding: '10px', 
-          marginBottom: '15px', 
-          backgroundColor: message.includes('Error') ? '#ffebee' : '#e8f5e8',
-          color: message.includes('Error') ? '#c62828' : '#2e7d32',
-          border: `1px solid ${message.includes('Error') ? '#f44336' : '#4caf50'}`
-        }}>
+        <div
+          className={`p-4 mb-4 rounded-lg border ${
+            message.includes("Error")
+              ? "bg-red-50 text-red-800 border-red-300"
+              : "bg-green-50 text-green-800 border-green-300"
+          }`}
+        >
           {message}
         </div>
       )}
-      
-      <form onSubmit={handleSubmit}>
-        <div style={{ marginBottom: '15px' }}>
-          <label htmlFor="titulo">Título:</label>
-          <input
-            type="text"
-            id="titulo"
-            value={titulo}
-            onChange={(e) => setTitulo(e.target.value)}
-            style={{ marginLeft: '10px', padding: '5px', width: '300px' }}
-            required
-          />
-        </div>
 
-        <div style={{ marginBottom: '15px' }}>
-          <label htmlFor="descripcion">Descripción:</label>
-          <textarea
-            id="descripcion"
-            value={descripcion}
-            onChange={(e) => setDescripcion(e.target.value)}
-            style={{ marginLeft: '10px', padding: '5px', width: '300px' }}
-            rows={4}
-            required
-          />
-        </div>
+      {encuestaCreada ? (
+        <div className="bg-white p-6 rounded-lg shadow space-y-4">
+          <div className="text-center">
+            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg
+                className="w-8 h-8 text-green-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M5 13l4 4L19 7"
+                />
+              </svg>
+            </div>
+            <h3 className="text-xl font-bold text-gray-800 mb-2">
+              ¡Encuesta Creada!
+            </h3>
 
-        <div style={{ marginBottom: '15px' }}>
-          <label htmlFor="anioCarrera">Año de Carrera:</label>
-          <select
-            id="anioCarrera"
-            value={anioCarrera}
-            onChange={(e) => setAnioCarrera(e.target.value)}
-            style={{ marginLeft: '10px', padding: '5px' }}
-          >
-            <option value="1">1° Año</option>
-            <option value="2">2° Año</option>
-            <option value="3">3° Año</option>
-            <option value="4">4° Año</option>
-            <option value="5">5° Año</option>
-          </select>
-        </div>
+            <p className="text-gray-600">
+              Título: <span className="font-semibold">{titulo}</span>
+            </p>
+          </div>
 
-        <div style={{ marginBottom: '15px' }}>
-          <label htmlFor="cursada">Cursada:</label>
-          <select
-            id="cursada"
-            value={cursada}
-            onChange={(e) => setCursada(e.target.value)}
-            style={{ marginLeft: '10px', padding: '5px' }}
-          >
-            <option value="primero">Primer Cuatrimestre</option>
-            <option value="segundo">Segundo Cuatrimestre</option>
-            <option value="anual">Anual</option>
-          </select>
-        </div>
+          <div className="pt-4 space-y-3">
+            <button
+              onClick={handleAgregarPreguntas}
+              className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+            >
+              Agregar Preguntas a esta Encuesta
+            </button>
 
-        <button 
-          type="submit" 
-          disabled={loading}
-          style={{ 
-            padding: '10px 20px', 
-            backgroundColor: loading ? '#ccc' : '#007bff',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: loading ? 'not-allowed' : 'pointer'
-          }}
+            <button
+              onClick={handleCrearOtra}
+              className="w-full px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium"
+            >
+              Crear Otra Encuesta
+            </button>
+          </div>
+        </div>
+      ) : (
+        <form
+          onSubmit={handleSubmit}
+          className="space-y-6 bg-white p-6 rounded-lg shadow"
         >
-          {loading ? 'Creando...' : 'Crear Encuesta'}
-        </button>
-      </form>
+          <div>
+            <label
+              htmlFor="titulo"
+              className="block text-sm font-medium text-gray-700 mb-2"
+            >
+              Título:
+            </label>
+            <input
+              type="text"
+              id="titulo"
+              value={titulo}
+              onChange={(e) => setTitulo(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              placeholder="Ej: Encuesta de Satisfacción 2025"
+              required
+            />
+          </div>
+
+          <div>
+            <label
+              htmlFor="descripcion"
+              className="block text-sm font-medium text-gray-700 mb-2"
+            >
+              Descripción:
+            </label>
+            <textarea
+              id="descripcion"
+              value={descripcion}
+              onChange={(e) => setDescripcion(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              rows={4}
+              placeholder="Describe el propósito de esta encuesta..."
+              required
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label
+                htmlFor="anioCarrera"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
+                Año de Carrera:
+              </label>
+              <select
+                id="anioCarrera"
+                value={anioCarrera}
+                onChange={(e) => setAnioCarrera(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="1">1° Año</option>
+                <option value="2">2° Año</option>
+                <option value="3">3° Año</option>
+                <option value="4">4° Año</option>
+                <option value="5">5° Año</option>
+              </select>
+            </div>
+
+            <div>
+              <label
+                htmlFor="cursada"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
+                Cursada:
+              </label>
+              <select
+                id="cursada"
+                value={cursada}
+                onChange={(e) => setCursada(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="primero">Primer Cuatrimestre</option>
+                <option value="segundo">Segundo Cuatrimestre</option>
+                <option value="anual">Anual</option>
+              </select>
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading}
+            className={`w-full px-6 py-3 rounded-lg font-medium transition-colors ${
+              loading
+                ? "bg-gray-400 cursor-not-allowed"
+                : "bg-blue-600 hover:bg-blue-700 cursor-pointer"
+            } text-white`}
+          >
+            {loading ? "Creando..." : "Crear Encuesta"}
+          </button>
+        </form>
+      )}
     </div>
   );
 };
