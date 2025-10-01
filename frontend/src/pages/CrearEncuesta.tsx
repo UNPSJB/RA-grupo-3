@@ -1,33 +1,33 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 const CrearEncuesta: React.FC = () => {
   const navigate = useNavigate();
-  const [titulo, setTitulo] = useState<string>('');
-  const [descripcion, setDescripcion] = useState<string>('');
-  const [anioCarrera, setAnioCarrera] = useState<string>('1');
-  const [cursada, setCursada] = useState<string>('primero');
+  const [titulo, setTitulo] = useState<string>("");
+  const [descripcion, setDescripcion] = useState<string>("");
+  const [anioCarrera, setAnioCarrera] = useState<string>("1");
+  const [cursada, setCursada] = useState<string>("primero");
   const [loading, setLoading] = useState<boolean>(false);
-  const [message, setMessage] = useState<string>('');
+  const [message, setMessage] = useState<string>("");
   const [encuestaCreada, setEncuestaCreada] = useState<number | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setMessage('');
-    
+    setMessage("");
+
     try {
       const encuestaData = {
         titulo: titulo,
         descripcion: descripcion,
         anio_carrera: parseInt(anioCarrera),
-        cursada: cursada
+        cursada: cursada,
       };
 
-      const response = await fetch('http://localhost:8000/encuestas/', {
-        method: 'POST',
+      const response = await fetch("http://localhost:8000/encuestas/", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify(encuestaData),
       });
@@ -38,47 +38,52 @@ const CrearEncuesta: React.FC = () => {
 
       const data = await response.json();
       setEncuestaCreada(data.id);
-      setMessage('¡Encuesta creada exitosamente!');
-      
+      setMessage("¡Encuesta creada exitosamente!");
     } catch (error) {
-      console.error('Error al crear encuesta:', error);
-      setMessage(`Error: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+      console.error("Error al crear encuesta:", error);
+      setMessage(
+        `Error: ${error instanceof Error ? error.message : "Error desconocido"}`
+      );
     } finally {
       setLoading(false);
     }
   };
 
   const handleAgregarPreguntas = () => {
-  if (encuestaCreada) {
-    navigate('/crearPregunta', {
-      state: {
-        encuestaId: encuestaCreada,
-        encuestaTitulo: titulo,
-        encuestaDescripcion: descripcion
-      }
-    });
-  }
-};
+    if (encuestaCreada) {
+      navigate("/crearPregunta", {
+        state: {
+          encuestaId: encuestaCreada,
+          encuestaTitulo: titulo,
+          encuestaDescripcion: descripcion,
+        },
+      });
+    }
+  };
 
   const handleCrearOtra = () => {
-    setTitulo('');
-    setDescripcion('');
-    setAnioCarrera('1');
-    setCursada('primero');
+    setTitulo("");
+    setDescripcion("");
+    setAnioCarrera("1");
+    setCursada("primero");
     setEncuestaCreada(null);
-    setMessage('');
+    setMessage("");
   };
 
   return (
     <div className="p-6 max-w-2xl mx-auto">
-      <h2 className="text-2xl font-bold mb-6 text-gray-800">Crear Nueva Encuesta</h2>
-      
+      <h2 className="text-2xl font-bold mb-6 text-gray-800">
+        Crear Nueva Encuesta
+      </h2>
+
       {message && (
-        <div className={`p-4 mb-4 rounded-lg border ${
-          message.includes('Error') 
-            ? 'bg-red-50 text-red-800 border-red-300' 
-            : 'bg-green-50 text-green-800 border-green-300'
-        }`}>
+        <div
+          className={`p-4 mb-4 rounded-lg border ${
+            message.includes("Error")
+              ? "bg-red-50 text-red-800 border-red-300"
+              : "bg-green-50 text-green-800 border-green-300"
+          }`}
+        >
           {message}
         </div>
       )}
@@ -87,13 +92,27 @@ const CrearEncuesta: React.FC = () => {
         <div className="bg-white p-6 rounded-lg shadow space-y-4">
           <div className="text-center">
             <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              <svg
+                className="w-8 h-8 text-green-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M5 13l4 4L19 7"
+                />
               </svg>
             </div>
-            <h3 className="text-xl font-bold text-gray-800 mb-2">¡Encuesta Creada!</h3>
-            <p className="text-gray-600 mb-1">ID de la encuesta: <span className="font-mono font-bold">{encuestaCreada}</span></p>
-            <p className="text-gray-600">Título: <span className="font-semibold">{titulo}</span></p>
+            <h3 className="text-xl font-bold text-gray-800 mb-2">
+              ¡Encuesta Creada!
+            </h3>
+
+            <p className="text-gray-600">
+              Título: <span className="font-semibold">{titulo}</span>
+            </p>
           </div>
 
           <div className="pt-4 space-y-3">
@@ -103,7 +122,7 @@ const CrearEncuesta: React.FC = () => {
             >
               Agregar Preguntas a esta Encuesta
             </button>
-            
+
             <button
               onClick={handleCrearOtra}
               className="w-full px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium"
@@ -113,9 +132,15 @@ const CrearEncuesta: React.FC = () => {
           </div>
         </div>
       ) : (
-        <form onSubmit={handleSubmit} className="space-y-6 bg-white p-6 rounded-lg shadow">
+        <form
+          onSubmit={handleSubmit}
+          className="space-y-6 bg-white p-6 rounded-lg shadow"
+        >
           <div>
-            <label htmlFor="titulo" className="block text-sm font-medium text-gray-700 mb-2">
+            <label
+              htmlFor="titulo"
+              className="block text-sm font-medium text-gray-700 mb-2"
+            >
               Título:
             </label>
             <input
@@ -130,7 +155,10 @@ const CrearEncuesta: React.FC = () => {
           </div>
 
           <div>
-            <label htmlFor="descripcion" className="block text-sm font-medium text-gray-700 mb-2">
+            <label
+              htmlFor="descripcion"
+              className="block text-sm font-medium text-gray-700 mb-2"
+            >
               Descripción:
             </label>
             <textarea
@@ -146,7 +174,10 @@ const CrearEncuesta: React.FC = () => {
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label htmlFor="anioCarrera" className="block text-sm font-medium text-gray-700 mb-2">
+              <label
+                htmlFor="anioCarrera"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
                 Año de Carrera:
               </label>
               <select
@@ -164,7 +195,10 @@ const CrearEncuesta: React.FC = () => {
             </div>
 
             <div>
-              <label htmlFor="cursada" className="block text-sm font-medium text-gray-700 mb-2">
+              <label
+                htmlFor="cursada"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
                 Cursada:
               </label>
               <select
@@ -180,16 +214,16 @@ const CrearEncuesta: React.FC = () => {
             </div>
           </div>
 
-          <button 
-            type="submit" 
+          <button
+            type="submit"
             disabled={loading}
             className={`w-full px-6 py-3 rounded-lg font-medium transition-colors ${
-              loading 
-                ? 'bg-gray-400 cursor-not-allowed' 
-                : 'bg-blue-600 hover:bg-blue-700 cursor-pointer'
+              loading
+                ? "bg-gray-400 cursor-not-allowed"
+                : "bg-blue-600 hover:bg-blue-700 cursor-pointer"
             } text-white`}
           >
-            {loading ? 'Creando...' : 'Crear Encuesta'}
+            {loading ? "Creando..." : "Crear Encuesta"}
           </button>
         </form>
       )}
