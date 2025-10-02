@@ -113,12 +113,44 @@ button:disabled,
     border-color: rgba(255, 255, 255, 0.6);
 }
 
-.tabla-encuestas__acciones button {
+.tabla-encuestas__acciones {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 0.5rem;
+}
+
+.tabla-encuestas__btn {
+    padding: 10px 18px;
+    font-size: 0.95rem;
+}
+
+.tabla-encuestas__btn--completar {
     background-color: #43a047;
 }
 
-.tabla-encuestas__acciones button:hover {
+.tabla-encuestas__btn--completar:hover,
+.tabla-encuestas__btn--completar:focus {
     background-color: #2e7d32;
+}
+
+.tabla-encuestas__btn--modificar {
+    background-color: #1976d2;
+}
+
+.tabla-encuestas__btn--modificar:hover,
+.tabla-encuestas__btn--modificar:focus {
+    background-color: #1565c0;
+}
+
+.tabla-encuestas__btn:disabled,
+.tabla-encuestas__btn:disabled:hover,
+.tabla-encuestas__btn:disabled:focus {
+    background-color: #bdbdbd;
+    color: #757575;
+    cursor: not-allowed;
+    box-shadow: none;
+    transform: none;
 }
 
 .tabla-alert {
