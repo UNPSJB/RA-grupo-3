@@ -167,9 +167,9 @@ export function Tabla() {
 
                         return (
                             <tr key={item.id}>
+                                <td>{typeof item.anio_carrera === "number" ? `${item.anio_carrera}°` : "-"}</td>
                                 <td>{item.titulo}</td>
                                 <td>{item.descripcion}</td>
-                                <td>{typeof item.anio_carrera === "number" ? `${item.anio_carrera}°` : "-"}</td>
                                 <td className="tabla-encuestas__acciones">
                                     <button
                                         className="tabla-encuestas__btn tabla-encuestas__btn--completar"
