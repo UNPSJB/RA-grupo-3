@@ -19,7 +19,7 @@ const CrearPregunta: React.FC = () => {
   // Redirigimos si no hay datos de encuesta
   useEffect(() => {
     if (!encuestaId) {
-      navigate("/crearEncuesta");
+      navigate("/encuestas/crear");
     }
   }, [encuestaId, navigate]);
 

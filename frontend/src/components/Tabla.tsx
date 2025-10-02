@@ -91,7 +91,7 @@ export function Tabla() {
                             <td>{item.titulo}</td>
                             <td>{item.descripcion}</td>
                             <td className="tabla-encuestas__acciones">
-                                <button className="completar__button" onClick={()=>navigate('/completarEncuesta')}>
+                                <button className="completar__button" onClick={() => navigate('/encuestas/completar')}>
                                     Completar
                                 </button>
                             </td>

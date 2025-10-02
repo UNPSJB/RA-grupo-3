@@ -51,7 +51,7 @@ const CrearEncuesta: React.FC = () => {
 
   const handleAgregarPreguntas = () => {
     if (encuestaCreada) {
-      navigate("/crearPregunta", {
+      navigate("/encuestas/preguntas", {
         state: {
           encuestaId: encuestaCreada,
           encuestaTitulo: titulo,
