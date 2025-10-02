@@ -173,7 +173,7 @@ export function Tabla() {
                                 <td className="tabla-encuestas__acciones">
                                     <button
                                         className="tabla-encuestas__btn tabla-encuestas__btn--completar"
-                                        onClick={() => navigate('/encuestas/completar')}
+                                        onClick={() => navigate(`/encuestas/${item.id}/completar`)}
                                         disabled={encuestaCompleta}
                                     >
                                         Completar
