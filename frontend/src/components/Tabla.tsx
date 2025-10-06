@@ -30,6 +30,7 @@ export function Tabla() {
     const [data, setData] = React.useState<Encuesta[]>([]);
     const [loading, setLoading] = React.useState(false);
     const [error, setError] = React.useState<string | null>(null);
+    const [selectedYear, setSelectedYear] = React.useState<string>('');
 
     const sortByTitulo = () => {
         const sorted = [...data].sort((a, b) =>
@@ -78,7 +79,8 @@ export function Tabla() {
             setError(null);
 
             try {
-                const response = await fetch(`${API_BASE_URL}/encuestas`);
+                const query = selectedYear ? `?anio=${selectedYear}` : "";
+                const response = await fetch(`${API_BASE_URL}/encuestas${query}`);
                 if (!response.ok) {
                     throw new Error(`Error ${response.status}`);
                 }
@@ -104,7 +106,11 @@ export function Tabla() {
         return () => {
             isMounted = false;
         };
-    }, [API_BASE_URL]);
+    }, [API_BASE_URL, selectedYear]);
+
+    const handleYearChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+        setSelectedYear(event.target.value);
+    };
 
     return (
         <div className="tabla-wrapper">
@@ -113,8 +119,26 @@ export function Tabla() {
                     ¡Encuesta completada!
                 </div>
             )} */}
+            <div className="tabla-encuestas__filters">
+                <label htmlFor="tabla-encuestas-anio" className="tabla-encuestas__label">
+                    Año: 
+                </label>
+                <select
+                    id="tabla-encuestas-anio"
+                    className="tabla-encuestas__select"
+                    value={selectedYear}
+                    onChange={handleYearChange}
+                >
+                    <option value="">Todos</option>
+                    <option value="1">1°</option>
+                    <option value="2">2°</option>
+                    <option value="3">3°</option>
+                    <option value="4">4°</option>
+                    <option value="5">5°</option>
+                </select>
+            </div>
             <table className="tabla-encuestas">
-                <thead>
+                <thead> 
                     <tr>
                         <th>
                             Año
@@ -131,7 +155,7 @@ export function Tabla() {
                                 className="btn btn--compact tabla-encuestas__sort-btn"
                                 onClick={sortByTitulo}
                             >
-                                {tituloAsc ? "A/Z ↑" : "Z/A ↓"}
+                                {tituloAsc ? "Z/A ↑" : "A/Z ↓"}
                             </button>
                         </th>
                         <th>
