@@ -1,4 +1,6 @@
 from fastapi import APIRouter, Depends
+from fastapi.encoders import jsonable_encoder
+from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from src.database import get_db
 from src.encuestas import schemas, services
@@ -12,6 +14,8 @@ router = APIRouter(prefix="/encuestas", tags=["encuestas"])
 def crear_encuesta(encuesta: schemas.EncuestaCreate, db: Session = Depends(get_db)):
     return services.crear_encuesta(db, encuesta)
 
-@router.get('/', response_model=list[schemas.Encuesta])
+# Get de encuestas
+@router.get('/', response_model=list[schemas.EncuestaConPreguntas])
 def listar_encuestas(db: Session = Depends(get_db)):
-    return services.listar_encuestas(db)
+    encuestas = services.listar_encuestas(db)
+    return JSONResponse(content=jsonable_encoder(encuestas))
