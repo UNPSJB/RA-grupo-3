@@ -71,7 +71,7 @@ const CrearEncuesta: React.FC = () => {
     setMensaje("");
   };
 
-/*  return (
+  /*  return (
     <div className="p-6 max-w-2xl mx-auto">
       <h2 className="text-2xl font-bold mb-6 text-gray-800">
         Crear Nueva Encuesta
@@ -235,7 +235,7 @@ const CrearEncuesta: React.FC = () => {
 
 export default CrearEncuesta;*/
 
- return (
+  return (
     <div className="p-6 max-w-2xl mx-auto">
       <h2 className="text-2xl font-bold mb-6 text-gray-800">
         Crear Nueva Encuesta
@@ -285,15 +285,19 @@ export default CrearEncuesta;*/
               Año: <span className="font-semibold">{anioCarrera}° Año</span>
             </p>
             <p className="text-gray-600">
-              Cursada: <span className="font-semibold">
-                {cursada === "primero" ? "Primer Cuatrimestre" : 
-                 cursada === "segundo" ? "Segundo Cuatrimestre" : "Anual"}
+              Cursada:{" "}
+              <span className="font-semibold">
+                {cursada === "primero"
+                  ? "Primer Cuatrimestre"
+                  : cursada === "segundo"
+                  ? "Segundo Cuatrimestre"
+                  : "Anual"}
               </span>
             </p>
           </div>
 
           {/* Componente CrearSeccion */}
-          <CrearSeccion encuestaId={encuestaCreada}/>
+          <CrearSeccion encuestaId={encuestaCreada} />
 
             <button
               onClick={handleCrearOtra}

@@ -1,4 +1,5 @@
 # src/Respuesta/models.py
+from __future__ import annotations
 from sqlalchemy import Integer, String, ForeignKey, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from typing import Optional

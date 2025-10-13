@@ -1,4 +1,5 @@
 # src/Pregunta/models.py
+from __future__ import annotations
 from typing import List, Optional
 from sqlalchemy import Integer, String, Enum, ForeignKey, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -27,6 +28,10 @@ class Pregunta(ModeloBase):
     # Relaciones
     opciones: Mapped[List["Opcion"]] = relationship(
         "Opcion", back_populates="pregunta", cascade="all, delete-orphan"
+    )
+
+    respuestas: Mapped["Respuesta"] = relationship(
+        "Respuesta", back_populates="pregunta"
     )
 
 class Opcion(ModeloBase):
