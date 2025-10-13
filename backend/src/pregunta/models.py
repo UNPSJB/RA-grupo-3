@@ -22,6 +22,7 @@ class Pregunta(ModeloBase):
     # Relación con seccion
     seccion_id: Mapped[int] = mapped_column(ForeignKey("secciones.id"), nullable=True)
     seccion: Mapped[Optional["Seccion"]] = relationship("Seccion", back_populates="preguntas")
+    respuestas = relationship("Respuesta", back_populates="pregunta")
     
     # Relaciones
     opciones: Mapped[List["Opcion"]] = relationship(

@@ -493,14 +493,6 @@ const CrearPregunta: React.FC<CrearPreguntaProps> = ({
         </div>
       </form>
 
-      {preguntasCreadas > 0 && (
-        <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
-          <p className="text-sm text-blue-800">
-            💡 <strong>Tip:</strong> Puedes seguir agregando más preguntas o
-            presionar "Finalizar" cuando termines.
-          </p>
-        </div>
-      )}
     </div>
   );
 };

@@ -295,15 +295,6 @@ export default CrearEncuesta;*/
           {/* Componente CrearSeccion */}
           <CrearSeccion encuestaId={encuestaCreada}/>
 
-          {/* Botones de acción */}
-          <div className="bg-white p-6 rounded-lg shadow space-y-3">
-            <button
-              onClick={handleAgregarPreguntas}
-              className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
-            >
-              Agregar Preguntas a esta Encuesta
-            </button>
-
             <button
               onClick={handleCrearOtra}
               className="w-full px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium"
@@ -311,7 +302,7 @@ export default CrearEncuesta;*/
               Crear Otra Encuesta
             </button>
           </div>
-        </div>
+
       ) : (
         <form
           onSubmit={handleSubmit}
