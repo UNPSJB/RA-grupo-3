@@ -1,3 +1,4 @@
+from __future__ import annotations
 from datetime import datetime
 from sqlalchemy import Integer, String, DateTime, Boolean, CheckConstraint
 from sqlalchemy import Enum as SQLEnum
@@ -9,7 +10,7 @@ from src.enumerados import TipoCuatrimestre, EstadoEncuesta
 
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from src.pregunta.models import Pregunta
+    from src.seccion.models import Seccion
 
 
 class Encuesta(ModeloBase):
@@ -47,7 +48,6 @@ class Encuesta(ModeloBase):
     estado: Mapped[EstadoEncuesta] = mapped_column(
           SQLEnum(EstadoEncuesta, name = "estado_encuesta_enum"), default=EstadoEncuesta.BORRADOR
     )
-
 # Faltaria la relación con las preguntas
-    preguntas: Mapped[list['Pregunta']] = relationship(
+    secciones: Mapped[list['Seccion']] = relationship(
         back_populates="encuesta", cascade="all, delete-orphan")

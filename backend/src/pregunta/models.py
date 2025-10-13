@@ -1,4 +1,5 @@
 # src/Pregunta/models.py
+from __future__ import annotations
 from typing import List, Optional
 from sqlalchemy import Integer, String, Enum, ForeignKey, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -17,19 +18,20 @@ class Pregunta(ModeloBase):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     texto: Mapped[str] = mapped_column(String(500), nullable=False)
     tipo: Mapped[TipoPregunta] = mapped_column(Enum(TipoPregunta), nullable=False)
-    encuesta_id: Mapped[int] = mapped_column(ForeignKey("encuesta.id"))
+    #encuesta_id: Mapped[int] = mapped_column(ForeignKey("encuesta.id"))
+
+    # Relación con seccion
+    seccion_id: Mapped[int] = mapped_column(ForeignKey("secciones.id"), nullable=True)
+    seccion: Mapped[Optional["Seccion"]] = relationship("Seccion", back_populates="preguntas")
     
     # Relaciones
     opciones: Mapped[List["Opcion"]] = relationship(
         "Opcion", back_populates="pregunta", cascade="all, delete-orphan"
     )
-    encuesta: Mapped["Encuesta"] = relationship(
-        "Encuesta", back_populates="preguntas"
-    )
-    respuestas: Mapped[List["Respuesta"]] = relationship(
-        "Respuesta", back_populates="pregunta", cascade="all, delete-orphan"
-    )
 
+    respuestas: Mapped["Respuesta"] = relationship(
+        "Respuesta", back_populates="pregunta"
+    )
 
 class Opcion(ModeloBase):
     __tablename__ = "opciones"

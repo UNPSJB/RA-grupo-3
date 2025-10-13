@@ -14,6 +14,7 @@ const shortcuts: Shortcut[] = [
   { label: "Crear encuesta", path: "/encuestas/crear" },
   { label: "Completar encuesta", path: "/encuestas/completar" },
   { label: "Estadísticas", path: "/estadisticas" },
+  { label: "Crear seccion", path: "/secciones" },
   { label: "Cuenta", path: "/cuenta" },
 ];
 

@@ -5,6 +5,10 @@ from pydantic import BaseModel, Field
 from src.pregunta.schemas import Pregunta
 from src.enumerados import TipoCuatrimestre, EstadoEncuesta
 
+from src.encuestas.models import TipoCuatrimestre
+from src.seccion.schemas import Seccion
+
+
 class EncuestaBase(BaseModel):
     titulo: str
     descripcion: str
@@ -29,9 +33,7 @@ class EncuestaUpdate(BaseModel):
     fecha_inicio: Optional[datetime] = None
     fecha_fin: Optional[datetime] = None
 
-class EncuestaEstadoUpdate(BaseModel):
-    estado: EstadoEncuesta
 
 #para devolver la encuesta junto con sus preguntas
 class EncuestaConPreguntas(Encuesta):
-    preguntas: list[Pregunta] = []
+    secciones: list[Seccion] = []

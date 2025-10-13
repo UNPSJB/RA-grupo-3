@@ -45,11 +45,6 @@ const App: React.FC = () => {
             element={<EncuestasPage tipo="publicadas" />}
           />
           <Route path="crear" element={<CrearEncuesta />} />
-          {/* <Route
-            path="completar"
-            element={<EncuestasPage tipo="publicadas" />}
-          /> */}
-          <Route path="preguntas" element={<CrearPregunta />} />
         </Route>
         <Route path="estadisticas" element={<EstadisticasPage />} />
         <Route path="cuenta" element={<CuentaPage />} />

@@ -45,15 +45,10 @@ def modificar_encuesta(
 
 def actualizar_estado_encuesta(db: Session, encuesta_id: int, nuevo_estado: models.EstadoEncuesta):
     encuesta_db = obtener_encuesta_por_id(db, encuesta_id)
-
-    
     encuesta_db.estado = nuevo_estado.value 
-
     db.add(encuesta_db) 
     db.commit()
-       
     db.refresh(encuesta_db)
-
     return encuesta_db
 
 def eliminar_encuesta(db: Session, encuesta_id: int)-> schemas.Encuesta:
