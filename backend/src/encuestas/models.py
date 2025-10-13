@@ -4,17 +4,12 @@ from sqlalchemy import Enum as SQLEnum
 from sqlalchemy.sql import func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from src.models import ModeloBase
-from enum import Enum
-
+from enum import StrEnum
+from src.enumerados import TipoCuatrimestre, EstadoEncuesta
 
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from src.pregunta.models import Pregunta
-
-class TipoCuatrimestre(str, Enum):
-        PRIMERO = "primero"
-        SEGUNDO = "segundo"
-        ANUAL = "anual"
 
 
 class Encuesta(ModeloBase):
@@ -46,9 +41,13 @@ class Encuesta(ModeloBase):
         DateTime(timezone=True), nullable=True) # es nulleable ya que no conocemos cuando va a cerrar la encuesta
     
 # para saber si esta completa la encuesta
-    esta_completa: Mapped[bool] = mapped_column(Boolean, default=False)
- 
-# Faltaria la relación con las preguntas
+    esta_completa:Mapped[Boolean] = mapped_column(Boolean, default = False)
 
+# estados de la encuesta
+    estado: Mapped[EstadoEncuesta] = mapped_column(
+          SQLEnum(EstadoEncuesta, name = "estado_encuesta_enum"), default=EstadoEncuesta.BORRADOR
+    )
+
+# Faltaria la relación con las preguntas
     preguntas: Mapped[list['Pregunta']] = relationship(
         back_populates="encuesta", cascade="all, delete-orphan")
