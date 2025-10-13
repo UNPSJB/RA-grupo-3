@@ -13,9 +13,11 @@ const CrearEncuesta: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
     setMessage("");
-
+    setLoading(true);
+    await handleConfirmarCreacion();
+  };
+  const handleConfirmarCreacion = async () => {
     try {
       const encuestaData = {
         titulo: titulo,

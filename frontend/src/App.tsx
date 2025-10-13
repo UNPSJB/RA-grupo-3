@@ -1,15 +1,15 @@
-import React from 'react';
-import { Outlet, Route, Routes } from 'react-router-dom';
-import { Navbar } from './components/Navbar.tsx';
-import EncuestasPage from './pages/EncuestasPage.tsx';
-import EstadisticasPage from './pages/EstadisticasPage.tsx';
-import CuentaPage from './pages/CuentaPage.tsx';
-import logo from './img/Logo50Color_conletras.png';
-import CrearPregunta from './pages/CrearPregunta.tsx';
-import CrearEncuesta from './pages/CrearEncuesta.tsx';
-import Home from './pages/Home.tsx';
-import PanelAdmin from './pages/panelAdmin.tsx';
-import './Styles/Styles.css';
+import React from "react";
+import { Outlet, Route, Routes, Navigate } from "react-router-dom";
+import { Navbar } from "./components/Navbar.tsx";
+import EncuestasPage from "./pages/EncuestasPage.tsx";
+import EstadisticasPage from "./pages/EstadisticasPage.tsx";
+import CuentaPage from "./pages/CuentaPage.tsx";
+import logo from "./img/Logo50Color_conletras.png";
+import CrearPregunta from "./pages/CrearPregunta.tsx";
+import CrearEncuesta from "./pages/CrearEncuesta.tsx";
+import Home from "./pages/Home.tsx";
+import PanelAdmin from "./pages/panelAdmin.tsx";
+import "./Styles/Styles.css";
 
 const MainLayout: React.FC = () => (
   <div className="app">
@@ -32,9 +32,23 @@ const App: React.FC = () => {
       <Route path="/" element={<MainLayout />}>
         <Route index element={<Home />} />
         <Route path="encuestas" element={<Outlet />}>
-          <Route index element={<EncuestasPage />} />
+          {/* redirección por defecto */}
+          <Route index element={<Navigate to="borradores" replace />} />
+
+          {/* vistas de encuestas según su estado */}
+          <Route
+            path="borradores"
+            element={<EncuestasPage tipo="borradores" />}
+          />
+          <Route
+            path="publicadas"
+            element={<EncuestasPage tipo="publicadas" />}
+          />
           <Route path="crear" element={<CrearEncuesta />} />
-          <Route path="completar" element={<EncuestasPage />} />
+          {/* <Route
+            path="completar"
+            element={<EncuestasPage tipo="publicadas" />}
+          /> */}
           <Route path="preguntas" element={<CrearPregunta />} />
         </Route>
         <Route path="estadisticas" element={<EstadisticasPage />} />
