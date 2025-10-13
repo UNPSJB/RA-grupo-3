@@ -6,16 +6,16 @@ export interface SeriesDescriptor {
   color: string;
 }
 
-export interface QuestionDatum extends Record<SeriesKey, number> {
+export interface preguntaDato extends Record<SeriesKey, number> {
   id: string;
-  question: string;
+  pregunta: string;
 }
 
-export interface SectionDatum {
+export interface SeccionDato {
   id: string;
-  title: string;
-  description?: string;
-  questions: QuestionDatum[];
+  titulo: string;
+  descripcion?: string;
+  preguntas: preguntaDato[];
 }
 
 export const responseSeries: SeriesDescriptor[] = [
@@ -25,15 +25,15 @@ export const responseSeries: SeriesDescriptor[] = [
   { key: 'muyMalo', label: 'Muy malo', color: '#D73027' },
 ];
 
-export const sectionsData: SectionDatum[] = [
+export const seccionsData: SeccionDato[] = [
   {
     id: 'SeccionA',
-    title: 'Seccion A',
-    description: 'Informacion General',
-    questions: [
+    titulo: 'Seccion A',
+    descripcion: 'Informacion General',
+    preguntas: [
       {
         id: 'A1',
-        question: '¿Cuántas veces te has inscripto para cursar esta asignatura?',
+        pregunta: '¿Cuántas veces te has inscripto para cursar esta asignatura?',
         muyBueno: 7,
         bueno: 6,
         malo: 4,
@@ -41,7 +41,7 @@ export const sectionsData: SectionDatum[] = [
       },
       {
         id: 'A2',
-        question: '¿Cuál ha sido aproximadamente tu porcentaje de asistencia a clases teóricas?',
+        pregunta: '¿Cuál ha sido aproximadamente tu porcentaje de asistencia a clases teóricas?',
         muyBueno: 5,
         bueno: 7,
         malo: 4,
@@ -49,7 +49,7 @@ export const sectionsData: SectionDatum[] = [
       },
       {
         id: 'A3',
-        question: '¿Cuál ha sido aproximadamente tu porcentaje de asistencia a clases prácticas?',
+        pregunta: '¿Cuál ha sido aproximadamente tu porcentaje de asistencia a clases prácticas?',
         muyBueno: 6,
         bueno: 5,
         malo: 5,
@@ -57,7 +57,7 @@ export const sectionsData: SectionDatum[] = [
       },
       {
         id: 'A4',
-        question: 'Los conocimientos previos para comprender los contenidos de la asignatura fueron: ',
+        pregunta: 'Los conocimientos previos para comprender los contenidos de la asignatura fueron: ',
         muyBueno: 8,
         bueno: 6,
         malo: 3,
@@ -67,12 +67,12 @@ export const sectionsData: SectionDatum[] = [
   },
   {
     id: 'SeccionB',
-    title: 'Seccion B',
-    description: 'Comunicacion y desarrollo de la asignatura.',
-    questions: [
+    titulo: 'Seccion B',
+    descripcion: 'Comunicacion y desarrollo de la asignatura.',
+    preguntas: [
       {
         id: 'B1',
-        question: 'El profesor brino al inicio del curso, informacion referia al desarrollo de la asignatura.',
+        pregunta: 'El profesor brino al inicio del curso, informacion referia al desarrollo de la asignatura.',
         muyBueno: 9,
         bueno: 5,
         malo: 3,
@@ -80,7 +80,7 @@ export const sectionsData: SectionDatum[] = [
       },
       {
         id: 'B2',
-        question: 'Se respeto la planificacion de las actividades programadas al inicio del cursado y el calendario academico.',
+        pregunta: 'Se respeto la planificacion de las actividades programadas al inicio del cursado y el calendario academico.',
         muyBueno: 6,
         bueno: 8,
         malo: 4,
@@ -88,7 +88,7 @@ export const sectionsData: SectionDatum[] = [
       },
       {
         id: 'B3',
-        question: 'La bibliografica propuesta por la catedra estuvo disponible en la biblioteca o centros de documentacion.',
+        pregunta: 'La bibliografica propuesta por la catedra estuvo disponible en la biblioteca o centros de documentacion.',
         muyBueno: 5,
         bueno: 9,
         malo: 4,
@@ -96,7 +96,7 @@ export const sectionsData: SectionDatum[] = [
       },
       {
         id: 'B4',
-        question: 'El profesor ofrecio la posibilidad de establecer una buena comunicacion en diferentes aspectos de la vida universitaria.',
+        pregunta: 'El profesor ofrecio la posibilidad de establecer una buena comunicacion en diferentes aspectos de la vida universitaria.',
         muyBueno: 7,
         bueno: 6,
         malo: 5,
@@ -106,12 +106,12 @@ export const sectionsData: SectionDatum[] = [
   },
   {
     id: 'SeccionC',
-    title: 'Seccion C.',
-    description: 'Metodologia e la cursada.',
-    questions: [
+    titulo: 'Seccion C.',
+    descripcion: 'Metodologia e la cursada.',
+    preguntas: [
       {
         id: 'C1',
-        question: 'Se propusieron clases de apoyo y consulta.',
+        pregunta: 'Se propusieron clases de apoyo y consulta.',
         muyBueno: 4,
         bueno: 8,
         malo: 5,
@@ -119,7 +119,7 @@ export const sectionsData: SectionDatum[] = [
       },
       {
         id: 'C2',
-        question: 'Existe relacion entre los contenidos desarrollados en las clases teoricas y los trabajos practicos.',
+        pregunta: 'Existe relacion entre los contenidos desarrollados en las clases teoricas y los trabajos practicos.',
         muyBueno: 6,
         bueno: 7,
         malo: 5,
@@ -127,7 +127,7 @@ export const sectionsData: SectionDatum[] = [
       },
       {
         id: 'C3',
-        question: 'Las clases practicas de laboratorio resultaron de utilidad para la comprension de los contenidos.',
+        pregunta: 'Las clases practicas de laboratorio resultaron de utilidad para la comprension de los contenidos.',
         muyBueno: 5,
         bueno: 6,
         malo: 5,
@@ -137,12 +137,12 @@ export const sectionsData: SectionDatum[] = [
   },
   {
     id: 'SeccionD',
-    title: 'Seccion D',
-    description: 'Evaluacion durante la cursaa',
-    questions: [
+    titulo: 'Seccion D',
+    descripcion: 'Evaluacion durante la cursaa',
+    preguntas: [
       {
         id: 'D1',
-        question: 'Las clases teoricas y las clases practicas tuvieron correlacion.',
+        pregunta: 'Las clases teoricas y las clases practicas tuvieron correlacion.',
         muyBueno: 5,
         bueno: 7,
         malo: 5,
@@ -150,7 +150,7 @@ export const sectionsData: SectionDatum[] = [
       },
       {
         id: 'D2',
-        question: 'La profundidad de los temas tratados en las clases teoricas y practicas es equivalente al nivel de exigencia en las evaluaciones.',
+        pregunta: 'La profundidad de los temas tratados en las clases teoricas y practicas es equivalente al nivel de exigencia en las evaluaciones.',
         muyBueno: 6,
         bueno: 5,
         malo: 6,
@@ -158,7 +158,7 @@ export const sectionsData: SectionDatum[] = [
       },
       {
         id: 'D3',
-        question: 'La revision de evaluaciones o trabajos presentados resulta una instancia para mejorar la comprension de los contenidos.',
+        pregunta: 'La revision de evaluaciones o trabajos presentados resulta una instancia para mejorar la comprension de los contenidos.',
         muyBueno: 7,
         bueno: 6,
         malo: 4,
@@ -166,7 +166,7 @@ export const sectionsData: SectionDatum[] = [
       },
       {
         id: 'D$',
-        question: 'Las alternativas de evaluacion propuestos por la catedra (promocion directa, informes, trabajos practicos, monografias, etc.) te resultaron convenientes para el aprendizaje.',
+        pregunta: 'Las alternativas de evaluacion propuestos por la catedra (promocion directa, informes, trabajos practicos, monografias, etc.) te resultaron convenientes para el aprendizaje.',
         muyBueno: 4,
         bueno: 8,
         malo: 5,
@@ -176,12 +176,12 @@ export const sectionsData: SectionDatum[] = [
   },
   {
     id: 'SeccionE',
-    title: 'Seccion E',
-    description: 'Actuacion de los miembros de la catedra',
-    questions: [
+    titulo: 'Seccion E',
+    descripcion: 'Actuacion de los miembros de la catedra',
+    preguntas: [
       {
         id: 'E1',
-        question: 'Se respeto la planificacion de actividades programadas.',
+        pregunta: 'Se respeto la planificacion de actividades programadas.',
         muyBueno: 6,
         bueno: 7,
         malo: 4,
@@ -189,7 +189,7 @@ export const sectionsData: SectionDatum[] = [
       },
       {
         id: 'E2',
-        question: 'El profesor asistio a clases en el horario establecido.',
+        pregunta: 'El profesor asistio a clases en el horario establecido.',
         muyBueno: 5,
         bueno: 8,
         malo: 4,
@@ -197,7 +197,7 @@ export const sectionsData: SectionDatum[] = [
       },
       {
         id: 'E3',
-        question: 'Se presentaron aplicaciones, ejemplos, demostraciones, formas de transferencias a la vida cotidianda y profesional en el desarrollo de las clases.',
+        pregunta: 'Se presentaron aplicaciones, ejemplos, demostraciones, formas de transferencias a la vida cotidianda y profesional en el desarrollo de las clases.',
         muyBueno: 7,
         bueno: 6,
         malo: 4,
@@ -205,7 +205,7 @@ export const sectionsData: SectionDatum[] = [
       },
       {
         id: 'E4',
-        question: 'Los recursos didacticos utilizados facilitaron el aprendizaje.',
+        pregunta: 'Los recursos didacticos utilizados facilitaron el aprendizaje.',
         muyBueno: 6,
         bueno: 7,
         malo: 5,
@@ -213,7 +213,7 @@ export const sectionsData: SectionDatum[] = [
       },
       {
         id: 'E5',
-        question: 'Los profesores ofrecen la posibilidad de plantear dudas y dificultades en la comprension de los temas.',
+        pregunta: 'Los profesores ofrecen la posibilidad de plantear dudas y dificultades en la comprension de los temas.',
         muyBueno: 8,
         bueno: 7,
         malo: 3,
@@ -221,7 +221,7 @@ export const sectionsData: SectionDatum[] = [
       },
       {
         id: 'E6',
-        question: 'Los temas desarrollados son explicados con claridad.',
+        pregunta: 'Los temas desarrollados son explicados con claridad.',
         muyBueno: 9,
         bueno: 5,
         malo: 4,
@@ -231,12 +231,12 @@ export const sectionsData: SectionDatum[] = [
   },
   {
     id: 'SeccionF',
-    title: 'Seccion F',
-    description: 'Institucional.',
-    questions: [
+    titulo: 'Seccion F',
+    descripcion: 'Institucional.',
+    preguntas: [
       {
         id: 'F1',
-        question: 'El personal administrativo de la facultad da respuestas a tus requerimientos.',
+        pregunta: 'El personal administrativo de la facultad da respuestas a tus requerimientos.',
         muyBueno: 6,
         bueno: 6,
         malo: 5,
@@ -244,7 +244,7 @@ export const sectionsData: SectionDatum[] = [
       },
       {
         id: 'F2',
-        question: 'El personal administrativo respondio cordialmente a tus consultas.',
+        pregunta: 'El personal administrativo respondio cordialmente a tus consultas.',
         muyBueno: 5,
         bueno: 7,
         malo: 5,
@@ -252,7 +252,7 @@ export const sectionsData: SectionDatum[] = [
       },
       {
         id: 'F3',
-        question: 'El servicio de biblioteca es adecuado a tus necesidades.',
+        pregunta: 'El servicio de biblioteca es adecuado a tus necesidades.',
         muyBueno: 7,
         bueno: 6,
         malo: 4,
@@ -260,7 +260,7 @@ export const sectionsData: SectionDatum[] = [
       },
       {
         id: 'F4',
-        question: 'El sistema sui guarani te facilito la realizacion de tramites administrativos.',
+        pregunta: 'El sistema sui guarani te facilito la realizacion de tramites administrativos.',
         muyBueno: 6,
         bueno: 7,
         malo: 4,
@@ -268,7 +268,7 @@ export const sectionsData: SectionDatum[] = [
       },
       {
         id: 'F5',
-        question: 'Las aulas y el equipamiento de los laboratorios son apropiados.',
+        pregunta: 'Las aulas y el equipamiento de los laboratorios son apropiados.',
         muyBueno: 8,
         bueno: 5,
         malo: 4,
@@ -276,7 +276,7 @@ export const sectionsData: SectionDatum[] = [
       },
       {
         id: 'F6',
-        question: 'Los recursos informaticos que ofrece la institucion (pc, pc con internet, wifi, etc.) son adecuaos a tus necesidades.',
+        pregunta: 'Los recursos informaticos que ofrece la institucion (pc, pc con internet, wifi, etc.) son adecuaos a tus necesidades.',
         muyBueno: 7,
         bueno: 6,
         malo: 4,
@@ -286,43 +286,43 @@ export const sectionsData: SectionDatum[] = [
   },
 ];
 
-export const getQuestionTotal = (question: QuestionDatum) =>
-  responseSeries.reduce((sum, serie) => sum + question[serie.key], 0);
+export const getpreguntaTotal = (pregunta: preguntaDato) =>
+  responseSeries.reduce((sum, serie) => sum + pregunta[serie.key], 0);
 
-export const getTotalResponses = (data: SectionDatum[] = sectionsData) =>
+export const getTotalResponses = (data: SeccionDato[] = seccionsData) =>
   data.reduce(
-    (acc, section) =>
-      acc + section.questions.reduce((sectionAcc, question) => sectionAcc + getQuestionTotal(question), 0),
+    (acc, seccion) =>
+      acc + seccion.preguntas.reduce((seccionAcc, pregunta) => seccionAcc + getpreguntaTotal(pregunta), 0),
     0,
   );
 
-export type ChartDatum = {
-  name: string;
+export type ChartDato = {
+  nombre: string;
 } & Record<SeriesKey, number>;
 
-export const buildChartData = (data: SectionDatum[] = sectionsData): ChartDatum[] =>
-  data.map((section) => {
+export const buildChartData = (data: SeccionDato[] = seccionsData): ChartDato[] =>
+  data.map((seccion) => {
     const totals = responseSeries.reduce(
       (acc, serie) => ({
         ...acc,
-        [serie.key]: section.questions.reduce((sum, question) => sum + question[serie.key], 0),
+        [serie.key]: seccion.preguntas.reduce((sum, pregunta) => sum + pregunta[serie.key], 0),
       }),
       {} as Record<SeriesKey, number>,
     );
 
     return {
-      name: section.title,
+      nombre: seccion.titulo,
       ...totals,
     };
   });
 
-export const getOptionTotals = (data: SectionDatum[] = sectionsData) => {
+export const getOptionTotals = (data: SeccionDato[] = seccionsData) => {
   const totalResponses = getTotalResponses(data);
 
   return responseSeries.map((serie) => {
     const total = data.reduce(
-      (sum, section) =>
-        sum + section.questions.reduce((questionSum, question) => questionSum + question[serie.key], 0),
+      (sum, seccion) =>
+        sum + seccion.preguntas.reduce((preguntaSum, pregunta) => preguntaSum + pregunta[serie.key], 0),
       0,
     );
     const percent = totalResponses === 0 ? 0 : (total / totalResponses) * 100;
