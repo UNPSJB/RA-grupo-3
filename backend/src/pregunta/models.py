@@ -1,8 +1,8 @@
-#Define la estructura de los datos de nuestra aplicacion al momento de ser guardados en una BD
+# src/Pregunta/models.py
 from typing import List, Optional
-from sqlalchemy import Integer, String, Enum, ForeignKey
+from sqlalchemy import Integer, String, Enum, ForeignKey, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from src.models import ModeloBase  # tu base declarativa
+from src.models import ModeloBase
 import enum
 from src.encuestas.models import Encuesta
 
@@ -24,7 +24,7 @@ class Pregunta(ModeloBase):
     seccion: Mapped[Optional["Seccion"]] = relationship("Seccion", back_populates="preguntas")
     
     # Relaciones
-    opciones: Mapped[Optional[List["Opcion"]]] = relationship(
+    opciones: Mapped[List["Opcion"]] = relationship(
         "Opcion", back_populates="pregunta", cascade="all, delete-orphan"
     )
 
@@ -33,6 +33,9 @@ class Opcion(ModeloBase):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     texto: Mapped[str] = mapped_column(String(255), nullable=False)
-
     pregunta_id: Mapped[int] = mapped_column(ForeignKey("preguntas.id"), nullable=False)
+    
     pregunta: Mapped["Pregunta"] = relationship("Pregunta", back_populates="opciones")
+    respuestas: Mapped[List["Respuesta"]] = relationship(
+        "Respuesta", back_populates="opcion"
+    )

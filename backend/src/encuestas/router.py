@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
+from fastapi.encoders import jsonable_encoder
+from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from src.database import get_db
 from src.encuestas import schemas, services
@@ -12,6 +14,14 @@ router = APIRouter(prefix="/encuestas", tags=["encuestas"])
 def crear_encuesta(encuesta: schemas.EncuestaCreate, db: Session = Depends(get_db)):
     return services.crear_encuesta(db, encuesta)
 
-@router.get('/', response_model=list[schemas.Encuesta])
-def listar_encuestas(db: Session = Depends(get_db)):
-    return services.listar_encuestas(db)
+# Get de encuestas
+@router.get('/', response_model=list[schemas.EncuestaConPreguntas])
+def listar_encuestas(anio: int | None = None, db: Session = Depends(get_db)):
+    if anio is not None and (anio < 1 or anio > 5):
+        raise HTTPException(
+            status_code=400,
+            detail="El año de la carrera debe estar entre 1 (primero) y 5 (quinto).",
+        )
+
+    encuestas = services.listar_encuestas(db, anio=anio)
+    return JSONResponse(content=jsonable_encoder(encuestas))
