@@ -16,13 +16,13 @@ def crear_encuesta(db: Session, encuesta: schemas.EncuestaCreate) -> schemas.Enc
 def listar_encuestas(db: Session, state: schemas.EstadoEncuesta = None) -> List[Encuesta]:
     stmt = (
         select(Encuesta)
-        .options(selectinload(Encuesta.preguntas))
+        .options(selectinload(Encuesta.secciones))
         .filter(Encuesta.estado == state.value) 
     )
     return db.execute(stmt).unique().scalars().all()
 
 def obtener_encuesta_por_id(db: Session, encuesta_id: int):
-    encuesta = db.query(Encuesta).options(selectinload(Encuesta.preguntas)).filter(Encuesta.id == encuesta_id).first()
+    encuesta = db.query(Encuesta).options(selectinload(Encuesta.secciones)).filter(Encuesta.id == encuesta_id).first()
     if not encuesta:
         raise NotFound(detail= f"Encuesta con id {encuesta_id} no encontrada")
     
