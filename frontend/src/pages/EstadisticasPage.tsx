@@ -1,5 +1,6 @@
 import Grafico from '../components/estadisticas/Grafico.tsx';
-import { SectionBreakdown, OptionTotals } from '../components/estadisticas/DataGrafico.tsx';
+import SectionBreakdownTable from '../components/estadisticas/SectionBreakdownTable.tsx';
+import OptionTotalsSummary from '../components/estadisticas/OptionTotalsSummary.tsx';
 
 const EstadisticasPage = () => (
   <section className="w-full max-w-7xl mx-auto px-6 md:px-10 xl:px-16 py-10 space-y-10">
@@ -14,10 +15,10 @@ const EstadisticasPage = () => (
         <Grafico />
       </div>
       <div className="flex flex-col gap-6">
-        <OptionTotals />
+        <OptionTotalsSummary />
       </div>
       <div className="xl:col-span-2">
-        <SectionBreakdown />
+        <SectionBreakdownTable />
       </div>
     </div>
   </section>
