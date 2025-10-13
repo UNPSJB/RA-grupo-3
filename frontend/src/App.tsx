@@ -5,11 +5,12 @@ import EncuestasPage from './pages/EncuestasPage.tsx';
 import EstadisticasPage from './pages/EstadisticasPage.tsx';
 import CuentaPage from './pages/CuentaPage.tsx';
 import logo from './img/Logo50Color_conletras.png';
-import CrearPregunta from './pages/CrearPregunta.tsx';
+
 import CrearEncuesta from './pages/CrearEncuesta.tsx';
 import Home from './pages/Home.tsx';
 import PanelAdmin from './pages/panelAdmin.tsx';
 import './Styles/Styles.css';
+
 
 const MainLayout: React.FC = () => (
   <div className="app">
@@ -35,7 +36,6 @@ const App: React.FC = () => {
           <Route index element={<EncuestasPage />} />
           <Route path="crear" element={<CrearEncuesta />} />
           <Route path="completar" element={<EncuestasPage />} />
-          <Route path="preguntas" element={<CrearPregunta />} />
         </Route>
         <Route path="estadisticas" element={<EstadisticasPage />} />
         <Route path="cuenta" element={<CuentaPage />} />

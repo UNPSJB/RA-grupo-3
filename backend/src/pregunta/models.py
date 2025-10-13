@@ -17,14 +17,16 @@ class Pregunta(ModeloBase):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     texto: Mapped[str] = mapped_column(String(500), nullable=False)
     tipo: Mapped[TipoPregunta] = mapped_column(Enum(TipoPregunta), nullable=False)
-    encuesta_id: Mapped[int] = mapped_column(ForeignKey("encuesta.id"))
+    #encuesta_id: Mapped[int] = mapped_column(ForeignKey("encuesta.id"))
+
+    # Relación con seccion
+    seccion_id: Mapped[int] = mapped_column(ForeignKey("secciones.id"), nullable=True)
+    seccion: Mapped[Optional["Seccion"]] = relationship("Seccion", back_populates="preguntas")
+    
     # Relaciones
     opciones: Mapped[Optional[List["Opcion"]]] = relationship(
         "Opcion", back_populates="pregunta", cascade="all, delete-orphan"
     )
-
-    encuesta: Mapped["Encuesta"] = relationship(
-        "Encuesta",back_populates="preguntas")
 
 class Opcion(ModeloBase):
     __tablename__ = "opciones"

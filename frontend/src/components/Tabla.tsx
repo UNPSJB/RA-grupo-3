@@ -2,7 +2,6 @@ import React from 'react';
 import "../Styles/Styles.css";
 import { useNavigate } from 'react-router-dom';
 
-
 export function Tabla() {
     // Datos de ejemplo
 

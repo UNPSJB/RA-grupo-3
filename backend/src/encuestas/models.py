@@ -8,7 +8,7 @@ from enum import Enum
 
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from src.pregunta.models import Pregunta
+    from src.seccion.models import Seccion
 
 class TipoCuatrimestre(str, Enum):
         PRIMERO = "primero"
@@ -49,5 +49,5 @@ class Encuesta(ModeloBase):
  
 # Faltaria la relación con las preguntas
 
-    preguntas: Mapped[list['Pregunta']] = relationship(
+    secciones: Mapped[list['Seccion']] = relationship(
         back_populates="encuesta", cascade="all, delete-orphan")

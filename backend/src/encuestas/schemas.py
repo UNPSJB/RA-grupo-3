@@ -4,7 +4,7 @@ from typing import Optional
 from pydantic import BaseModel, Field
 
 from src.encuestas.models import TipoCuatrimestre
-from src.pregunta.schemas import Pregunta
+from src.seccion.schemas import Seccion
 
 
 from typing import TYPE_CHECKING
@@ -42,4 +42,4 @@ class Encuesta(EncuestaBase):
 
 #para devolver la encuesta junto con sus preguntas
 class EncuestaConPreguntas(Encuesta):
-    preguntas: list[Pregunta] = []
+    secciones: list[Seccion] = []

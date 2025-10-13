@@ -12,3 +12,4 @@ def create_pregunta(pregunta: schemas.PreguntaCreate, db: Session = Depends(get_
     Crear una nueva pregunta con sus opciones (si es multiple choice)
     """
     return crear_pregunta(db, pregunta)
+

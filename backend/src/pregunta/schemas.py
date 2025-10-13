@@ -22,7 +22,7 @@ class PreguntaBase(BaseModel):
 
 
 class PreguntaCreate(PreguntaBase):
-    encuesta_id: int
+    seccion_id: int
     opciones: Optional[List[OpcionCreate]] = None
 
 
