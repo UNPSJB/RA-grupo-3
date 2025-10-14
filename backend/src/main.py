@@ -7,6 +7,9 @@ from src.models import ModeloBase
 
 from src.encuestas.router import router as encuestas_router
 from src.pregunta.router import router as pregunta_router
+from src.seccion.router import router as seccion_router
+from src.respuesta.router import router as respuesta_router 
+
 
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -21,8 +24,8 @@ async def db_creation_lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(root_path=ROOT_PATH, lifespan=db_creation_lifespan)
-
+#app = FastAPI(root_path=ROOT_PATH, lifespan=db_creation_lifespan)
+app = FastAPI(lifespan=db_creation_lifespan)  # Sin root_path
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173"], 
@@ -35,4 +38,7 @@ app.add_middleware(
 
 app.include_router(encuestas_router)
 app.include_router(pregunta_router)
+app.include_router(seccion_router)
+app.include_router(respuesta_router)
+
 

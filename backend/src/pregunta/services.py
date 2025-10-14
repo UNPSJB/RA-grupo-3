@@ -11,7 +11,7 @@ def crear_pregunta(db: Session, pregunta: schemas.PreguntaCreate) -> schemas.Pre
     _pregunta = Pregunta(
         texto=pregunta.texto,
         tipo=TipoPregunta(pregunta.tipo),
-        encuesta_id= pregunta.encuesta_id
+        seccion_id= pregunta.seccion_id
     )
 
     # Si es multiple choice, agregamos las opciones

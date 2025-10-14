@@ -1,7 +1,9 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
+from fastapi.encoders import jsonable_encoder
+from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from src.database import get_db
-from src.encuestas import schemas, services
+from src.encuestas import models, schemas, services
 
 router = APIRouter(prefix="/encuestas", tags=["encuestas"])
 
@@ -9,9 +11,44 @@ router = APIRouter(prefix="/encuestas", tags=["encuestas"])
 
 # Creación de una encuesta
 @router.post('/', response_model=schemas.Encuesta)
-def crear_encuesta(encuesta: schemas.EncuestaCreate, db: Session = Depends(get_db)):
+def crear_encuesta(
+    encuesta: schemas.EncuestaCreate, db: Session = Depends(get_db)
+):
     return services.crear_encuesta(db, encuesta)
 
-@router.get('/', response_model=list[schemas.Encuesta])
-def listar_encuestas(db: Session = Depends(get_db)):
-    return services.listar_encuestas(db)
+# Get de encuestas
+@router.get('/borradores', response_model=list[schemas.EncuestaConPreguntas])
+def listar_encuestas_borrador(db: Session = Depends(get_db)):
+    encuestas = services.listar_encuestas(db, models.EstadoEncuesta.BORRADOR)
+    return JSONResponse(content=jsonable_encoder(encuestas))
+
+@router.get('/publicadas', response_model=list[schemas.EncuestaConPreguntas])
+def listar_encuestas_publicadas(db: Session = Depends(get_db)):
+    encuestas = services.listar_encuestas(db, models.EstadoEncuesta.PUBLICADA)
+    return JSONResponse(content=jsonable_encoder(encuestas))
+
+
+@router.get("/{encuesta_id}",response_model=schemas.Encuesta)
+def leer_encuesta(
+    encuesta_id: int, db: Session = Depends(get_db)
+):
+    return services.obtener_encuesta_por_id(db,encuesta_id)
+
+@router.put("/{encuesta_id}", response_model=schemas.Encuesta)
+def modificar_encuesta(
+    encuesta_id: int, encuesta: schemas.EncuestaUpdate , db: Session = Depends(get_db)
+):
+    return services.modificar_encuesta(db, encuesta_id, encuesta)
+
+@router.patch("/{encuesta_id}/publicar", response_model=schemas.Encuesta)
+def publicar_encuesta(
+    encuesta_id: int, db: Session = Depends(get_db)
+):
+    
+    return services.actualizar_estado_encuesta(db, encuesta_id, models.EstadoEncuesta.PUBLICADA)
+
+
+@router.delete("/{encuesta_id}",response_model=schemas.Encuesta)
+def eliminar_encuesta(encuesta_id: int, db: Session = Depends(get_db)):
+    return services.eliminar_encuesta(db, encuesta_id)
+

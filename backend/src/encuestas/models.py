@@ -1,14 +1,16 @@
-"""from datetime import datetime
+from __future__ import annotations
+from datetime import datetime
 from sqlalchemy import Integer, String, DateTime, Boolean, CheckConstraint
 from sqlalchemy import Enum as SQLEnum
 from sqlalchemy.sql import func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from src.models import ModeloBase
+from enum import StrEnum
+from src.enumerados import TipoCuatrimestre, EstadoEncuesta
 
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from src.pregunta.models import Pregunta
-
+    from src.seccion.models import Seccion
 
 
 class Encuesta(ModeloBase):
@@ -40,35 +42,12 @@ class Encuesta(ModeloBase):
         DateTime(timezone=True), nullable=True) # es nulleable ya que no conocemos cuando va a cerrar la encuesta
     
 # para saber si esta completa la encuesta
-    esta_completa: Mapped[bool] = mapped_column(Boolean, default=False)
- 
-# Faltaria la relación con las preguntas
+    esta_completa:Mapped[Boolean] = mapped_column(Boolean, default = False)
 
-    preguntas: Mapped[list['Pregunta']] = relationship(
-        back_populates="encuesta", cascade="all, delete-orphan")
-"""
-from sqlalchemy import Integer, String
-from sqlalchemy.orm import Mapped, mapped_column, relationship
-from src.models import ModeloBase
-
-from typing import Optional, List
-
-from enum import Enum as PyEnum
-
-class Encuesta(ModeloBase):
-    __tablename__ = "encuestas"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
-    titulo: Mapped[str] = mapped_column(String, index=True)
-    descripcion: Mapped[str] = mapped_column(String, index=True)
-    anio_carrera: Mapped[str] = mapped_column(String, index=True)
-    cursada: Mapped[str] = mapped_column(String, index=True)
-    # Faltaria la relación con las preguntas
-    preguntas: Mapped[Optional[List["src.pregunta.models.Pregunta"]]] = relationship(
-        "src.pregunta.models.Pregunta", back_populates="encuesta"
+# estados de la encuesta
+    estado: Mapped[EstadoEncuesta] = mapped_column(
+          SQLEnum(EstadoEncuesta, name = "estado_encuesta_enum"), default=EstadoEncuesta.BORRADOR
     )
-
-class TipoCuatrimestre(str, PyEnum):
-    PRIMERO = "primero"
-    SEGUNDO = "segundo"
-    ANUAL = "anual"
+# Faltaria la relación con las preguntas
+    secciones: Mapped[list['Seccion']] = relationship(
+        back_populates="encuesta", cascade="all, delete-orphan")

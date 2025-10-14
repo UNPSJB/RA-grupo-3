@@ -64,6 +64,40 @@ button:disabled,
     position: relative;
 }
 
+.tabla-encuestas__filters {
+    width: min(92%, 900px);
+    margin: 1.5rem auto 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-family: inherit;
+    color: #0d47a1;
+}
+
+.tabla-encuestas__label {
+    font-weight: 600;
+    letter-spacing: 0.01em;
+}
+
+.tabla-encuestas__select {
+    min-width: 120px;
+    padding: 0.55rem 0.9rem;
+    border-radius: 8px;
+    border: 1px solid #c5d1ea;
+    background: #ffffff;
+    color: #0d47a1;
+    font-size: 0.95rem;
+    font-family: inherit;
+    box-shadow: 0 4px 10px rgba(13, 71, 161, 0.12);
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.tabla-encuestas__select:focus {
+    outline: none;
+    border-color: #1565c0;
+    box-shadow: 0 0 0 3px rgba(21, 101, 192, 0.2);
+}
+
 .tabla-encuestas {
     width: min(92%, 900px);
     margin: 2.5rem auto;
@@ -113,12 +147,44 @@ button:disabled,
     border-color: rgba(255, 255, 255, 0.6);
 }
 
-.tabla-encuestas__acciones button {
+.tabla-encuestas__acciones {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 0.5rem;
+}
+
+.tabla-encuestas__btn {
+    padding: 10px 18px;
+    font-size: 0.95rem;
+}
+
+.tabla-encuestas__btn--completar {
     background-color: #43a047;
 }
 
-.tabla-encuestas__acciones button:hover {
+.tabla-encuestas__btn--completar:hover,
+.tabla-encuestas__btn--completar:focus {
     background-color: #2e7d32;
+}
+
+.tabla-encuestas__btn--modificar {
+    background-color: #1976d2;
+}
+
+.tabla-encuestas__btn--modificar:hover,
+.tabla-encuestas__btn--modificar:focus {
+    background-color: #1565c0;
+}
+
+.tabla-encuestas__btn:disabled,
+.tabla-encuestas__btn:disabled:hover,
+.tabla-encuestas__btn:disabled:focus {
+    background-color: #bdbdbd;
+    color: #757575;
+    cursor: not-allowed;
+    box-shadow: none;
+    transform: none;
 }
 
 .tabla-alert {
@@ -182,9 +248,80 @@ button:disabled,
 }
 
 .app-main {
-    max-width: 960px;
-    margin: 0 auto;
+    max-width: none;
+    width: 100%;
+    margin: 0;
     padding: 2.5rem 1.5rem 3.5rem;
+}
+
+/* ---------- Panel de administración ---------- */
+
+.admin-panel {
+    padding: 2rem;
+    margin: 0 auto;
+    background: #ffffff;
+    border-radius: 16px;
+    box-shadow: 0 12px 30px rgba(13, 71, 161, 0.12);
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+.admin-panel__header {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.admin-panel__title {
+    font-size: clamp(2rem, 2.5vw + 1rem, 2.6rem);
+    font-weight: 700;
+    color: #0d47a1;
+    margin: 0;
+}
+
+.admin-panel__subtitle {
+    color: #546e7a;
+    font-size: 1rem;
+    line-height: 1.5;
+    margin: 0;
+}
+
+.admin-shortcuts {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.admin-shortcut {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    width: 100%;
+    padding: 1.25rem 1.5rem;
+    border: 1px solid rgba(13, 71, 161, 0.12);
+    border-radius: 14px;
+    background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+    box-shadow: 0 10px 18px rgba(25, 118, 210, 0.08);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.admin-shortcut:hover,
+.admin-shortcut:focus {
+    transform: translateY(-2px);
+    box-shadow: 0 18px 28px rgba(25, 118, 210, 0.18);
+}
+
+.admin-shortcut__label {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #0d47a1;
+}
+
+.admin-shortcut__description {
+    margin-top: 0.5rem;
+    font-size: 0.95rem;
+    color: #546e7a;
 }
 
 @media (max-width: 768px) {
