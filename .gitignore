@@ -191,5 +191,10 @@ sketch
 
 # End of https://www.toptal.com/developers/gitignore/api/python,react
 #-------------------------------------------------------------------------------------
-#Hasta aca lo de Fastapi
-requirements.txt
+# --- Bases de datos locales (no se versionan) ---
+*.sqlite
+*.sqlite3
+*.db
+
+# --- Archivos de configuración locales opcionales ---
+.env
