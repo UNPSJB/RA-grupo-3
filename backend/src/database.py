@@ -5,7 +5,10 @@ from sqlalchemy.orm import sessionmaker
 
 load_dotenv()
 
-engine = create_engine(os.getenv("DB_URL"), connect_args={"check_same_thread": False})
+DB_URL = os.getenv("DB_URL", "sqlite:///./data/app.db")
+connect_args = {"check_same_thread": False} if DB_URL.startswith("sqlite") else {}
+
+engine = create_engine(DB_URL, connect_args=connect_args)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 # Dependency

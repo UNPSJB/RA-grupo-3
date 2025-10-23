@@ -46,7 +46,10 @@ const App: React.FC = () => {
           />
           <Route path="crear" element={<CrearEncuesta />} />
         </Route>
-        <Route path="estadisticas" element={<EstadisticasPage />} />
+        <Route path="estadisticas" element={<Outlet />}>
+          <Route index element={<EstadisticasPage />} />
+          <Route path=":encuestaId" element={<EstadisticasPage />} />
+        </Route>
         <Route path="cuenta" element={<CuentaPage />} />
         <Route path="admin" element={<PanelAdmin />} />
       </Route>

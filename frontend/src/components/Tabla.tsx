@@ -210,7 +210,7 @@ export function Tabla({ tipo }: TablaProps) {
                       <button
                         className="tabla-encuestas__btn tabla-encuestas__btn--completar"
                         onClick={() =>
-                          navigate(`/encuestas/${item.id}/visualizacion`)
+                          navigate(`/estadisticas/${item.id}`)
                         }
                       >
                         Ver

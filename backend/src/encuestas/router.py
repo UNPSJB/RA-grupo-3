@@ -1,54 +1,74 @@
-from fastapi import APIRouter, Depends, HTTPException
-from fastapi.encoders import jsonable_encoder
-from fastapi.responses import JSONResponse
+from __future__ import annotations
+
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy.orm import Session
+
 from src.database import get_db
-from src.encuestas import models, schemas, services
+from src.encuestas import schemas, services
 
 router = APIRouter(prefix="/encuestas", tags=["encuestas"])
 
-# Rutas para encuestas
 
-# Creación de una encuesta
-@router.post('/', response_model=schemas.Encuesta)
+@router.post(
+    "/",
+    response_model=schemas.Encuesta,
+    status_code=status.HTTP_201_CREATED,
+)
 def crear_encuesta(
     encuesta: schemas.EncuestaCreate, db: Session = Depends(get_db)
 ):
     return services.crear_encuesta(db, encuesta)
 
-# Get de encuestas
-@router.get('/borradores', response_model=list[schemas.EncuestaConPreguntas])
-def listar_encuestas_borrador(db: Session = Depends(get_db)):
-    encuestas = services.listar_encuestas(db, models.EstadoEncuesta.BORRADOR)
-    return JSONResponse(content=jsonable_encoder(encuestas))
 
-@router.get('/publicadas', response_model=list[schemas.EncuestaConPreguntas])
-def listar_encuestas_publicadas(db: Session = Depends(get_db)):
-    encuestas = services.listar_encuestas(db, models.EstadoEncuesta.PUBLICADA)
-    return JSONResponse(content=jsonable_encoder(encuestas))
-
-
-@router.get("/{encuesta_id}",response_model=schemas.Encuesta)
-def leer_encuesta(
+@router.get(
+    "/{encuesta_id:int}",
+    response_model=schemas.EncuestaDetalle,
+    status_code=status.HTTP_200_OK,
+)
+def obtener_encuesta(
     encuesta_id: int, db: Session = Depends(get_db)
 ):
-    return services.obtener_encuesta_por_id(db,encuesta_id)
+    encuesta = services.obtener_encuesta(db, encuesta_id)
+    if encuesta is None:
+        raise HTTPException(status_code=404, detail="Encuesta no encontrada")
+    return encuesta
 
-@router.put("/{encuesta_id}", response_model=schemas.Encuesta)
-def modificar_encuesta(
-    encuesta_id: int, encuesta: schemas.EncuestaUpdate , db: Session = Depends(get_db)
-):
-    return services.modificar_encuesta(db, encuesta_id, encuesta)
 
-@router.patch("/{encuesta_id}/publicar", response_model=schemas.Encuesta)
+@router.get(
+    "/{estado}",
+    response_model=list[schemas.Encuesta],
+    status_code=status.HTTP_200_OK,
+)
+def listar_por_estado(estado: str, db: Session = Depends(get_db)):
+    try:
+        return services.listar_por_estado(db, estado)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.patch(
+    "/{encuesta_id:int}/publicar",
+    response_model=schemas.Encuesta,
+    status_code=status.HTTP_200_OK,
+)
 def publicar_encuesta(
     encuesta_id: int, db: Session = Depends(get_db)
 ):
-    
-    return services.actualizar_estado_encuesta(db, encuesta_id, models.EstadoEncuesta.PUBLICADA)
+    encuesta = services.publicar_encuesta(db, encuesta_id)
+    if encuesta is None:
+        raise HTTPException(status_code=404, detail="Encuesta no encontrada")
+    return encuesta
 
 
-@router.delete("/{encuesta_id}",response_model=schemas.Encuesta)
-def eliminar_encuesta(encuesta_id: int, db: Session = Depends(get_db)):
-    return services.eliminar_encuesta(db, encuesta_id)
-
+@router.delete(
+    "/{encuesta_id:int}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    response_class=Response,
+)
+def eliminar_encuesta(
+    encuesta_id: int, db: Session = Depends(get_db)
+) -> Response:
+    eliminada = services.eliminar_encuesta(db, encuesta_id)
+    if not eliminada:
+        raise HTTPException(status_code=404, detail="Encuesta no encontrada")
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

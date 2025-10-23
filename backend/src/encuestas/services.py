@@ -1,58 +1,88 @@
-from typing import List, Optional
-from sqlalchemy import delete, select, update
+from __future__ import annotations
+
+from typing import Iterable, List, Optional
+
+from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
+
+from src.encuestas import schemas
 from src.encuestas.models import Encuesta
-from src.encuestas import schemas,models
-from src.exceptions import NotFound
+from src.enumerados import EstadoEncuestaEnum
+from src.preguntas.models import Pregunta
+from src.secciones.models import Seccion
+
+_ESTADO_MAP = {
+    "borradores": EstadoEncuestaEnum.BORRADOR,
+    "borrador": EstadoEncuestaEnum.BORRADOR,
+    "publicadas": EstadoEncuestaEnum.PUBLICADA,
+    "publicada": EstadoEncuestaEnum.PUBLICADA,
+}
 
 
-def crear_encuesta(db: Session, encuesta: schemas.EncuestaCreate) -> schemas.Encuesta:
-    _encuesta = Encuesta(**encuesta.model_dump())
-    db.add(_encuesta)
+def _parse_estado(valor: str) -> EstadoEncuestaEnum:
+    try:
+        return _ESTADO_MAP[valor.lower()]
+    except KeyError as exc:  # pragma: no cover - Validado en router
+        raise ValueError(f"Estado inválido: {valor}") from exc
+
+
+def crear_encuesta(
+    db: Session, encuesta: schemas.EncuestaCreate
+) -> schemas.Encuesta:
+    datos = encuesta.model_dump(exclude_none=True)
+    nueva = Encuesta(**datos)
+    db.add(nueva)
     db.commit()
-    db.refresh(_encuesta)
-    return _encuesta
+    db.refresh(nueva)
+    return schemas.Encuesta.model_validate(nueva, from_attributes=True)
 
-def listar_encuestas(db: Session, state: schemas.EstadoEncuesta = None) -> List[Encuesta]:
+
+def listar_por_estado(db: Session, estado: str) -> List[schemas.Encuesta]:
+    estado_enum = _parse_estado(estado)
+    stmt = select(Encuesta).where(Encuesta.estado == estado_enum)
+    encuestas: Iterable[Encuesta] = db.execute(stmt).scalars().all()
+    return [
+        schemas.Encuesta.model_validate(item, from_attributes=True)
+        for item in encuestas
+    ]
+
+
+def obtener_encuesta(
+    db: Session, encuesta_id: int
+) -> Optional[schemas.EncuestaDetalle]:
     stmt = (
         select(Encuesta)
-        .options(selectinload(Encuesta.secciones))
-        .filter(Encuesta.estado == state.value) 
+        .options(
+            selectinload(Encuesta.secciones)
+            .selectinload(Seccion.preguntas)
+            .selectinload(Pregunta.opciones)
+        )
+        .where(Encuesta.id == encuesta_id)
     )
-    return db.execute(stmt).unique().scalars().all()
-
-def obtener_encuesta_por_id(db: Session, encuesta_id: int):
-    encuesta = db.query(Encuesta).options(selectinload(Encuesta.secciones)).filter(Encuesta.id == encuesta_id).first()
-    if not encuesta:
-        raise NotFound(detail= f"Encuesta con id {encuesta_id} no encontrada")
-    
-    return encuesta
-
-def modificar_encuesta(
-    db: Session, encuesta_id: int, encuesta: schemas.EncuestaUpdate
-) -> Encuesta:
-    db_encuesta = obtener_encuesta_por_id(db, encuesta_id)
-    db.execute(
-        update(Encuesta).where(Encuesta.id == encuesta_id).values(**encuesta.model_dump(exclude_unset=True))
+    encuesta = db.execute(stmt).scalar_one_or_none()
+    if encuesta is None:
+        return None
+    return schemas.EncuestaDetalle.model_validate(
+        encuesta, from_attributes=True
     )
-    #solo se puede modificar si esta en borrador
-    if db_encuesta.estado == "publicada":
-        raise ValueError("No se puede modificar una encuesta publicada")
-    
-    db.commit()
-    db.refresh(db_encuesta)
-    return db_encuesta
 
-def actualizar_estado_encuesta(db: Session, encuesta_id: int, nuevo_estado: models.EstadoEncuesta):
-    encuesta_db = obtener_encuesta_por_id(db, encuesta_id)
-    encuesta_db.estado = nuevo_estado.value 
-    db.add(encuesta_db) 
-    db.commit()
-    db.refresh(encuesta_db)
-    return encuesta_db
 
-def eliminar_encuesta(db: Session, encuesta_id: int)-> schemas.Encuesta:
-    db_encuesta = obtener_encuesta_por_id(db,encuesta_id)
-    db.execute(delete(Encuesta).where(Encuesta.id == encuesta_id))
+def publicar_encuesta(
+    db: Session, encuesta_id: int
+) -> Optional[schemas.Encuesta]:
+    encuesta = db.get(Encuesta, encuesta_id)
+    if encuesta is None:
+        return None
+    encuesta.estado = EstadoEncuestaEnum.PUBLICADA
     db.commit()
-    return db_encuesta
+    db.refresh(encuesta)
+    return schemas.Encuesta.model_validate(encuesta, from_attributes=True)
+
+
+def eliminar_encuesta(db: Session, encuesta_id: int) -> bool:
+    encuesta = db.get(Encuesta, encuesta_id)
+    if encuesta is None:
+        return False
+    db.delete(encuesta)
+    db.commit()
+    return True
