@@ -1,39 +1,45 @@
 from datetime import datetime
 from typing import Optional
-
 from pydantic import BaseModel, Field
-from src.pregunta.schemas import Pregunta
-from src.enumerados import TipoCuatrimestre, EstadoEncuesta
 
-from src.encuestas.models import TipoCuatrimestre
+from src.enumerados import EstadoInstancia, EstadoEncuesta
+
 from src.seccion.schemas import Seccion
 
+#plantilla
 
-class EncuestaBase(BaseModel):
+class EncuestaAlumnoPlantillaBase(BaseModel):
     titulo: str
     descripcion: str
-    anio_carrera: int
-    cursada: TipoCuatrimestre
-
-class EncuestaCreate(EncuestaBase):
+    
+class EncuestaAlumnoPlantillaCreate(EncuestaAlumnoPlantillaBase):
     estado: EstadoEncuesta = Field(default = EstadoEncuesta.BORRADOR)
 
-class Encuesta(EncuestaBase):
+class EncuestaAlumnoPlantilla(EncuestaAlumnoPlantillaBase):
     id: int
-    fecha_inicio: Optional[datetime] = None 
-    fecha_fin: Optional[datetime] = None    
-    estado: EstadoEncuesta                  
+    estado: EstadoEncuesta
+    secciones: list[Seccion] = [] # Cargar las secciones
+    
     model_config = {"from_attributes": True}
 
-class EncuestaUpdate(BaseModel):
+class EncuestaAlumnoPlantillaUpdate(BaseModel):
     titulo: Optional[str] = None
     descripcion: Optional[str] = None
-    anio_carrera: Optional[int] = None
-    cursada: Optional[TipoCuatrimestre] = None
-    fecha_inicio: Optional[datetime] = None
+
+#instancia
+
+class EncuestaInstanciaBase(BaseModel):
+    fecha_inicio: datetime
     fecha_fin: Optional[datetime] = None
+    estado: EstadoInstancia = Field(default = EstadoInstancia.PENDIENTE)
 
+class EncuestaInstanciaCreate(EncuestaInstanciaBase):
+    cursada_id: int
+    plantilla_id: int
 
-#para devolver la encuesta junto con sus preguntas
-class EncuestaConPreguntas(Encuesta):
-    secciones: list[Seccion] = []
+class EncuestaInstancia(EncuestaInstanciaBase):
+    id: int
+    cursada_id: int
+    plantilla_id: int
+    plantilla: EncuestaAlumnoPlantilla
+    model_config = {"from_attributes": True}

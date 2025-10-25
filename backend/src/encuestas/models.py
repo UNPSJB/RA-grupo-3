@@ -1,53 +1,62 @@
 from __future__ import annotations
 from datetime import datetime
-from sqlalchemy import Integer, String, DateTime, Boolean, CheckConstraint
+from typing import List
+from sqlalchemy import Integer, String, DateTime, Boolean, CheckConstraint,ForeignKey
 from sqlalchemy import Enum as SQLEnum
 from sqlalchemy.sql import func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from src.models import ModeloBase
-from enum import StrEnum
-from src.enumerados import TipoCuatrimestre, EstadoEncuesta
+from src.enumerados import EstadoEncuesta, EstadoInstancia
+from src.respuesta.models import RespuestaSet
 
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from src.seccion.models import Seccion
 
 
+#Hay que cambiar el nombre de la encuesta a: EncuestaAlumno, porque tenemos tres tipos de encuestas, para el proximo sprint
+#Tambien tenemos que tener un instrumento como clase principal y esta encuesta hereda de ahi 
 class Encuesta(ModeloBase):
     __tablename__ = "encuesta" #cambio de nombre a encuesta singular por un tema de buenas practicas
-
-
-# filtro para saber en que año de la carrera pertenece la encuesta
-# restringido a poner entre 1 y 6 años (osea primero a sexto por las dudas)
-    __table_args__ = (
-        CheckConstraint("anio_carrera BETWEEN 1 AND 6", name="ck_encuesta_anio_carrera"),
-        )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     titulo: Mapped[str] = mapped_column(String, index=True)
     descripcion: Mapped[str] = mapped_column(String, index=True)
 
-# año para filtrar por que año de la carrera corresponde la encuesta
-    anio_carrera: Mapped[int] = mapped_column(Integer, nullable=True)
-
-# para filtrar por cuatrimestre
-    cursada: Mapped[TipoCuatrimestre] = mapped_column(
-        SQLEnum(TipoCuatrimestre, name="cuatrimestre_enum"), nullable=True
+    # estados de la encuesta
+    estado: Mapped[EstadoEncuesta] = mapped_column(
+          SQLEnum(EstadoEncuesta, name = "estado_encuesta_enum"), default=EstadoEncuesta.BORRADOR
     )
 
-# fecha de inicio y de fin para cuando se pone activa la encuesta o se cierra
+    secciones: Mapped[List["Seccion"]] = relationship(
+        back_populates="encuesta", cascade="all, delete-orphan")
+
+    instancias: Mapped[List["EncuestaInstancia"]] = relationship(
+        back_populates="plantilla"
+    )
+
+
+class EncuestaInstancia(ModeloBase):
+    __tablename__ = "encuesta_instancia"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+
+    # fecha de inicio y de fin para cuando se pone activa la encuesta o se cierra
     fecha_inicio: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=func.now()) # esto deja la fecha de creacion automaticamente.
     fecha_fin: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True) # es nulleable ya que no conocemos cuando va a cerrar la encuesta
-    
-# para saber si esta completa la encuesta
-    esta_completa:Mapped[Boolean] = mapped_column(Boolean, default = False)
 
-# estados de la encuesta
-    estado: Mapped[EstadoEncuesta] = mapped_column(
-          SQLEnum(EstadoEncuesta, name = "estado_encuesta_enum"), default=EstadoEncuesta.BORRADOR
+    estado: Mapped[EstadoInstancia] = mapped_column(
+        SQLEnum(EstadoInstancia, name="estado_instancia_enum"), default=EstadoInstancia.PENDIENTE
     )
-# Faltaria la relación con las preguntas
-    secciones: Mapped[list['Seccion']] = relationship(
-        back_populates="encuesta", cascade="all, delete-orphan")
+
+    cursada_id: Mapped[int] = mapped_column(ForeignKey("cursada.id"), unique=True, nullable=False)
+    cursada: Mapped["Cursada"] = relationship(back_populates="encuesta_instancia")
+
+    plantilla_id: Mapped[int] = mapped_column(ForeignKey("encuesta.id"), nullable=False)
+    plantilla: Mapped["Encuesta"] = relationship(back_populates="instancias")
+
+    respuesta_sets: Mapped[List["RespuestaSet"]] = relationship(
+        "RespuestaSet", back_populates="encuesta_instancia", cascade="all, delete-orphan"
+    )

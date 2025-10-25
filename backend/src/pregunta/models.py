@@ -1,15 +1,17 @@
-# src/Pregunta/models.py
 from __future__ import annotations
 from typing import List, Optional
-from sqlalchemy import Integer, String, Enum, ForeignKey, Text
+
+from src.seccion.models import Seccion
+from sqlalchemy import Integer, String, Enum, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from src.models import ModeloBase
 import enum
-from src.encuestas.models import Encuesta
 
-class TipoPregunta(enum.Enum):
-    MULTIPLE_CHOICE = "MULTIPLE_CHOICE"
+
+class TipoPregunta(enum.StrEnum):
     REDACCION = "REDACCION"
+    MULTIPLE_CHOICE = "MULTIPLE_CHOICE"
+
 
 
 class Pregunta(ModeloBase):
@@ -17,30 +19,59 @@ class Pregunta(ModeloBase):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     texto: Mapped[str] = mapped_column(String(500), nullable=False)
-    tipo: Mapped[TipoPregunta] = mapped_column(Enum(TipoPregunta), nullable=False)
-    #encuesta_id: Mapped[int] = mapped_column(ForeignKey("encuesta.id"))
 
     # Relación con seccion
     seccion_id: Mapped[int] = mapped_column(ForeignKey("secciones.id"), nullable=True)
     seccion: Mapped[Optional["Seccion"]] = relationship("Seccion", back_populates="preguntas")
-    
-    # Relaciones
-    opciones: Mapped[List["Opcion"]] = relationship(
-        "Opcion", back_populates="pregunta", cascade="all, delete-orphan"
-    )
 
-    respuestas: Mapped["Respuesta"] = relationship(
+    tipo: Mapped[TipoPregunta] = mapped_column(
+        Enum(TipoPregunta), nullable=False
+    )
+    respuestas: Mapped[List["Respuesta"]] = relationship(
         "Respuesta", back_populates="pregunta"
     )
+    __mapper_args__ = {
+        "polymorphic_on": "tipo", # Le dice que use la columna 'tipo'
+    }
+
+class PreguntaRedaccion(Pregunta):
+    __tablename__= "pregunta_redaccion"
+    id: Mapped[int] = mapped_column(ForeignKey("preguntas.id"), primary_key=True)
+    __mapper_args__ = {
+        "polymorphic_identity": TipoPregunta.REDACCION,
+    }
+
+
+class PreguntaMultipleChoice(Pregunta):
+    __tablename__ = "pregunta_multiple_choice"
+    
+    id: Mapped[int] = mapped_column(ForeignKey("preguntas.id"), primary_key=True)
+    
+    opciones: Mapped[List["Opcion"]] = relationship(
+        "Opcion", 
+        back_populates="pregunta",
+        cascade="all, delete-orphan"
+    )
+
+    __mapper_args__ = {
+        "polymorphic_identity": TipoPregunta.MULTIPLE_CHOICE,
+    }
+
 
 class Opcion(ModeloBase):
     __tablename__ = "opciones"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     texto: Mapped[str] = mapped_column(String(255), nullable=False)
-    pregunta_id: Mapped[int] = mapped_column(ForeignKey("preguntas.id"), nullable=False)
+    pregunta_id: Mapped[int] = mapped_column(
+        ForeignKey("pregunta_multiple_choice.id"), nullable=False
+    )
+
+    pregunta: Mapped["PreguntaMultipleChoice"] = relationship(
+        "PreguntaMultipleChoice", 
+        back_populates="opciones"
+    )
     
-    pregunta: Mapped["Pregunta"] = relationship("Pregunta", back_populates="opciones")
-    respuestas: Mapped[List["Respuesta"]] = relationship(
-        "Respuesta", back_populates="opcion"
+    respuestas: Mapped[List["RespuestaMultipleChoice"]] = relationship(
+        "RespuestaMultipleChoice", back_populates="opcion"
     )

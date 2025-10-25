@@ -5,7 +5,7 @@ type IconsProps = {
 };
 
 export const ProfileIcon: React.FC<IconsProps> = ({
-  className = "w-[29px] h-[29px] text-gray-800 dark:text-white",
+  className = "w-6 h-6 text-gray-800 dark:text-white",
 }) => (
   <svg
     className={className}
@@ -13,13 +13,13 @@ export const ProfileIcon: React.FC<IconsProps> = ({
     xmlns="http://www.w3.org/2000/svg"
     width="24"
     height="24"
-    fill="currentColor"
+    fill="none"
     viewBox="0 0 24 24"
   >
     <path
-      fill-rule="evenodd"
-      d="M12 4a4 4 0 1 0 0 8 4 4 0 0 0 0-8Zm-2 9a4 4 0 0 0-4 4v1a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2v-1a4 4 0 0 0-4-4h-4Z"
-      clip-rule="evenodd"
+      stroke="currentColor"
+      stroke-width="2"
+      d="M7 17v1a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1v-1a3 3 0 0 0-3-3h-4a3 3 0 0 0-3 3Zm8-9a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
     />
   </svg>
 );

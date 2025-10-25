@@ -29,13 +29,14 @@ const PanelAdmin: React.FC = () => {
 
       <div className="admin-shortcuts">
         {shortcuts.map(({ label, path }) => (
-            <button
-                key={path}
-                type="button"
-                onClick={() => navigate(path)}
-                className="admin-shortcut">
-                <span className="admin-shortcut__label">{label}</span>
-            </button>
+          <button
+            key={path}
+            type="button"
+            onClick={() => navigate(path)}
+            className="admin-shortcut"
+          >
+            <span className="admin-shortcut__label">{label}</span>
+          </button>
         ))}
       </div>
     </section>
