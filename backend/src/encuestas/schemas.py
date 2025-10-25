@@ -7,6 +7,7 @@ from src.enumerados import TipoCuatrimestre, EstadoEncuesta
 
 from src.encuestas.models import TipoCuatrimestre
 from src.seccion.schemas import Seccion
+from src.pregunta.schemas import Pregunta
 
 
 class EncuestaBase(BaseModel):
@@ -34,6 +35,7 @@ class EncuestaUpdate(BaseModel):
     fecha_fin: Optional[datetime] = None
 
 
-#para devolver la encuesta junto con sus preguntas
+#para devolver la encuesta junto con sus secciones y preguntas
 class EncuestaConPreguntas(Encuesta):
     secciones: list[Seccion] = []
+

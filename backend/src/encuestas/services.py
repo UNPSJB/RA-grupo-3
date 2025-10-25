@@ -1,7 +1,8 @@
 from typing import List, Optional
 from sqlalchemy import delete, select, update
-from sqlalchemy.orm import Session, selectinload
+from sqlalchemy.orm import Session, selectinload, joinedload
 from src.encuestas.models import Encuesta
+from src.seccion.models import Seccion
 from src.encuestas import schemas,models
 from src.exceptions import NotFound
 
@@ -20,6 +21,17 @@ def listar_encuestas(db: Session, state: schemas.EstadoEncuesta = None) -> List[
         .filter(Encuesta.estado == state.value) 
     )
     return db.execute(stmt).unique().scalars().all()
+
+# Devuelve la encuesta con secciones y preguntas
+def get_encuesta_completa(db: Session, encuesta_id: int):
+    encuesta = db.query(Encuesta)\
+        .options(
+            joinedload(Encuesta.secciones).joinedload(Seccion.preguntas)
+        )\
+        .filter(Encuesta.id == encuesta_id)\
+        .first()
+    
+    return encuesta
 
 def obtener_encuesta_por_id(db: Session, encuesta_id: int):
     encuesta = db.query(Encuesta).options(selectinload(Encuesta.secciones)).filter(Encuesta.id == encuesta_id).first()

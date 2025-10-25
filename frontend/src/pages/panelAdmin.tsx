@@ -11,10 +11,9 @@ type Shortcut = {
 const shortcuts: Shortcut[] = [
   { label: "Inicio", path: "/" },
   { label: "Listado de encuestas", path: "/encuestas" },
-  { label: "Crear encuesta", path: "/encuestas/crear" },
+  { label: "Crear encuesta", path: "/encuestas/crearEncuesta" },
   { label: "Completar encuesta", path: "/encuestas/completar" },
   { label: "Estadísticas", path: "/estadisticas" },
-  { label: "Crear seccion", path: "/secciones" },
   { label: "Cuenta", path: "/cuenta" },
 ];
 
