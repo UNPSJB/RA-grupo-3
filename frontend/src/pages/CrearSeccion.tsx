@@ -24,7 +24,7 @@ function CrearSeccion({ encuestaId }: CrearSeccionProps) {
     try {
       const seccionData = {
         nombre: nombre,
-        encuesta_id: encuestaId
+        encuesta_id: encuestaId,
       };
 
       const respuesta = await fetch("http://127.0.0.1:8000/secciones/", {
@@ -44,13 +44,12 @@ function CrearSeccion({ encuestaId }: CrearSeccionProps) {
       setSeccionCreada(data.id);
       setNombre("");
     } catch (error) {
-      console.error(error); 
+      console.error(error);
       setMensaje("Error al crear la sección");
     } finally {
       setCargando(false);
     }
   };
-
 
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     setNombre(e.target.value);
@@ -69,7 +68,9 @@ function CrearSeccion({ encuestaId }: CrearSeccionProps) {
         padding: "20px",
       }}
     >
-      <h2 style={{ textAlign: "center", marginBottom: "20px" }}>Crear Sección</h2>
+      <h2 style={{ textAlign: "center", marginBottom: "20px" }}>
+        Crear Sección
+      </h2>
 
       {mensaje && (
         <div
@@ -80,7 +81,9 @@ function CrearSeccion({ encuestaId }: CrearSeccionProps) {
             textAlign: "center",
             backgroundColor: mensaje.includes("Error") ? "#f8d7da" : "#d1edff",
             color: mensaje.includes("Error") ? "#721c24" : "#155724",
-            border: `1px solid ${mensaje.includes("Error") ? "#f5c6cb" : "#c3e6cb"}`
+            border: `1px solid ${
+              mensaje.includes("Error") ? "#f5c6cb" : "#c3e6cb"
+            }`,
           }}
         >
           {mensaje}
@@ -95,7 +98,7 @@ function CrearSeccion({ encuestaId }: CrearSeccionProps) {
               padding: "20px",
               borderRadius: "10px",
               border: "1px solid #ccc",
-              marginBottom: "20px"
+              marginBottom: "20px",
             }}
           >
             <h3 style={{ color: "green", marginBottom: "10px" }}>
@@ -113,7 +116,7 @@ function CrearSeccion({ encuestaId }: CrearSeccionProps) {
                 border: "none",
                 borderRadius: "5px",
                 cursor: "pointer",
-                marginRight: "10px"
+                marginRight: "10px",
               }}
             >
               Crear Otra Sección
@@ -121,10 +124,7 @@ function CrearSeccion({ encuestaId }: CrearSeccionProps) {
           </div>
 
           {/* Componente CrearPregunta */}
-          <CrearPregunta 
-            seccionId={seccionCreada} 
-            seccionNombre={nombre}
-          />
+          <CrearPregunta seccionId={seccionCreada} seccionNombre={nombre} />
         </div>
       ) : (
         <div
@@ -179,4 +179,3 @@ function CrearSeccion({ encuestaId }: CrearSeccionProps) {
 }
 
 export default CrearSeccion;
-

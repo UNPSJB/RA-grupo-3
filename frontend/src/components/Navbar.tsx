@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "./Button";
 import "../Styles/Styles.css";
 import { ProfileIcon, ChartLineIcon, ClipboardListIcon } from "./icons";
+
 export const Navbar: React.FC = () => {
   const navigate = useNavigate();
   return (
@@ -10,6 +11,13 @@ export const Navbar: React.FC = () => {
       <div className="flex items-center gap-2">
         {" "}
         {/* Contenedor para los botones */}
+        <Button
+          variant="ghost"
+          className="navbar__button"
+          onClick={() => navigate("/admin")}
+        >
+          Administrador
+        </Button>
         <Button
           variant="ghost"
           className="navbar__button"

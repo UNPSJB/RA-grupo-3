@@ -1,25 +1,20 @@
-from typing import List, Optional
+from typing import List
 from sqlalchemy import delete, select, update
-from sqlalchemy.orm import Session, selectinload, joinedload
-from src.encuestas.models import Encuesta
-from src.seccion.models import Seccion
-from src.encuestas import schemas,models
+from sqlalchemy.orm import Session, selectinload
+from src.encuestas import models, schemas
 from src.exceptions import NotFound
 
-
-def crear_encuesta(db: Session, encuesta: schemas.EncuestaCreate) -> schemas.Encuesta:
-    _encuesta = Encuesta(**encuesta.model_dump())
-    db.add(_encuesta)
+def crear_plantilla_encuesta(db: Session, plantilla_data: schemas.EncuestaAlumnoPlantillaCreate) -> models.Encuesta:
+    _plantilla = models.Encuesta(**plantilla_data.model_dump())
+    db.add(_plantilla)
     db.commit()
-    db.refresh(_encuesta)
-    return _encuesta
+    db.refresh(_plantilla)
+    return _plantilla
 
-def listar_encuestas(db: Session, state: schemas.EstadoEncuesta = None) -> List[Encuesta]:
-    stmt = (
-        select(Encuesta)
-        .options(selectinload(Encuesta.secciones))
-        .filter(Encuesta.estado == state.value) 
-    )
+def listar_plantillas(db: Session, state: models.EstadoEncuesta = None) -> List[models.Encuesta]:
+    stmt = select(models.Encuesta).options(selectinload(models.Encuesta.secciones))
+    if state:
+        stmt = stmt.filter(models.Encuesta.estado == state)
     return db.execute(stmt).unique().scalars().all()
 
 # Devuelve la encuesta con secciones y preguntas
@@ -33,38 +28,72 @@ def get_encuesta_completa(db: Session, encuesta_id: int):
     
     return encuesta
 
-def obtener_encuesta_por_id(db: Session, encuesta_id: int):
-    encuesta = db.query(Encuesta).options(selectinload(Encuesta.secciones)).filter(Encuesta.id == encuesta_id).first()
-    if not encuesta:
-        raise NotFound(detail= f"Encuesta con id {encuesta_id} no encontrada")
-    
-    return encuesta
+def obtener_plantilla_por_id(db: Session, plantilla_id: int) -> models.Encuesta:
+    plantilla = db.query(models.Encuesta).options(selectinload(models.Encuesta.secciones)).filter(models.Encuesta.id == plantilla_id).first()
+    if not plantilla:
+        raise NotFound(detail= f"Plantilla de Encuesta con id {plantilla_id} no encontrada")
+    return plantilla
 
-def modificar_encuesta(
-    db: Session, encuesta_id: int, encuesta: schemas.EncuestaUpdate
-) -> Encuesta:
-    db_encuesta = obtener_encuesta_por_id(db, encuesta_id)
-    db.execute(
-        update(Encuesta).where(Encuesta.id == encuesta_id).values(**encuesta.model_dump(exclude_unset=True))
+def modificar_plantilla(
+    db: Session, plantilla_id: int, plantilla_data: schemas.EncuestaAlumnoPlantillaUpdate
+) -> models.Encuesta:
+    db_plantilla = obtener_plantilla_por_id(db, plantilla_id)
+    if db_plantilla.estado == models.EstadoEncuesta.PUBLICADA:
+        raise ValueError("No se puede modificar una plantilla de encuesta publicada")
+
+    update_data = plantilla_data.model_dump(exclude_unset=True)
+    if update_data:
+        db.execute(
+            update(models.Encuesta).where(models.Encuesta.id == plantilla_id).values(**update_data)
+        )
+        db.commit()
+        db.refresh(db_plantilla)
+    return db_plantilla
+
+def actualizar_estado_plantilla(db: Session, plantilla_id: int, nuevo_estado: models.EstadoEncuesta) -> models.Encuesta:
+    plantilla_db = obtener_plantilla_por_id(db, plantilla_id)
+    plantilla_db.estado = nuevo_estado
+    db.add(plantilla_db)
+    db.commit()
+    db.refresh(plantilla_db)
+    return plantilla_db
+
+def eliminar_plantilla(db: Session, plantilla_id: int) -> models.Encuesta:
+    db_plantilla = obtener_plantilla_por_id(db, plantilla_id)
+    db.execute(delete(models.Encuesta).where(models.Encuesta.id == plantilla_id))
+    db.commit()
+    return db_plantilla
+
+#EncuestaInstancia
+
+def activar_encuesta_para_cursada(
+    db: Session, 
+    data: schemas.EncuestaInstanciaCreate
+) -> models.EncuestaInstancia:
+    # 1. Verificamos que la cursada exista.
+    # 2. Verificamos que la plantilla exista y esté "publicada".
+    # 3. Creamos el objeto EncuestaInstancia con los datos.
+    # ...
+    _instancia = models.EncuestaInstancia(**data.model_dump())
+    db.add(_instancia)
+    db.commit()
+    db.refresh(_instancia)
+    return _instancia
+
+def obtener_instancia_activa_por_cursada(
+    db: Session, 
+    cursada_id: int
+) -> models.EncuestaInstancia:
+    """
+    El servicio que usa el Alumno para ver su encuesta.
+    Busca la instancia que esté "ACTIVA" para esa cursada_id.
+    """
+    stmt = select(models.EncuestaInstancia).where(
+        models.EncuestaInstancia.cursada_id == cursada_id,
+        models.EncuestaInstancia.estado == models.EstadoInstancia.ACTIVA
     )
-    #solo se puede modificar si esta en borrador
-    if db_encuesta.estado == "publicada":
-        raise ValueError("No se puede modificar una encuesta publicada")
-    
-    db.commit()
-    db.refresh(db_encuesta)
-    return db_encuesta
+    instancia = db.execute(stmt).scalar_one_or_none()
+    if not instancia:
+        raise NotFound(detail="No hay encuesta activa para esta cursada.")
+    return instancia
 
-def actualizar_estado_encuesta(db: Session, encuesta_id: int, nuevo_estado: models.EstadoEncuesta):
-    encuesta_db = obtener_encuesta_por_id(db, encuesta_id)
-    encuesta_db.estado = nuevo_estado.value 
-    db.add(encuesta_db) 
-    db.commit()
-    db.refresh(encuesta_db)
-    return encuesta_db
-
-def eliminar_encuesta(db: Session, encuesta_id: int)-> schemas.Encuesta:
-    db_encuesta = obtener_encuesta_por_id(db,encuesta_id)
-    db.execute(delete(Encuesta).where(Encuesta.id == encuesta_id))
-    db.commit()
-    return db_encuesta

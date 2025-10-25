@@ -1,4 +1,7 @@
+<<<<<<< HEAD
 
+=======
+>>>>>>> main
 import React, { useState, useEffect } from "react";
 
 interface CrearPreguntaProps {
@@ -6,19 +9,16 @@ interface CrearPreguntaProps {
   seccionNombre: string;
 }
 
-const CrearPregunta: React.FC<CrearPreguntaProps> = ({ 
-  seccionId, 
-  seccionNombre 
+const CrearPregunta: React.FC<CrearPreguntaProps> = ({
+  seccionId,
+  seccionNombre,
 }) => {
-  
-
   const [texto, setTexto] = useState<string>("");
   const [tipo, setTipo] = useState<string>("MULTIPLE_CHOICE");
   const [opciones, setOpciones] = useState<string[]>(["", ""]);
   const [loading, setLoading] = useState<boolean>(false);
   const [message, setMessage] = useState<string>("");
   const [preguntasCreadas, setPreguntasCreadas] = useState<number>(0);
-
 
   const handleAgregarOpcion = () => {
     setOpciones([...opciones, ""]);
@@ -100,9 +100,7 @@ const CrearPregunta: React.FC<CrearPreguntaProps> = ({
             <p className="text-sm text-blue-600 font-medium">
               Para la sección:
             </p>
-            <h3 className="text-lg font-bold text-blue-900">
-              {seccionNombre}
-            </h3>
+            <h3 className="text-lg font-bold text-blue-900">{seccionNombre}</h3>
             {preguntasCreadas > 0 && (
               <p className="text-sm text-green-700 mt-2 font-medium">
                 ✓ {preguntasCreadas} pregunta{preguntasCreadas !== 1 ? "s" : ""}{" "}
