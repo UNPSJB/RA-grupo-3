@@ -52,7 +52,7 @@ const App: React.FC = () => {
         <Route path="cuenta" element={<CuentaPage />} />
         <Route path="admin" element={<PanelAdmin />} />
         <Route path="encuestas/completar" element={<VerEncuesta />} />
-        <Route path="encuestas/:id/completa" element={<ResponderEncuesta />} />  
+        <Route path="encuestas/:id/completa" element={<ResponderEncuesta />} />
       </Route>
     </Routes>
   );

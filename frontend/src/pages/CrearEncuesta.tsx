@@ -71,6 +71,11 @@ const CrearEncuesta: React.FC = () => {
     setMensaje("");
   };
 
+<<<<<<< HEAD
+=======
+
+
+>>>>>>> origin/main
   return (
     <div className="p-6 max-w-2xl mx-auto">
       <h2 className="text-2xl font-bold mb-6 text-gray-800">
