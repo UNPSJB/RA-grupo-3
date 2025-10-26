@@ -1,7 +1,3 @@
-<<<<<<< HEAD
-
-=======
->>>>>>> main
 import React, { useState, useEffect } from "react";
 
 interface CrearPreguntaProps {
@@ -230,7 +226,6 @@ const CrearPregunta: React.FC<CrearPreguntaProps> = ({
           )}
         </div>
       </form>
-
     </div>
   );
 };

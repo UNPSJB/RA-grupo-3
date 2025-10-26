@@ -1,25 +1,43 @@
-from src.pregunta import schemas
-from src.pregunta.models import Pregunta, Opcion
-from src.pregunta.exceptions import PreguntaNoEncontrada
 from sqlalchemy.orm import Session
-from src.pregunta.models import TipoPregunta
+from src.pregunta import models, schemas
+from src.exceptions import NotFound 
 
 
-# Crear pregunta
-def crear_pregunta(db: Session, pregunta: schemas.PreguntaCreate) -> schemas.Pregunta:
-    # Creamos el objeto Pregunta
-    _pregunta = Pregunta(
-        texto=pregunta.texto,
-        tipo=TipoPregunta(pregunta.tipo),
-        seccion_id= pregunta.seccion_id
-    )
+def crear_pregunta(db: Session, pregunta_data: schemas.PreguntaCreate) -> models.Pregunta: # Devuelve el modelo base
 
-    # Si es multiple choice, agregamos las opciones
-    if pregunta.opciones:
-        _pregunta.opciones = [Opcion(texto=o.texto) for o in pregunta.opciones]
+    if pregunta_data.seccion_id:
+        seccion = db.get(models.Seccion, pregunta_data.seccion_id) # Asume que Seccion está en models
+        if not seccion:
+            raise NotFound(f"Sección con id {pregunta_data.seccion_id} no encontrada.")
 
-    db.add(_pregunta)
+    if pregunta_data.tipo == models.TipoPregunta.REDACCION:
+
+        if pregunta_data.opciones:
+             raise ValueError("Las preguntas de redacción no deben tener opciones.")
+
+        nueva_pregunta = models.PreguntaRedaccion(
+            texto=pregunta_data.texto,
+            tipo=pregunta_data.tipo, 
+            seccion_id=pregunta_data.seccion_id
+        )
+    elif pregunta_data.tipo == models.TipoPregunta.MULTIPLE_CHOICE:
+        if not pregunta_data.opciones or len(pregunta_data.opciones) < 2:
+            raise ValueError("Las preguntas Multiple Choice deben tener al menos 2 opciones.")
+        nueva_pregunta = models.PreguntaMultipleChoice(
+            texto=pregunta_data.texto,
+            tipo=pregunta_data.tipo,
+            seccion_id=pregunta_data.seccion_id
+        )
+        opciones_obj = [models.Opcion(texto=o.texto) for o in pregunta_data.opciones if o.texto.strip()]
+        if len(opciones_obj) < 2:
+             raise ValueError("Las preguntas Multiple Choice deben tener al menos 2 opciones con texto.")
+        nueva_pregunta.opciones = opciones_obj
+
+    else:
+        raise ValueError(f"Tipo de pregunta no válido: {pregunta_data.tipo}")
+
+    db.add(nueva_pregunta)
     db.commit()
-    db.refresh(_pregunta)
-    return _pregunta
 
+    db.refresh(nueva_pregunta)
+    return nueva_pregunta

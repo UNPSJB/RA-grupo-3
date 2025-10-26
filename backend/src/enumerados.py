@@ -19,3 +19,8 @@ class EstadoEncuesta(StrEnum):
 class TipoPersona(StrEnum):
     ALUMNO = "ALUMNO"
     DOCENTE = "DOCENTE"
+
+class TipoPregunta(StrEnum):
+    REDACCION = "REDACCION"
+    MULTIPLE_CHOICE = "MULTIPLE_CHOICE"
+

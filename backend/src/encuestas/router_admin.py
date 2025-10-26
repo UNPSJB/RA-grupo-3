@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from src.database import get_db
 from src.encuestas import models, schemas, services
 
-from src.exceptions import NotFound
+from src.exceptions import NotFound,BadRequest
 
 router = APIRouter(prefix="/admin/plantillas-encuesta", tags=["Admin Encuestas - Plantillas"])
 
@@ -66,3 +66,28 @@ def eliminar_plantilla(plantilla_id: int, db: Session = Depends(get_db)):
         return services.eliminar_plantilla(db, plantilla_id) 
     except NotFound as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    
+router_gestion = APIRouter(prefix="/admin/gestion-encuestas", tags=["Admin Encuestas - Instancias"])
+
+@router_gestion.post(
+    "/activar",
+    response_model=schemas.EncuestaInstancia,
+    status_code=status.HTTP_201_CREATED     
+)
+def activar_encuesta_cursada(
+    data: schemas.EncuestaInstanciaCreate,
+    db: Session = Depends(get_db)
+):
+    try:
+        nueva_instancia = services.activar_encuesta_para_cursada(db, data=data)
+        return nueva_instancia
+    except NotFound as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except BadRequest as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except Exception as e:
+        print(f"Error inesperado al activar encuesta: {e}") 
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Ocurrió un error interno al activar la encuesta."
+        )

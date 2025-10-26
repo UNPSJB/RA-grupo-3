@@ -10,13 +10,12 @@ type Shortcut = {
 
 const shortcuts: Shortcut[] = [
   { label: "Inicio", path: "/" },
-  { label: "Listado de encuestas", path: "/encuestas" },
-  { label: "Crear encuesta", path: "/encuestas/crearEncuesta" },
-  { label: "Completar encuesta", path: "/encuestas/completar" },
+  { label: "Listado de Plantillas", path: "/admin/plantillas" },
+  { label: "Crear Plantilla", path: "/admin/plantillas/crear" },
   { label: "Estadísticas", path: "/estadisticas" },
   { label: "Cuenta", path: "/cuenta" },
+  { label: "Crear materia", path: "/admin/materias/crear" },
 ];
-
 const PanelAdmin: React.FC = () => {
   const navigate = useNavigate();
 

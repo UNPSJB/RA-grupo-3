@@ -10,7 +10,6 @@ export const Navbar: React.FC = () => {
     <nav className="navbar">
       <div className="flex items-center gap-2">
         {" "}
-        {/* Contenedor para los botones */}
         <Button
           variant="ghost"
           className="navbar__button"
@@ -21,9 +20,9 @@ export const Navbar: React.FC = () => {
         <Button
           variant="ghost"
           className="navbar__button"
-          onClick={() => navigate("/encuestas")}
+          onClick={() => navigate("/encuestas-activas")}
         >
-          <ClipboardListIcon></ClipboardListIcon>
+          <ClipboardListIcon />
           Encuestas
         </Button>
         <Button
@@ -31,18 +30,20 @@ export const Navbar: React.FC = () => {
           className="navbar__button"
           onClick={() => navigate("/estadisticas")}
         >
-          <ChartLineIcon></ChartLineIcon>
-          Estadisticas
+          <ChartLineIcon />
+          Estadísticas
         </Button>
         <Button
           variant="ghost"
           className="navbar__button"
           onClick={() => navigate("/cuenta")}
         >
-          <ProfileIcon></ProfileIcon>
+          <ProfileIcon />
           Cuenta
         </Button>
       </div>
     </nav>
   );
 };
+
+export default Navbar;

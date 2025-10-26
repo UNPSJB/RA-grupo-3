@@ -144,8 +144,6 @@ function CrearSeccion({ encuestaId }: CrearSeccionProps) {
               value={nombre}
               onChange={handleChange}
               placeholder="Ej: Preguntas generales"
-              minLength={5}
-              maxLength={100}
               required
               style={{
                 width: "100%",

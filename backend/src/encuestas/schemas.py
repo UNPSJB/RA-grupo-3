@@ -27,6 +27,13 @@ class EncuestaAlumnoPlantillaUpdate(BaseModel):
     titulo: Optional[str] = None
     descripcion: Optional[str] = None
 
+class PlantillaInfo(BaseModel):
+    id: int
+    titulo: str
+    descripcion: Optional[str] = None
+
+    model_config = {"from_attributes": True}
+
 #instancia
 
 class EncuestaInstanciaBase(BaseModel):
@@ -38,16 +45,21 @@ class EncuestaInstanciaCreate(EncuestaInstanciaBase):
     cursada_id: int
     plantilla_id: int
 
-<<<<<<< HEAD
-#para devolver la encuesta junto con sus secciones y preguntas
-class EncuestaConPreguntas(Encuesta):
-    secciones: list[Seccion] = []
-
-=======
 class EncuestaInstancia(EncuestaInstanciaBase):
     id: int
     cursada_id: int
     plantilla_id: int
     plantilla: EncuestaAlumnoPlantilla
     model_config = {"from_attributes": True}
->>>>>>> main
+
+class EncuestaActivaAlumnoResponse(BaseModel):
+    instancia_id: int
+    plantilla: PlantillaInfo 
+    materia_nombre: Optional[str] = None 
+    fecha_fin: Optional[datetime] = None 
+
+    model_config = {"from_attributes": True}
+    
+class InstanciaConPlantillaResponse(BaseModel):
+     instancia_id: int
+     plantilla: EncuestaAlumnoPlantilla

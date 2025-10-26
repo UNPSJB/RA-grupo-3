@@ -3,7 +3,7 @@ from pydantic import BaseModel, Field
 from src.pregunta.schemas import Pregunta
 
 class SeccionBase(BaseModel):
-    nombre: str = Field(..., min_length=5, max_length=100)
+    nombre: str = Field()
 
 class SeccionCreate(SeccionBase):
     encuesta_id: int

@@ -1,14 +1,13 @@
 from __future__ import annotations
 from datetime import datetime
 from src.encuestas.models import EncuestaInstancia
-from sqlalchemy import Integer, String, DateTime, Boolean, CheckConstraint,ForeignKey
+from sqlalchemy import Integer, String, DateTime,ForeignKey
 from sqlalchemy import Enum as SQLEnum
 from sqlalchemy.sql import func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from src.models import ModeloBase
-from enum import StrEnum
 from src.enumerados import TipoCuatrimestre
-from src.persona import models as persona_models
+
 
 class Materia(ModeloBase):
     __tablename__ = "materia"
@@ -57,8 +56,8 @@ class Cursada(ModeloBase):
     cuatrimestre: Mapped[Cuatrimestre]= relationship(back_populates="cursadas")
     
 
-    profesor_id: Mapped[int] =  mapped_column(ForeignKey("persona.id"), nullable=False)
-    profesor: Mapped[persona_models.Persona]= relationship(back_populates="cursadas_impartidas")
+    profesor_id: Mapped[int] =  mapped_column(ForeignKey("profesor.id"), nullable=False)
+    profesor: Mapped["Profesor"]= relationship(back_populates="cursadas_impartidas")
 
     inscripciones: Mapped[list["Inscripcion"]] = relationship(
         back_populates="cursada", cascade="all, delete-orphan"
@@ -67,3 +66,4 @@ class Cursada(ModeloBase):
     encuesta_instancia: Mapped["EncuestaInstancia"] = relationship(
         back_populates="cursada"
     )
+

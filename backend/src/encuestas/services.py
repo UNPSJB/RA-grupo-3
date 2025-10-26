@@ -1,8 +1,14 @@
 from typing import List
-from sqlalchemy import delete, select, update
-from sqlalchemy.orm import Session, selectinload
+from src.seccion.models import Seccion
+from sqlalchemy import select, update
+from sqlalchemy.orm import Session, selectinload, joinedload
 from src.encuestas import models, schemas
-from src.exceptions import NotFound
+from src.exceptions import NotFound,BadRequest
+from src.persona.models import Inscripcion # Necesitas Alumno e Inscripcion
+from src.materia.models import Cursada
+from datetime import datetime
+
+
 
 def crear_plantilla_encuesta(db: Session, plantilla_data: schemas.EncuestaAlumnoPlantillaCreate) -> models.Encuesta:
     _plantilla = models.Encuesta(**plantilla_data.model_dump())
@@ -17,16 +23,6 @@ def listar_plantillas(db: Session, state: models.EstadoEncuesta = None) -> List[
         stmt = stmt.filter(models.Encuesta.estado == state)
     return db.execute(stmt).unique().scalars().all()
 
-# Devuelve la encuesta con secciones y preguntas
-def get_encuesta_completa(db: Session, encuesta_id: int):
-    encuesta = db.query(Encuesta)\
-        .options(
-            joinedload(Encuesta.secciones).joinedload(Seccion.preguntas)
-        )\
-        .filter(Encuesta.id == encuesta_id)\
-        .first()
-    
-    return encuesta
 
 def obtener_plantilla_por_id(db: Session, plantilla_id: int) -> models.Encuesta:
     plantilla = db.query(models.Encuesta).options(selectinload(models.Encuesta.secciones)).filter(models.Encuesta.id == plantilla_id).first()
@@ -60,40 +56,100 @@ def actualizar_estado_plantilla(db: Session, plantilla_id: int, nuevo_estado: mo
 
 def eliminar_plantilla(db: Session, plantilla_id: int) -> models.Encuesta:
     db_plantilla = obtener_plantilla_por_id(db, plantilla_id)
-    db.execute(delete(models.Encuesta).where(models.Encuesta.id == plantilla_id))
+    db.delete(db_plantilla)
     db.commit()
     return db_plantilla
 
 #EncuestaInstancia
 
-def activar_encuesta_para_cursada(
-    db: Session, 
-    data: schemas.EncuestaInstanciaCreate
-) -> models.EncuestaInstancia:
-    # 1. Verificamos que la cursada exista.
-    # 2. Verificamos que la plantilla exista y esté "publicada".
-    # 3. Creamos el objeto EncuestaInstancia con los datos.
-    # ...
-    _instancia = models.EncuestaInstancia(**data.model_dump())
-    db.add(_instancia)
-    db.commit()
-    db.refresh(_instancia)
-    return _instancia
+def activar_encuesta_para_cursada(db: Session, data: schemas.EncuestaInstanciaCreate) -> models.EncuestaInstancia:
+    cursada = db.get(Cursada, data.cursada_id)
+    if not cursada:
+        raise NotFound(detail=f"Cursada con ID {data.cursada_id} no encontrada.")
+    plantilla = db.get(models.Encuesta, data.plantilla_id)
+    if not plantilla:
+        raise NotFound(detail=f"Plantilla de Encuesta con ID {data.plantilla_id} no encontrada.")
+    if plantilla.estado != models.EstadoEncuesta.PUBLICADA:
+        raise BadRequest(detail=f"La plantilla de encuesta {data.plantilla_id} no está publicada.")
 
-def obtener_instancia_activa_por_cursada(
-    db: Session, 
-    cursada_id: int
-) -> models.EncuestaInstancia:
-    """
-    El servicio que usa el Alumno para ver su encuesta.
-    Busca la instancia que esté "ACTIVA" para esa cursada_id.
-    """
-    stmt = select(models.EncuestaInstancia).where(
-        models.EncuestaInstancia.cursada_id == cursada_id,
-        models.EncuestaInstancia.estado == models.EstadoInstancia.ACTIVA
+    stmt_existente = select(models.EncuestaInstancia).where(models.EncuestaInstancia.cursada_id == data.cursada_id)
+    instancia_existente = db.execute(stmt_existente).scalar_one_or_none()
+    if instancia_existente:
+        raise BadRequest(detail=f"Ya existe una instancia de encuesta (ID: {instancia_existente.id}) para la cursada {data.cursada_id}.")
+    nueva_instancia = models.EncuestaInstancia(
+        cursada_id=data.cursada_id,
+        plantilla_id=data.plantilla_id,
+        fecha_inicio=data.fecha_inicio,
+        fecha_fin=data.fecha_fin,
+        estado=data.estado 
+    )
+    db.add(nueva_instancia)
+    try:
+        db.commit()
+        db.refresh(nueva_instancia)
+    except Exception as e:
+        db.rollback()
+        print(f"ERROR en commit al activar instancia: {e}")
+        raise BadRequest(detail=f"Error al guardar la instancia en la base de datos: {e}")
+
+    return nueva_instancia
+
+
+def obtener_instancias_activas_alumno(db: Session, alumno_id: int) -> List[models.EncuestaInstancia]:
+    now = datetime.now() 
+    stmt = (
+        select(models.EncuestaInstancia)
+        .join(Inscripcion,models.EncuestaInstancia.cursada_id == Inscripcion.cursada_id) 
+        .where(
+            Inscripcion.alumno_id == alumno_id,
+           models.EncuestaInstancia.estado ==models.EstadoInstancia.ACTIVA,
+        )
+        .options(
+            joinedload(models.EncuestaInstancia.plantilla),
+            joinedload(models.EncuestaInstancia.cursada) 
+            .joinedload(Cursada.materia)
+        )
+        .distinct() 
+    )
+
+    instancias_activas = db.execute(stmt).scalars().all()
+    return instancias_activas
+
+
+def obtener_instancia_activa_por_cursada(db: Session, cursada_id: int) -> models.EncuestaInstancia:
+    now = datetime.now()
+    stmt = (
+        select(models.EncuestaInstancia)
+        .where(
+            models.EncuestaInstancia.cursada_id == cursada_id,
+            models.EncuestaInstancia.estado == models.EstadoInstancia.ACTIVA,
+            models.EncuestaInstancia.fecha_inicio <= now,
+            (models.EncuestaInstancia.fecha_fin == None) | (models.EncuestaInstancia.fecha_fin > now)
+        )
+        .options(selectinload(models.EncuestaInstancia.plantilla))
     )
     instancia = db.execute(stmt).scalar_one_or_none()
     if not instancia:
-        raise NotFound(detail="No hay encuesta activa para esta cursada.")
+        raise NotFound(f"No se encontró una encuesta activa para la cursada ID {cursada_id}.")
     return instancia
 
+def obtener_plantilla_para_instancia_activa(db: Session, instancia_id: int) -> models.Encuesta:
+    now = datetime.now()
+    instancia = db.query(models.EncuestaInstancia)\
+        .filter(
+            models.EncuestaInstancia.id == instancia_id,
+            models.EncuestaInstancia.estado == models.EstadoInstancia.ACTIVA,
+        )\
+        .options(
+            selectinload(models.EncuestaInstancia.plantilla)
+            .selectinload(models.Encuesta.secciones)
+            .selectinload(Seccion.preguntas)
+        )\
+        .first()
+    if not instancia:
+        raise NotFound(detail=f"No se encontró una encuesta activa con ID de instancia {instancia_id}.")
+
+    if not instancia.plantilla:
+         raise Exception(f"La instancia {instancia_id} no tiene una plantilla asociada.")
+
+    return instancia.plantilla

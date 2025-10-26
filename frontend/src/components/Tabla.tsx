@@ -1,33 +1,28 @@
 import React from "react";
 import "../Styles/Styles.css";
 import { useNavigate } from "react-router-dom";
-import type { TipoEncuesta } from "../pages/EncuestasPage.tsx";
 
-type Encuesta = {
+type PlantillaEncuesta = {
   id: number;
   titulo: string;
   descripcion: string;
-  anio_carrera?: number;
-  cursada?: string;
-  esta_completa?: boolean;
-  estado: TipoEncuesta;
-  preguntas: any[];
+  estado: string; // "BORRADOR" | "PUBLICADA"
 };
 
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
 
+type TipoTabla = "borradores" | "publicadas";
 interface TablaProps {
-  tipo: TipoEncuesta;
+  tipo: TipoTabla;
 }
 
 export function Tabla({ tipo }: TablaProps) {
   const navigate = useNavigate();
-  const [data, setData] = React.useState<Encuesta[]>([]);
+  const [data, setData] = React.useState<PlantillaEncuesta[]>([]);
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [tituloAsc, setTituloAsc] = React.useState(true);
   const [descripcionAsc, setDescripcionAsc] = React.useState(true);
-  const [anioAsc, setAnioAsc] = React.useState(true);
 
   const sortByTitulo = () => {
     const sorted = [...data].sort((a, b) =>
@@ -49,53 +44,50 @@ export function Tabla({ tipo }: TablaProps) {
     setDescripcionAsc(!descripcionAsc);
   };
 
-  const sortByAnio = () => {
-    const sorted = [...data].sort((a, b) => {
-      const valueA = typeof a.anio_carrera === "number" ? a.anio_carrera : null;
-      const valueB = typeof b.anio_carrera === "number" ? b.anio_carrera : null;
-      if (valueA === valueB) return 0;
-      if (valueA === null) return anioAsc ? 1 : -1;
-      if (valueB === null) return anioAsc ? -1 : 1;
-      return anioAsc ? valueA - valueB : valueB - valueA;
-    });
-    setData(sorted);
-    setAnioAsc(!anioAsc);
-  };
-
   React.useEffect(() => {
+    console.log(`Tabla useEffect ejecutándose para tipo: ${tipo}`);
     let isMounted = true;
-    const loadEncuestas = async () => {
+    const loadPlantillas = async () => {
       setLoading(true);
       setError(null);
+      setData([]);
       try {
         const response = await fetch(
-          `${API_BASE_URL}/encuestas/${tipo.toLowerCase()}`
+          `${API_BASE_URL}/admin/plantillas-encuesta/${tipo.toLowerCase()}`
         );
-        if (!response.ok) throw new Error(`Error ${response.status}`);
-        const payload: Encuesta[] = await response.json();
+        if (!response.ok) {
+          let errorDetail = response.statusText;
+          try {
+            const errorData = await response.json();
+            errorDetail = errorData.detail || errorDetail;
+          } catch (e) {}
+          throw new Error(`Error ${response.status}: ${errorDetail}`);
+        }
+        const payload: PlantillaEncuesta[] = await response.json();
         if (isMounted) setData(payload);
       } catch (err) {
-        console.error("No se puede cargar encuestas", err);
-        if (isMounted) setError("No se pudieron cargar las encuestas");
+        console.error(`No se pudo cargar ${tipo}`, err);
+        if (isMounted) setError(`No se pudieron cargar las plantillas ${tipo}`);
       } finally {
         if (isMounted) setLoading(false);
       }
     };
-    loadEncuestas();
+    loadPlantillas();
     return () => {
       isMounted = false;
     };
-  }, [tipo, API_BASE_URL]);
+  }, [tipo]);
 
-  const handlePublicar = async (idEncuesta: number) => {
+  const handlePublicar = async (plantillaId: number) => {
+    setError(null);
     try {
       const response = await fetch(
-        `${API_BASE_URL}/encuestas/${idEncuesta}/publicar`,
+        `${API_BASE_URL}/admin/plantillas-encuesta/${plantillaId}/publicar`,
         { method: "PATCH" }
       );
       if (!response.ok) throw new Error("Falló la publicación");
       setData((prevData) =>
-        prevData.filter((encuesta) => encuesta.id !== idEncuesta)
+        prevData.filter((encuesta) => encuesta.id !== plantillaId)
       );
     } catch (err) {
       console.error("Error al publicar:", err);
@@ -103,7 +95,7 @@ export function Tabla({ tipo }: TablaProps) {
     }
   };
 
-  const handleBorrar = async (idEncuesta: number) => {
+  const handleBorrar = async (plantillaId: number) => {
     if (
       !window.confirm(
         "¿Estás seguro de que quieres eliminar esta encuesta permanentemente?"
@@ -112,12 +104,15 @@ export function Tabla({ tipo }: TablaProps) {
       return;
     }
     try {
-      const response = await fetch(`${API_BASE_URL}/encuestas/${idEncuesta}`, {
-        method: "DELETE",
-      });
+      const response = await fetch(
+        `${API_BASE_URL}/admin/plantillas-encuesta/${plantillaId}`,
+        {
+          method: "DELETE",
+        }
+      );
       if (!response.ok) throw new Error("Falló la eliminación");
       setData((prevData) =>
-        prevData.filter((encuesta) => encuesta.id !== idEncuesta)
+        prevData.filter((encuesta) => encuesta.id !== plantillaId)
       );
     } catch (err) {
       console.error("Error al borrar:", err);
@@ -131,29 +126,14 @@ export function Tabla({ tipo }: TablaProps) {
         <thead>
           <tr>
             <th>
-              Año
-              <button
-                className="btn btn--compact tabla-encuestas__sort-btn"
-                onClick={sortByAnio}
-              >
-                {anioAsc ? "↑" : "↓"}
-              </button>
-            </th>
-            <th>
               Titulo
-              <button
-                className="btn btn--compact tabla-encuestas__sort-btn"
-                onClick={sortByTitulo}
-              >
+              <button onClick={sortByTitulo}>
                 {tituloAsc ? "A/Z ↑" : "Z/A ↓"}
               </button>
             </th>
             <th>
               Descripcion
-              <button
-                className="btn btn--compact tabla-encuestas__sort-btn"
-                onClick={sortByDescripcion}
-              >
+              <button onClick={sortByDescripcion}>
                 {descripcionAsc ? "A/Z ↑" : "Z/A ↓"}
               </button>
             </th>
@@ -163,28 +143,23 @@ export function Tabla({ tipo }: TablaProps) {
         <tbody>
           {loading && (
             <tr>
-              <td colSpan={4}>Cargando encuestas...</td>
+              <td colSpan={3}>Cargando plantillas...</td>
             </tr>
           )}
           {error && !loading && (
-            <tr>
-              <td colSpan={4}>{error}</td>
+            <tr className="text-red-600">
+              <td colSpan={3}>{error}</td>
             </tr>
           )}
           {!loading && !error && data.length === 0 && (
             <tr>
-              <td colSpan={4}>No hay encuestas disponibles.</td>
+              <td colSpan={3}>No hay plantillas disponibles.</td>{" "}
             </tr>
           )}
           {!loading &&
             !error &&
             data.map((item) => (
               <tr key={item.id}>
-                <td>
-                  {typeof item.anio_carrera === "number"
-                    ? `${item.anio_carrera}°`
-                    : "-"}
-                </td>
                 <td>{item.titulo}</td>
                 <td>{item.descripcion}</td>
                 <td className="tabla-encuestas__acciones">
@@ -193,7 +168,9 @@ export function Tabla({ tipo }: TablaProps) {
                       <button
                         className="tabla-encuestas__btn tabla-encuestas__btn--modificar"
                         onClick={() =>
-                          navigate(`/encuestas/${item.id}/modificar`)
+                          navigate(
+                            `/admin/plantillas-encuesta/${item.id}/modificar`
+                          )
                         }
                       >
                         Modificar
@@ -204,13 +181,21 @@ export function Tabla({ tipo }: TablaProps) {
                       >
                         Publicar
                       </button>
+                      <button
+                        className="tabla-encuestas__btn tabla-encuestas__btn--borrar"
+                        onClick={() => handleBorrar(item.id)}
+                      >
+                        Borrar
+                      </button>
                     </>
                   ) : (
                     <>
                       <button
                         className="tabla-encuestas__btn tabla-encuestas__btn--completar"
                         onClick={() =>
-                          navigate(`/encuestas/${item.id}/visualizacion`)
+                          navigate(
+                            `/admin/plantillas-encuesta/${item.id}/visualizacion`
+                          )
                         }
                       >
                         Ver

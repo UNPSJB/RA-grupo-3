@@ -1,16 +1,16 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import CrearSeccion from "./CrearSeccion";
 
 const CrearEncuesta: React.FC = () => {
-  const navigate = useNavigate();
+  // Estado para título y descripción (¡solo datos de la plantilla!)
   const [titulo, setTitulo] = useState<string>("");
   const [descripcion, setDescripcion] = useState<string>("");
-  const [anioCarrera, setAnioCarrera] = useState<string>("1");
-  const [cursada, setCursada] = useState<string>("primero");
+  // Estado para el flujo de la UI
   const [cargando, setCargando] = useState<boolean>(false);
   const [mensaje, setMensaje] = useState<string>("");
-  const [encuestaCreada, setEncuestaCreada] = useState<number | null>(null);
+  const [plantillaCreadaId, setPlantillaCreadaId] = useState<number | null>(
+    null
+  );
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -18,86 +18,80 @@ const CrearEncuesta: React.FC = () => {
     setMensaje("");
 
     try {
-      const encuestaData = {
+      // Datos a enviar: solo título y descripción
+      const plantillaData = {
         titulo: titulo,
         descripcion: descripcion,
-        anio_carrera: parseInt(anioCarrera),
-        cursada: cursada,
+        // El estado 'BORRADOR' lo pone el backend por defecto
       };
 
-      const response = await fetch("http://localhost:8000/encuestas/", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(encuestaData),
-      });
+      // Endpoint correcto para crear plantillas
+      const response = await fetch(
+        "http://localhost:8000/admin/plantillas-encuesta/",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(plantillaData),
+        }
+      );
 
       if (!response.ok) {
-        throw new Error(`Error ${response.status}: ${response.statusText}`);
+        let errorData = null;
+        try {
+          errorData = await response.json();
+        } catch (jsonError) {}
+        throw new Error(
+          `Error ${response.status}: ${
+            errorData?.detail || response.statusText
+          }`
+        );
       }
 
       const data = await response.json();
-      setEncuestaCreada(data.id);
-      setMensaje("¡Encuesta creada exitosamente!");
+      setPlantillaCreadaId(data.id);
+      setMensaje("¡Plantilla de Encuesta creada exitosamente!");
     } catch (error) {
-      console.error("Error al crear encuesta:", error);
+      console.error("Error al crear plantilla:", error);
       setMensaje(
-        `Error: ${error instanceof Error ? error.message : "Error desconocido"}`
+        `Error al crear plantilla: ${
+          error instanceof Error ? error.message : "Error desconocido"
+        }`
       );
     } finally {
       setCargando(false);
     }
   };
 
-  const handleAgregarPreguntas = () => {
-    if (encuestaCreada) {
-      navigate("/encuestas/preguntas", {
-        state: {
-          encuestaId: encuestaCreada,
-          encuestaTitulo: titulo,
-          encuestaDescripcion: descripcion,
-        },
-      });
-    }
-  };
-
   const handleCrearOtra = () => {
     setTitulo("");
     setDescripcion("");
-    setAnioCarrera("1");
-    setCursada("primero");
-    setEncuestaCreada(null);
+    setPlantillaCreadaId(null);
     setMensaje("");
   };
 
-<<<<<<< HEAD
-=======
-
-
->>>>>>> origin/main
   return (
-    <div className="p-6 max-w-2xl mx-auto">
-      <h2 className="text-2xl font-bold mb-6 text-gray-800">
-        Crear Nueva Encuesta
+    <div className="p-6 max-w-2xl mx-auto bg-gray-50 min-h-screen">
+      <h2 className="text-3xl font-bold mb-8 text-gray-800 text-center">
+        Crear Nueva Plantilla de Encuesta
       </h2>
 
       {mensaje && (
         <div
-          className={`p-4 mb-4 rounded-lg border ${
+          className={`p-4 mb-6 rounded-lg border text-center ${
             mensaje.includes("Error")
-              ? "bg-red-50 text-red-800 border-red-300"
-              : "bg-green-50 text-green-800 border-green-300"
+              ? "bg-red-50 text-red-700 border-red-300"
+              : "bg-green-50 text-green-700 border-green-300"
           }`}
         >
           {mensaje}
         </div>
       )}
 
-      {encuestaCreada ? (
+      {plantillaCreadaId ? (
         <div className="space-y-6">
-          {/* Mensaje de éxito */}
-          <div className="bg-white p-6 rounded-lg shadow text-center">
+          <div className="bg-white p-6 rounded-lg shadow text-center border border-gray-200">
             <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <svg
                 className="w-8 h-8 text-green-600"
@@ -113,134 +107,84 @@ const CrearEncuesta: React.FC = () => {
                 />
               </svg>
             </div>
-            <h3 className="text-xl font-bold text-gray-800 mb-2">
-              ¡Encuesta Creada!
+            <h3 className="text-xl font-semibold text-gray-800 mb-2">
+              Plantilla Creada (ID: {plantillaCreadaId})
             </h3>
-            <p className="text-gray-600">
-              Título: <span className="font-semibold">{titulo}</span>
+            <p className="text-gray-600 mb-1">
+              Título:{" "}
+              <span className="font-medium text-gray-800">{titulo}</span>
             </p>
             <p className="text-gray-600">
-              Descripción: <span className="font-semibold">{descripcion}</span>
-            </p>
-            <p className="text-gray-600">
-              Año: <span className="font-semibold">{anioCarrera}° Año</span>
-            </p>
-            <p className="text-gray-600">
-              Cursada:{" "}
-              <span className="font-semibold">
-                {cursada === "primero"
-                  ? "Primer Cuatrimestre"
-                  : cursada === "segundo"
-                  ? "Segundo Cuatrimestre"
-                  : "Anual"}
-              </span>
+              Descripción:{" "}
+              <span className="font-medium text-gray-800">{descripcion}</span>
             </p>
           </div>
 
-          {/* Componente CrearSeccion */}
-          <CrearSeccion encuestaId={encuestaCreada} />
+          <CrearSeccion encuestaId={plantillaCreadaId} />
 
-            <button
-              onClick={handleCrearOtra}
-              className="w-full px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium"
-            >
-              Crear Otra Encuesta
-            </button>
-          </div>
-
+          <button
+            onClick={handleCrearOtra}
+            className="w-full px-6 py-3 mt-4 bg-indigo-100 text-indigo-700 rounded-lg hover:bg-indigo-200 transition-colors font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+          >
+            Crear Otra Plantilla
+          </button>
+        </div>
       ) : (
         <form
           onSubmit={handleSubmit}
-          className="space-y-6 bg-white p-6 rounded-lg shadow"
+          className="space-y-6 bg-white p-8 rounded-lg shadow border border-gray-200"
         >
+          {/* Campo Título */}
           <div>
             <label
               htmlFor="titulo"
-              className="block text-sm font-medium text-gray-700 mb-2"
+              className="block text-sm font-medium text-gray-700 mb-1"
             >
-              Título:
+              Título de la Plantilla:
             </label>
             <input
               type="text"
               id="titulo"
               value={titulo}
               onChange={(e) => setTitulo(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="Ej: Encuesta 2025"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition duration-150 ease-in-out"
+              placeholder="Ej: Encuesta Fin de Cursada 1er Año"
               required
             />
           </div>
 
+          {/* Campo Descripción */}
           <div>
             <label
               htmlFor="descripcion"
-              className="block text-sm font-medium text-gray-700 mb-2"
+              className="block text-sm font-medium text-gray-700 mb-1"
             >
-              Descripción:
+              Descripción de la Plantilla:
             </label>
             <textarea
               id="descripcion"
               value={descripcion}
               onChange={(e) => setDescripcion(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition duration-150 ease-in-out"
               rows={4}
-              placeholder="Describe el propósito de esta encuesta..."
+              placeholder="Describe cuándo o para qué se usará esta plantilla..."
               required
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label
-                htmlFor="anioCarrera"
-                className="block text-sm font-medium text-gray-700 mb-2"
-              >
-                Año de Carrera:
-              </label>
-              <select
-                id="anioCarrera"
-                value={anioCarrera}
-                onChange={(e) => setAnioCarrera(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="1">1° Año</option>
-                <option value="2">2° Año</option>
-                <option value="3">3° Año</option>
-                <option value="4">4° Año</option>
-                <option value="5">5° Año</option>
-              </select>
-            </div>
-
-            <div>
-              <label
-                htmlFor="cursada"
-                className="block text-sm font-medium text-gray-700 mb-2"
-              >
-                Cursada:
-              </label>
-              <select
-                id="cursada"
-                value={cursada}
-                onChange={(e) => setCursada(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="primero">Primer Cuatrimestre</option>
-                <option value="segundo">Segundo Cuatrimestre</option>
-                <option value="anual">Anual</option>
-              </select>
-            </div>
-          </div>
-
+          {/* Botón de envío */}
           <button
             type="submit"
             disabled={cargando}
-            className={`w-full px-6 py-3 rounded-lg font-medium transition-colors ${
+            className={`w-full px-6 py-3 rounded-lg font-semibold text-white transition-colors duration-150 ease-in-out ${
               cargando
                 ? "bg-gray-400 cursor-not-allowed"
-                : "bg-blue-600 hover:bg-blue-700 cursor-pointer"
-            } text-white`}
+                : "bg-indigo-600 hover:bg-indigo-700 cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+            }`}
           >
-            {cargando ? "Creando..." : "Crear Encuesta"}
+            {cargando
+              ? "Creando Plantilla..."
+              : "Crear Plantilla y Añadir Secciones"}
           </button>
         </form>
       )}

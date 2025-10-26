@@ -32,7 +32,7 @@ class Encuesta(ModeloBase):
         back_populates="encuesta", cascade="all, delete-orphan")
 
     instancias: Mapped[List["EncuestaInstancia"]] = relationship(
-        back_populates="plantilla"
+        back_populates="plantilla", cascade="all, delete-orphan"
     )
 
 

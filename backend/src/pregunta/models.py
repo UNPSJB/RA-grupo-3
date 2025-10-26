@@ -5,12 +5,8 @@ from src.seccion.models import Seccion
 from sqlalchemy import Integer, String, Enum, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from src.models import ModeloBase
-import enum
+from src.enumerados import TipoPregunta
 
-
-class TipoPregunta(enum.StrEnum):
-    REDACCION = "REDACCION"
-    MULTIPLE_CHOICE = "MULTIPLE_CHOICE"
 
 
 
@@ -23,15 +19,6 @@ class Pregunta(ModeloBase):
     # Relación con seccion
     seccion_id: Mapped[int] = mapped_column(ForeignKey("secciones.id"), nullable=True)
     seccion: Mapped[Optional["Seccion"]] = relationship("Seccion", back_populates="preguntas")
-<<<<<<< HEAD
-    respuestas = relationship("Respuesta", back_populates="pregunta")
-    
-    # Relaciones
-    opciones: Mapped[List["Opcion"]] = relationship(
-        "Opcion", back_populates="pregunta", cascade="all, delete-orphan"
-    )
-=======
->>>>>>> main
 
     tipo: Mapped[TipoPregunta] = mapped_column(
         Enum(TipoPregunta), nullable=False
