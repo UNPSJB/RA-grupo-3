@@ -10,6 +10,7 @@ import CrearEncuesta from "./pages/CrearEncuesta.tsx";
 import Home from "./pages/Home.tsx";
 import PanelAdmin from "./pages/panelAdmin.tsx";
 import ListaEncuestasAlumnos from "./pages/ListaEncuestasAlumnos.tsx";
+import ResultadosProfesorPage from "./pages/ResultadosProfesorPage.tsx";
 
 import "./Styles/Styles.css";
 
@@ -58,6 +59,11 @@ const App: React.FC = () => {
         <Route
           path="encuestas/instancia/:instanciaId/responder"
           element={<ResponderEncuesta />}
+        />
+        {/* --- Rutas de Profesor --- */}
+        <Route
+          path="resultados-profesor"
+          element={<ResultadosProfesorPage />}
         />
         <Route path="estadisticas" element={<EstadisticasPage />} />
         <Route path="cuenta" element={<CuentaPage />} />

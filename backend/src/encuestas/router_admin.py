@@ -91,3 +91,25 @@ def activar_encuesta_cursada(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Ocurrió un error interno al activar la encuesta."
         )
+    
+@router_gestion.patch(
+    "/instancia/{instancia_id}/cerrar",
+    response_model=schemas.EncuestaInstancia 
+)
+def cerrar_encuesta_instancia(
+    instancia_id: int,
+    db: Session = Depends(get_db)
+):
+    try:
+        instancia_cerrada = services.cerrar_instancia_encuesta(db, instancia_id=instancia_id)
+        return instancia_cerrada
+    except NotFound as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except BadRequest as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except Exception as e:
+        print(f"Error inesperado al cerrar instancia {instancia_id}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Ocurrió un error interno al cerrar la encuesta."
+        )

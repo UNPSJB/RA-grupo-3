@@ -18,7 +18,7 @@ ID_ALUMNO_PRUEBA = 2
 def seed_initial_data(db: Session):
     """
     Inserta datos iniciales de simulación si no existen.
-    Crea: 1 Cuatrimestre, 2 Materias, 1 Profesor, 1 Alumno, 2 Cursadas, 1 Inscripcion.
+    Crea: 1 Cuatrimestre, 4 Materias, 1 Profesor, 1 Alumno, 4 Cursadas, 1 Inscripcion.
     """
     print("Verificando/Insertando datos semilla...")
 
@@ -34,41 +34,41 @@ def seed_initial_data(db: Session):
         print(f"   - Cuatrimestre 1C 2025 (ID: {cuatri.id}) ya existe.")
 
     # --- 2. Crear Materias (si no existen) ---
-    materia1_nombre = "Álgebra Lineal (Simulación)"
-    materia1 = db.query(Materia).filter_by(nombre=materia1_nombre).first()
-    if not materia1:
-        print(f"   - Creando materia '{materia1_nombre}'...")
-        materia1 = Materia(nombre=materia1_nombre, descripcion="Materia de prueba para encuestas")
-        db.add(materia1)
-    else:
-        print(f"   - Materia '{materia1_nombre}' (ID: {materia1.id}) ya existe.")
+    materias_a_crear = [
+        {"nombre": "Álgebra Lineal (Simulación)", "descripcion": "Materia de prueba para encuestas"},
+        {"nombre": "Programación I (Simulación)", "descripcion": "Otra materia de prueba"},
+        {"nombre": "Análisis Matemático I (Simulación)", "descripcion": "Materia adicional de prueba"},
+        {"nombre": "Física I (Simulación)", "descripcion": "Cuarta materia de prueba"},
+    ]
+    materias_obj = {} # Diccionario para guardar los objetos Materia
 
-    materia2_nombre = "Programación I (Simulación)"
-    materia2 = db.query(Materia).filter_by(nombre=materia2_nombre).first()
-    if not materia2:
-        print(f"   - Creando materia '{materia2_nombre}'...")
-        materia2 = Materia(nombre=materia2_nombre, descripcion="Otra materia de prueba")
-        db.add(materia2)
-    else:
-        print(f"   - Materia '{materia2_nombre}' (ID: {materia2.id}) ya existe.")
+    for mat_data in materias_a_crear:
+        materia = db.query(Materia).filter_by(nombre=mat_data["nombre"]).first()
+        if not materia:
+            print(f"   - Creando materia '{mat_data['nombre']}'...")
+            materia = Materia(nombre=mat_data["nombre"], descripcion=mat_data["descripcion"])
+            db.add(materia)
+        else:
+            print(f"   - Materia '{mat_data['nombre']}' (ID: {materia.id}) ya existe.")
+        materias_obj[mat_data["nombre"]] = materia # Guarda el objeto (nuevo o existente)
 
     # Commit intermedio para asegurar IDs antes de crear Cursadas
     db.commit()
-    # Refrescar si se crearon
-    # Corrección: Verificar si el objeto ya está en la sesión antes de refrescar
-    if materia1 not in db.new: db.refresh(materia1) # Usar db.new para verificar si es nuevo
-    if materia2 not in db.new: db.refresh(materia2) # Usar db.new para verificar si es nuevo
+    # Refrescar solo si es necesario (si el objeto no estaba ya en la sesión persistente)
+    for nombre, materia_obj in materias_obj.items():
+        if materia_obj not in db: # Chequea si el objeto está detached o transient
+             try:
+                 db.refresh(materia_obj)
+             except Exception: # Evita errores si el objeto ya fue borrado o no existe
+                 print(f"   - Aviso: No se pudo refrescar la materia '{nombre}'. Recargando...")
+                 materias_obj[nombre] = db.query(Materia).filter_by(nombre=nombre).first()
 
 
     # --- 3. Crear Profesor (si no existe) ---
     profe_nombre = "Profesor Simulado"
-    # --- CORRECCIÓN AQUÍ ---
-    # Busca directamente en Profesor y filtra por el atributo 'nombre' (heredado)
     profe = db.query(Profesor).filter(Profesor.nombre == profe_nombre).first()
-    # --- FIN CORRECCIÓN ---
     if not profe:
         print(f"   - Creando profesor '{profe_nombre}'...")
-        # Crea directamente Profesor, SQLAlchemy maneja Persona
         profe = Profesor(nombre=profe_nombre)
         db.add(profe)
         db.commit()
@@ -79,57 +79,42 @@ def seed_initial_data(db: Session):
 
     # --- 4. Crear Alumno de Prueba (si no existe) ---
     alumno_nombre = "Alumno Prueba"
-    # Busca directamente en Alumno por el ID fijo
     alumno_prueba = db.query(Alumno).filter(Alumno.id == ID_ALUMNO_PRUEBA).first()
     if not alumno_prueba:
-        # Intenta buscar la persona por ID por si existe pero no como alumno
         persona_existente = db.get(Persona, ID_ALUMNO_PRUEBA)
         if persona_existente and persona_existente.tipo != TipoPersona.ALUMNO:
              print(f"   - ERROR: Ya existe una Persona con ID {ID_ALUMNO_PRUEBA} pero no es Alumno.")
-             return # Salir si hay conflicto de tipo
+             return
         elif persona_existente:
-             # Si la Persona existe y es Alumno, crea solo el registro Alumno si falta
              print(f"   - Persona Alumno con ID {ID_ALUMNO_PRUEBA} existe, verificando tabla 'alumno'...")
-             alumno_prueba = persona_existente # Asumiendo que es instancia de Alumno
-             # Verifica si el registro específico 'alumno' falta
-             alumno_row = db.get(Alumno, ID_ALUMNO_PRUEBA) # Intenta obtener Alumno directamente
+             alumno_prueba = persona_existente
+             alumno_row = db.get(Alumno, ID_ALUMNO_PRUEBA)
              if not alumno_row:
                  print(f"   - ... creando entrada faltante en tabla 'alumno'...")
-                 # Crea solo la entrada en la tabla hija si falta
-                 # No deberías necesitar asignar nombre aquí si la persona ya existe
                  alumno_entry = Alumno(id=ID_ALUMNO_PRUEBA)
                  db.add(alumno_entry)
-                 db.commit() # Comete solo la creación de la fila hija
-                 # Vuelve a obtener el objeto completo
+                 db.commit()
                  alumno_prueba = db.query(Alumno).filter(Alumno.id == ID_ALUMNO_PRUEBA).first()
              else:
-                 alumno_prueba = alumno_row # Ya existía el registro Alumno
+                 alumno_prueba = alumno_row
         else:
-            # Si no existe ni Persona, crea todo
             print(f"   - Creando alumno de prueba '{alumno_nombre}' con ID={ID_ALUMNO_PRUEBA}...")
-            # Crea Alumno directamente.
-            # ¡OJO con forzar ID! Asegúrate que esté libre.
             try:
-                # Intenta crear con el ID forzado
                 alumno_prueba = Alumno(id=ID_ALUMNO_PRUEBA, nombre=alumno_nombre)
                 db.add(alumno_prueba)
                 db.commit()
                 db.refresh(alumno_prueba)
-            except Exception as e: # Captura error si el ID ya existe
+            except Exception as e:
                 db.rollback()
                 print(f"   - ERROR al crear alumno con ID forzado {ID_ALUMNO_PRUEBA}: {e}")
                 print(f"   - Intentando crear alumno sin forzar ID...")
-                # Intenta crear sin forzar el ID (la BD asignará uno nuevo)
                 alumno_prueba_nuevo = Alumno(nombre=alumno_nombre)
                 db.add(alumno_prueba_nuevo)
                 db.commit()
                 db.refresh(alumno_prueba_nuevo)
                 print(f"   - Alumno creado con ID asignado: {alumno_prueba_nuevo.id}. ¡DEBES ACTUALIZAR ID_ALUMNO_PRUEBA en seed_data.py y dependencies.py a {alumno_prueba_nuevo.id}!")
-                # Asigna el nuevo objeto para continuar el script, pero advierte al usuario
                 alumno_prueba = alumno_prueba_nuevo
-                # return # Podrías detener el script aquí para forzar la actualización del ID
 
-    # Asegurarse que alumno_prueba no sea None antes de continuar
     if not alumno_prueba:
         print("   - ERROR CRÍTICO: No se pudo obtener/crear el alumno de prueba.")
         return
@@ -138,60 +123,99 @@ def seed_initial_data(db: Session):
 
 
     # --- 5. Crear Cursadas (si no existen) ---
-    # Asegúrate que las materias y cuatri existen antes de usarlos
-    if not materia1 or not cuatri or not profe:
-        print("   - ERROR: Falta Materia 1, Cuatrimestre o Profesor para crear Cursada 1.")
-        return
-    cursada1 = db.query(Cursada).filter_by(materia_id=materia1.id, cuatrimestre_id=cuatri.id).first()
-    if not cursada1:
-        print(f"   - Creando cursada para '{materia1.nombre}'...")
-        cursada1 = Cursada(
-            materia_id=materia1.id,
-            cuatrimestre_id=cuatri.id,
-            profesor_id=profe.id # Vincula con el Profesor
-        )
-        db.add(cursada1)
-    else:
-        print(f"   - Cursada para '{materia1.nombre}' (ID: {cursada1.id}) ya existe.")
+    cursadas_a_crear = [
+        {"materia_nombre": "Álgebra Lineal (Simulación)"},
+        {"materia_nombre": "Programación I (Simulación)"},
+        {"materia_nombre": "Análisis Matemático I (Simulación)"}, # Nueva
+        {"materia_nombre": "Física I (Simulación)"},              # Nueva
+    ]
+    cursadas_obj = {} # Diccionario para guardar objetos Cursada
 
-    if not materia2 or not cuatri or not profe:
-         print("   - ERROR: Falta Materia 2, Cuatrimestre o Profesor para crear Cursada 2.")
-         return
-    cursada2 = db.query(Cursada).filter_by(materia_id=materia2.id, cuatrimestre_id=cuatri.id).first()
-    if not cursada2:
-        print(f"   - Creando cursada para '{materia2.nombre}'...")
-        cursada2 = Cursada(
-            materia_id=materia2.id,
+    # Verifica que cuatri y profe existan antes del bucle
+    if not cuatri or not profe:
+        print("   - ERROR: Falta Cuatrimestre o Profesor base para crear cursadas.")
+        return
+
+    for curs_data in cursadas_a_crear:
+        materia_obj = materias_obj.get(curs_data["materia_nombre"])
+        if not materia_obj:
+            print(f"   - ERROR: No se encontró la materia '{curs_data['materia_nombre']}' para crear su cursada.")
+            continue # Salta a la siguiente
+
+        # Busca la cursada existente
+        cursada = db.query(Cursada).filter_by(
+            materia_id=materia_obj.id,
             cuatrimestre_id=cuatri.id,
-            profesor_id=profe.id # Vincula con el Profesor
-        )
-        db.add(cursada2)
-    else:
-        print(f"   - Cursada para '{materia2.nombre}' (ID: {cursada2.id}) ya existe.")
+            profesor_id=profe.id # Asigna siempre al mismo profesor de prueba
+        ).first()
+
+        if not cursada:
+            print(f"   - Creando cursada para '{materia_obj.nombre}'...")
+            cursada = Cursada(
+                materia_id=materia_obj.id,
+                cuatrimestre_id=cuatri.id,
+                profesor_id=profe.id
+            )
+            db.add(cursada)
+        else:
+            print(f"   - Cursada para '{materia_obj.nombre}' (ID: {cursada.id}) ya existe.")
+        cursadas_obj[materia_obj.nombre] = cursada # Guarda el objeto cursada
+
 
     # Commit intermedio para asegurar IDs antes de crear Inscripciones
     db.commit()
-    # Refrescar si se crearon
-    if cursada1 not in db.new: db.refresh(cursada1)
-    if cursada2 not in db.new: db.refresh(cursada2)
+    # Refrescar si es necesario
+    for nombre, cursada_obj in cursadas_obj.items():
+         if cursada_obj not in db:
+             try:
+                 db.refresh(cursada_obj)
+             except Exception:
+                  print(f"   - Aviso: No se pudo refrescar la cursada para '{nombre}'. Recargando...")
+                  # Intenta recargarla por si acaso
+                  materia_correspondiente = materias_obj.get(nombre)
+                  if materia_correspondiente:
+                      cursadas_obj[nombre] = db.query(Cursada).filter_by(
+                          materia_id=materia_correspondiente.id,
+                          cuatrimestre_id=cuatri.id,
+                          profesor_id=profe.id
+                      ).first()
 
-    # Asegúrate que cursada1 tiene ID antes de inscribir
-    if not cursada1 or not hasattr(cursada1, 'id'):
-        print(f"   - ERROR: No se pudo obtener el ID de Cursada 1 para la inscripción.")
-        return
 
     # --- 6. Inscribir Alumno de Prueba en Cursada 1 (si no está inscripto) ---
-    inscripcion = db.query(Inscripcion).filter_by(alumno_id=alumno_prueba.id, cursada_id=cursada1.id).first()
-    if not inscripcion:
-        print(f"   - Inscribiendo Alumno ID {alumno_prueba.id} en Cursada ID {cursada1.id}...")
-        nueva_inscripcion = Inscripcion(
-            alumno_id=alumno_prueba.id,
-            cursada_id=cursada1.id,
-            ha_respondido=False # Importante: empieza como False
-        )
-        db.add(nueva_inscripcion)
+    cursada1 = cursadas_obj.get("Álgebra Lineal (Simulación)")
+    if not cursada1 or not hasattr(cursada1, 'id'):
+        print(f"   - ERROR: No se pudo obtener la Cursada 1 para la inscripción.")
     else:
-        print(f"   - Alumno ID {alumno_prueba.id} ya inscripto en Cursada ID {cursada1.id}.")
+        inscripcion = db.query(Inscripcion).filter_by(alumno_id=alumno_prueba.id, cursada_id=cursada1.id).first()
+        if not inscripcion:
+            print(f"   - Inscribiendo Alumno ID {alumno_prueba.id} en Cursada ID {cursada1.id}...")
+            nueva_inscripcion = Inscripcion(
+                alumno_id=alumno_prueba.id,
+                cursada_id=cursada1.id,
+                ha_respondido=False
+            )
+            db.add(nueva_inscripcion)
+        else:
+            print(f"   - Alumno ID {alumno_prueba.id} ya inscripto en Cursada ID {cursada1.id}.")
+
+    # --- (Opcional) Inscribir Alumno de Prueba en Cursada 3 (Análisis) ---
+    # Para tener otra cursada donde el alumno esté inscripto
+    cursada3 = cursadas_obj.get("Análisis Matemático I (Simulación)")
+    if not cursada3 or not hasattr(cursada3, 'id'):
+         print(f"   - Aviso: No se pudo obtener la Cursada 3 para inscripción opcional.")
+    else:
+        inscripcion3 = db.query(Inscripcion).filter_by(alumno_id=alumno_prueba.id, cursada_id=cursada3.id).first()
+        if not inscripcion3:
+            print(f"   - (Opcional) Inscribiendo Alumno ID {alumno_prueba.id} en Cursada ID {cursada3.id}...")
+            nueva_inscripcion3 = Inscripcion(
+                alumno_id=alumno_prueba.id,
+                cursada_id=cursada3.id,
+                ha_respondido=False
+            )
+            db.add(nueva_inscripcion3)
+        else:
+             print(f"   - Alumno ID {alumno_prueba.id} ya inscripto en Cursada ID {cursada3.id}.")
+
 
     db.commit() # Commit final
     print("Datos semilla verificados/insertados.")
@@ -200,11 +224,12 @@ def seed_initial_data(db: Session):
 def create_tables():
      print("Creando tablas si no existen...")
      # Asegúrate que todos los modelos estén importados ANTES de llamar a create_all
-     # A veces es necesario importar explícitamente todos los módulos de modelos
-     # from src.materia import models
-     # from src.persona import models
-     # from src.encuestas import models
-     # ... etc ...
+     from src.materia import models
+     from src.persona import models
+     from src.encuestas import models
+     from src.seccion import models
+     from src.pregunta import models
+     from src.respuesta import models
      ModeloBase.metadata.create_all(bind=engine)
      print("Tablas verificadas/creadas.")
 
@@ -212,21 +237,17 @@ def create_tables():
 # --- Punto de entrada para ejecutar el script ---
 if __name__ == "__main__":
     print("Iniciando script de carga de datos semilla...")
-    # Opcional: Crear tablas si no existen la primera vez
     # Descomenta si necesitas asegurarte que las tablas se creen/actualicen
     # create_tables()
 
-    # Obtener una sesión de base de datos
     db = SessionLocal()
     try:
-        # Ejecutar la función de carga
         seed_initial_data(db)
         print("Script finalizado exitosamente.")
     except Exception as e:
         print(f"ERROR durante la carga de datos semilla: {e}")
         import traceback
-        traceback.print_exc() # Imprime el traceback completo del error
-        db.rollback() # Deshace cambios en caso de error
+        traceback.print_exc()
+        db.rollback()
     finally:
-        db.close() # Siempre cierra la sesión
-
+        db.close()
