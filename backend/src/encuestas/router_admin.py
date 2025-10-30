@@ -1,17 +1,15 @@
-# src/encuestas/router_admin.py
-
 from fastapi import APIRouter, Depends, HTTPException, status # Importa status
 from fastapi.encoders import jsonable_encoder
 from sqlalchemy.orm import Session
 from src.database import get_db
 from src.encuestas import models, schemas, services
-
+from src.enumerados import EstadoInstrumento
 from src.exceptions import NotFound,BadRequest
 
 router = APIRouter(prefix="/admin/plantillas-encuesta", tags=["Admin Encuestas - Plantillas"])
 
 
-@router.post('/', response_model=schemas.EncuestaAlumnoPlantilla) #
+@router.post('/', response_model=schemas.EncuestaAlumnoPlantilla) 
 def crear_plantilla_encuesta(
     plantilla_data: schemas.EncuestaAlumnoPlantillaCreate,
     db: Session = Depends(get_db)
@@ -21,13 +19,13 @@ def crear_plantilla_encuesta(
 
 @router.get('/borradores', response_model=list[schemas.EncuestaAlumnoPlantilla])
 def listar_plantillas_borrador(db: Session = Depends(get_db)): 
-    plantillas = services.listar_plantillas(db, models.EstadoEncuesta.BORRADOR)
+    plantillas = services.listar_plantillas(db, EstadoInstrumento.BORRADOR)
     return plantillas 
 
 
 @router.get('/publicadas', response_model=list[schemas.EncuestaAlumnoPlantilla])
 def listar_plantillas_publicadas(db: Session = Depends(get_db)): 
-    plantillas = services.listar_plantillas(db, models.EstadoEncuesta.PUBLICADA)
+    plantillas = services.listar_plantillas(db, EstadoInstrumento.PUBLICADA)
     return plantillas
 
 
@@ -56,7 +54,7 @@ def publicar_plantilla(
     plantilla_id: int, db: Session = Depends(get_db) 
 ):
     try:
-        return services.actualizar_estado_plantilla(db, plantilla_id, models.EstadoEncuesta.PUBLICADA) 
+        return services.actualizar_estado_plantilla(db, plantilla_id, EstadoInstrumento.PUBLICADA) 
     except NotFound as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 

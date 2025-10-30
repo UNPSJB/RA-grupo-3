@@ -12,7 +12,7 @@ class EstadoInstancia(StrEnum):
     CERRADA = "cerrada"   # Ya pasó fecha_fin, se pueden ver resultados
 
 
-class EstadoEncuesta(StrEnum):
+class EstadoInstrumento(StrEnum):
         BORRADOR = "borrador"
         PUBLICADA = "publicada"
 
@@ -24,3 +24,7 @@ class TipoPregunta(StrEnum):
     REDACCION = "REDACCION"
     MULTIPLE_CHOICE = "MULTIPLE_CHOICE"
 
+class TipoInstrumento(StrEnum):
+    ENCUESTA = "ENCUESTA"
+    ACTIVIDAD_CURRICULAR = "ACTIVIDAD_CURRICULAR"
+    INFORME_SINTETICO = "INFORME_SINTETICO"

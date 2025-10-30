@@ -5,8 +5,7 @@ from typing import Optional, List
 from src.models import ModeloBase
 from sqlalchemy import Column, DateTime, func
 
-from src.pregunta.models import Pregunta, Opcion, TipoPregunta
-#from src.encuestas.models import EncuestaInstancia
+from src.enumerados import TipoPregunta
 
 class RespuestaSet(ModeloBase):
     __tablename__ = "respuesta_set"
@@ -15,11 +14,11 @@ class RespuestaSet(ModeloBase):
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     # A qué EncuestaInstancia pertenece (N-a-1)
-    encuesta_instancia_id: Mapped[int] = mapped_column(
-        ForeignKey("encuesta_instancia.id"), nullable=False
+    instrumento_instancia_id: Mapped[int] = mapped_column(
+        ForeignKey("instrumento_instancia.id"), nullable=False
     )
-    encuesta_instancia: Mapped["EncuestaInstancia"] = relationship(
-        "EncuestaInstancia", back_populates="respuesta_sets"
+    instrumento_instancia: Mapped["InstrumentoInstancia"] = relationship(
+        "InstrumentoInstancia", back_populates="respuesta_sets"
     )
 
     # Qué Respuestas contiene (1-a-N)

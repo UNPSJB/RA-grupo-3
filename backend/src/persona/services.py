@@ -2,7 +2,7 @@ from sqlalchemy.orm import Session
 from src.persona import models, schemas
 
 def crear_alumno(db: Session, alumno_data: schemas.AlumnoCreate) -> models.Alumno:
-    print(f"DEBUG: Datos recibidos para crear alumno: {alumno_data.model_dump()}") # Útil para depurar
+    print(f"DEBUG: Datos recibidos para crear alumno: {alumno_data.model_dump()}")
 
     nuevo_alumno = models.Alumno(
         nombre=alumno_data.nombre 

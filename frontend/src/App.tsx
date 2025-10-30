@@ -14,8 +14,6 @@ import ResultadosProfesorPage from "./pages/ResultadosProfesorPage.tsx";
 
 import "./Styles/Styles.css";
 
-import CrearMateria from "./pages/CrearMateria.tsx";
-
 const MainLayout: React.FC = () => (
   <div className="app">
     <header className="app-header">
@@ -49,7 +47,6 @@ const App: React.FC = () => {
             <Route path="publicadas" element={<EncuestasPage />} />
             <Route path="crear" element={<CrearEncuesta />} />{" "}
           </Route>
-          <Route path="materias/crear" element={<CrearMateria />} />
         </Route>
         {/* --- Rutas de Alumno --- */}
         <Route

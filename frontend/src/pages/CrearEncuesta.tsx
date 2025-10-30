@@ -2,9 +2,9 @@ import React, { useState } from "react";
 import CrearSeccion from "./CrearSeccion";
 
 const CrearEncuesta: React.FC = () => {
-  // Estado para título y descripción (¡solo datos de la plantilla!)
   const [titulo, setTitulo] = useState<string>("");
   const [descripcion, setDescripcion] = useState<string>("");
+  const [tipo, setTipo] = useState<string>("");
   // Estado para el flujo de la UI
   const [cargando, setCargando] = useState<boolean>(false);
   const [mensaje, setMensaje] = useState<string>("");
@@ -22,12 +22,12 @@ const CrearEncuesta: React.FC = () => {
       const plantillaData = {
         titulo: titulo,
         descripcion: descripcion,
+        tipo: tipo,
         // El estado 'BORRADOR' lo pone el backend por defecto
       };
 
-      // Endpoint correcto para crear plantillas
       const response = await fetch(
-        "http://localhost:8000/admin/plantillas-encuesta/",
+        "http://localhost:8000/admin/instrumentos/",
         {
           method: "POST",
           headers: {
@@ -67,6 +67,7 @@ const CrearEncuesta: React.FC = () => {
   const handleCrearOtra = () => {
     setTitulo("");
     setDescripcion("");
+    setTipo("");
     setPlantillaCreadaId(null);
     setMensaje("");
   };
@@ -74,7 +75,7 @@ const CrearEncuesta: React.FC = () => {
   return (
     <div className="p-6 max-w-2xl mx-auto bg-gray-50 min-h-screen">
       <h2 className="text-3xl font-bold mb-8 text-gray-800 text-center">
-        Crear Nueva Plantilla de Encuesta
+        Crear Nueva Plantilla
       </h2>
 
       {mensaje && (
@@ -114,7 +115,7 @@ const CrearEncuesta: React.FC = () => {
               Título:{" "}
               <span className="font-medium text-gray-800">{titulo}</span>
             </p>
-            <p className="text-gray-600">
+            <p className="text-gray-600 mb-1">
               Descripción:{" "}
               <span className="font-medium text-gray-800">{descripcion}</span>
             </p>
@@ -170,6 +171,29 @@ const CrearEncuesta: React.FC = () => {
               placeholder="Describe cuándo o para qué se usará esta plantilla..."
               required
             />
+          </div>
+          <div>
+            <label
+              htmlFor="tipo"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
+              Tipo de Plantilla:
+            </label>
+            <select
+              id="tipo"
+              value={tipo}
+              onChange={(e) => setTipo(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition duration-150 ease-in-out"
+              required
+            >
+              <option value="" disabled>
+                {" "}
+                -- Seleccione un tipo --{" "}
+              </option>
+              <option value="ENCUESTA">Encuesta de Alumno</option>
+              <option value="ACTIVIDAD_CURRICULAR">Actividad Curricular</option>
+              <option value="INFORME_SINTETICO">Informe Sintético</option>
+            </select>
           </div>
 
           {/* Botón de envío */}

@@ -14,7 +14,6 @@ const shortcuts: Shortcut[] = [
   { label: "Crear Plantilla", path: "/admin/plantillas/crear" },
   { label: "Estadísticas", path: "/estadisticas" },
   { label: "Cuenta", path: "/cuenta" },
-  { label: "Crear materia", path: "/admin/materias/crear" },
   { label: "Resultados de Encuestas", path: "/resultados-profesor" },
 ];
 const PanelAdmin: React.FC = () => {

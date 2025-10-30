@@ -2,25 +2,30 @@ from datetime import datetime
 from typing import List, Optional
 from pydantic import BaseModel, Field
 
-from src.enumerados import EstadoInstancia, EstadoEncuesta,TipoPregunta
+from src.enumerados import EstadoInstancia, EstadoInstrumento,TipoPregunta,TipoInstrumento
+
 
 from src.seccion.schemas import Seccion
 
-#plantilla
-
-class EncuestaAlumnoPlantillaBase(BaseModel):
+#instrumento
+class InstrumentoBaseCreate(BaseModel):
     titulo: str
     descripcion: str
-    
-class EncuestaAlumnoPlantillaCreate(EncuestaAlumnoPlantillaBase):
-    estado: EstadoEncuesta = Field(default = EstadoEncuesta.BORRADOR)
 
-class EncuestaAlumnoPlantilla(EncuestaAlumnoPlantillaBase):
+class InstrumentoBase(InstrumentoBaseCreate):
     id: int
-    estado: EstadoEncuesta
-    secciones: list[Seccion] = [] # Cargar las secciones
+    tipo: TipoInstrumento 
+
+    class Config:
+        from_attributes = True 
+
+#plantilla
     
-    model_config = {"from_attributes": True}
+class EncuestaAlumnoPlantillaCreate(InstrumentoBaseCreate):
+    pass
+
+class EncuestaAlumnoPlantilla(InstrumentoBase):
+    pass
 
 class EncuestaAlumnoPlantillaUpdate(BaseModel):
     titulo: Optional[str] = None
@@ -58,6 +63,7 @@ class EncuestaActivaAlumnoResponse(BaseModel):
     fecha_fin: Optional[datetime] = None 
 
     model_config = {"from_attributes": True}
+
 
 class InstanciaConPlantillaResponse(BaseModel):
      instancia_id: int

@@ -22,3 +22,5 @@ class ProfesorCreate(PersonaBase):
 class Profesor(PersonaBase):
     id: int
     model_config = {"from_attributes": True}
+
+
