@@ -8,15 +8,6 @@ from src.exceptions import NotFound,BadRequest
 
 router = APIRouter(prefix="/admin/plantillas-encuesta", tags=["Admin Encuestas - Plantillas"])
 
-
-@router.post('/', response_model=schemas.EncuestaAlumnoPlantilla) 
-def crear_plantilla_encuesta(
-    plantilla_data: schemas.EncuestaAlumnoPlantillaCreate,
-    db: Session = Depends(get_db)
-):
-    return services.crear_plantilla_encuesta(db, plantilla_data)
-
-
 @router.get('/borradores', response_model=list[schemas.EncuestaAlumnoPlantilla])
 def listar_plantillas_borrador(db: Session = Depends(get_db)): 
     plantillas = services.listar_plantillas(db, EstadoInstrumento.BORRADOR)

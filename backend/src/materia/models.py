@@ -7,7 +7,7 @@ from sqlalchemy.sql import func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from src.models import ModeloBase
 from src.enumerados import TipoCuatrimestre
-
+from src.instrumento.models import ActividadCurricularInstancia
 
 class Materia(ModeloBase):
     __tablename__ = "materia"
@@ -64,6 +64,10 @@ class Cursada(ModeloBase):
     )
 
     encuesta_instancia: Mapped["EncuestaInstancia"] = relationship(
+        back_populates="cursada"
+    )
+    
+    actividad_curricular_instancia: Mapped["ActividadCurricularInstancia"] = relationship(
         back_populates="cursada"
     )
 

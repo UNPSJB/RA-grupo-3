@@ -2,10 +2,8 @@ from datetime import datetime
 from typing import List, Optional
 from pydantic import BaseModel, Field
 
-from src.enumerados import EstadoInstancia, EstadoInstrumento,TipoPregunta,TipoInstrumento
+from src.enumerados import EstadoInstancia,TipoPregunta,TipoInstrumento
 
-
-from src.seccion.schemas import Seccion
 
 #instrumento
 class InstrumentoBaseCreate(BaseModel):

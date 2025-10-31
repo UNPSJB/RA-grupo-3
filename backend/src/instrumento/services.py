@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 from src.instrumento import models, schemas
 from src.enumerados import TipoInstrumento
-from src.encuestas import models as encuesta_models
+from src.encuestas.models import Encuesta
 
 def crear_instrumento_plantilla(
     db: Session, 
@@ -15,17 +15,19 @@ def crear_instrumento_plantilla(
     
     match plantilla_data.tipo:
         case TipoInstrumento.ENCUESTA:
-            db_plantilla = encuesta_models.Encuesta(**datos_base)
-        
+            datos_base["anexo"] = "Anexos I/II (DCDFI N° 005/2014)" 
+            db_plantilla = Encuesta(**datos_base)
+
         case TipoInstrumento.ACTIVIDAD_CURRICULAR:
-            db_plantilla = models.ActividadCurricularPlantilla(**datos_base)
+            datos_base["anexo"] = "Anexo I (RCDFI N° 283/2015)" 
+            db_plantilla = models.ActividadCurricular(**datos_base)
 
         case TipoInstrumento.INFORME_SINTETICO:
-            db_plantilla = models.InformeSinteticoPlantilla(**datos_base)
-        
+            datos_base["anexo"] = "Anexo II (RCDFI N° 283/2015)" 
+            db_plantilla = models.InformeSintetico(**datos_base)
+
         case _:
             raise ValueError("Tipo de instrumento no válido")
-
     db.add(db_plantilla)
     db.commit()
     db.refresh(db_plantilla)

@@ -4,7 +4,7 @@ from sqlalchemy import Integer, String,Enum, ForeignKey,Boolean
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from src.models import ModeloBase
 from src.enumerados import TipoPersona
-
+from src.instrumento.models import ActividadCurricularInstancia
 class Persona(ModeloBase):
     __tablename__ = "persona"
     
@@ -26,6 +26,11 @@ class Profesor(Persona):
     cursadas_impartidas: Mapped[list["Cursada"]] = relationship(
         back_populates="profesor"
     )
+    
+    actividades_curriculares: Mapped[list["ActividadCurricularInstancia"]] = relationship(
+        back_populates="profesor"
+    )
+
 
 
 class Inscripcion(ModeloBase):

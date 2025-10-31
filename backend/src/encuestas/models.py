@@ -7,7 +7,7 @@ from sqlalchemy.sql import func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from src.models import ModeloBase
 from src.enumerados import EstadoInstancia, TipoInstrumento
-from src.instrumento.models import InstrumentoBase
+from src.instrumento.models import ActividadCurricularInstancia, InstrumentoBase, InstrumentoInstancia
 
 class Encuesta(InstrumentoBase):
     __tablename__ = "encuesta" #cambio de nombre a encuesta singular por un tema de buenas practicas
@@ -23,7 +23,7 @@ class Encuesta(InstrumentoBase):
     )
 
 
-class EncuestaInstancia(ModeloBase):
+class EncuestaInstancia(InstrumentoInstancia):
     __tablename__ = "encuesta_instancia"
 
     id: Mapped[int] = mapped_column(ForeignKey("instrumento_instancia.id"), primary_key=True)
@@ -38,5 +38,10 @@ class EncuestaInstancia(ModeloBase):
     cursada: Mapped["Cursada"] = relationship(back_populates="encuesta_instancia")
 
     encuesta_id: Mapped[int] = mapped_column(ForeignKey("encuesta.id"), nullable=False)
+
     encuesta: Mapped["Encuesta"] = relationship(back_populates="instancias")
 
+    actividad_curricular_instancia: Mapped["ActividadCurricularInstancia"] = relationship(
+        back_populates="encuesta_instancia", uselist=False,
+        foreign_keys="[ActividadCurricularInstancia.encuesta_instancia_id]"
+    )
