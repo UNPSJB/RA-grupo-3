@@ -1,20 +1,16 @@
-// src/pages/ResultadosProfesorPage.tsx (NUEVO ARCHIVO)
 import React, { useState, useEffect } from "react";
 
-// Interface simplificada para los datos recibidos
 interface EncuestaCerradaInfo {
-  id: number; // ID de la instancia
+  id: number;
   fecha_fin: string | null;
   plantilla: {
     titulo: string;
   };
   cursada?: {
-    // Cursada puede ser null si hay problemas de carga
     materia?: {
       nombre: String;
       };
   };
-  // Podrías añadir cantidad de respuestas si el backend lo calcula fácil
 }
 
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
@@ -29,7 +25,6 @@ const ResultadosProfesorPage: React.FC = () => {
       setLoading(true);
       setError(null);
       try {
-        // Llama al endpoint del profesor
         const response = await fetch(`${API_BASE_URL}/profesor/mis-resultados`);
         if (!response.ok) {
           throw new Error(

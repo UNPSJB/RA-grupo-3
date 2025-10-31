@@ -251,3 +251,5 @@ if __name__ == "__main__":
         db.rollback()
     finally:
         db.close()
+        
+#Ejecutar con `python -m src.seed_data`,

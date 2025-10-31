@@ -9,18 +9,26 @@ from src.persona.models import Inscripcion # Necesitas Alumno e Inscripcion
 from src.materia.models import Cursada,Cuatrimestre
 from datetime import datetime
 from src.pregunta.models import Pregunta, PreguntaMultipleChoice
-from src.enumerados import EstadoInstancia, TipoPregunta
+from src.enumerados import EstadoInstancia, TipoPregunta,EstadoInstrumento
 from src.respuesta.models import Respuesta, RespuestaMultipleChoice, RespuestaRedaccion, RespuestaSet
 
 
-def crear_plantilla_encuesta(db: Session, plantilla_data: schemas.EncuestaAlumnoPlantillaCreate) -> models.Encuesta:
-    _plantilla = models.Encuesta(**plantilla_data.model_dump())
-    db.add(_plantilla)
+def crear_plantilla_encuesta(
+    db: Session, 
+    plantilla_data: schemas.EncuestaAlumnoPlantillaCreate
+) -> models.Encuesta:
+    db_plantilla = models.Encuesta(
+        titulo=plantilla_data.titulo,
+        descripcion=plantilla_data.descripcion
+    )
+    
+    db.add(db_plantilla)
     db.commit()
-    db.refresh(_plantilla)
-    return _plantilla
+    db.refresh(db_plantilla)
+    
+    return db_plantilla
 
-def listar_plantillas(db: Session, state: models.EstadoEncuesta = None) -> List[models.Encuesta]:
+def listar_plantillas(db: Session, state: EstadoInstrumento = None) -> List[models.Encuesta]:
     stmt = select(models.Encuesta).options(selectinload(models.Encuesta.secciones))
     if state:
         stmt = stmt.filter(models.Encuesta.estado == state)
@@ -37,7 +45,7 @@ def modificar_plantilla(
     db: Session, plantilla_id: int, plantilla_data: schemas.EncuestaAlumnoPlantillaUpdate
 ) -> models.Encuesta:
     db_plantilla = obtener_plantilla_por_id(db, plantilla_id)
-    if db_plantilla.estado == models.EstadoEncuesta.PUBLICADA:
+    if db_plantilla.estado == EstadoInstrumento.PUBLICADA:
         raise ValueError("No se puede modificar una plantilla de encuesta publicada")
 
     update_data = plantilla_data.model_dump(exclude_unset=True)
@@ -49,7 +57,7 @@ def modificar_plantilla(
         db.refresh(db_plantilla)
     return db_plantilla
 
-def actualizar_estado_plantilla(db: Session, plantilla_id: int, nuevo_estado: models.EstadoEncuesta) -> models.Encuesta:
+def actualizar_estado_plantilla(db: Session, plantilla_id: int, nuevo_estado: EstadoInstrumento) -> models.Encuesta:
     plantilla_db = obtener_plantilla_por_id(db, plantilla_id)
     plantilla_db.estado = nuevo_estado
     db.add(plantilla_db)
@@ -72,7 +80,7 @@ def activar_encuesta_para_cursada(db: Session, data: schemas.EncuestaInstanciaCr
     plantilla = db.get(models.Encuesta, data.plantilla_id)
     if not plantilla:
         raise NotFound(detail=f"Plantilla de Encuesta con ID {data.plantilla_id} no encontrada.")
-    if plantilla.estado != models.EstadoEncuesta.PUBLICADA:
+    if plantilla.estado != EstadoInstrumento.PUBLICADA:
         raise BadRequest(detail=f"La plantilla de encuesta {data.plantilla_id} no está publicada.")
 
     stmt_existente = select(models.EncuestaInstancia).where(models.EncuestaInstancia.cursada_id == data.cursada_id)

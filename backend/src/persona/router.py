@@ -20,7 +20,7 @@ def crear_nuevo_alumno(
     return nuevo_alumno
 
 router_profesor = APIRouter(prefix="/profesor", tags=["Profesor"])
-
+#tengo este esquema, tengo model, y necesito crear 10 alumnos para simular respuestas (decirle al chatgpt que genere esos datos)
 
 @router_profesor.get(
     "/mis-resultados",
