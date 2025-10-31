@@ -1,6 +1,5 @@
 // src/pages/ResultadosProfesorPage.tsx (NUEVO ARCHIVO)
 import React, { useState, useEffect } from "react";
-import { Link } from "react-router-dom"; // Opcional
 
 // Interface simplificada para los datos recibidos
 interface EncuestaCerradaInfo {
@@ -12,8 +11,8 @@ interface EncuestaCerradaInfo {
   cursada?: {
     // Cursada puede ser null si hay problemas de carga
     materia?: {
-      nombre: string;
-    };
+      nombre: String;
+      };
   };
   // Podrías añadir cantidad de respuestas si el backend lo calcula fácil
 }
