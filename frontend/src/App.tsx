@@ -1,6 +1,7 @@
 import React from "react";
 import { Outlet, Route, Routes, Navigate } from "react-router-dom";
-import { Navbar } from "./components/Navbar.tsx";
+import Navbar from "./components/Navbar.tsx";
+import { Tarjetas } from "./components/Tarjetas.tsx";
 import EncuestasPage from "./pages/EncuestasPage.tsx";
 import EstadisticasPage from "./pages/EstadisticasPage.tsx";
 import CuentaPage from "./pages/CuentaPage.tsx";
@@ -12,6 +13,7 @@ import PanelAdmin from "./pages/panelAdmin.tsx";
 import ListaEncuestasAlumnos from "./pages/ListaEncuestasAlumnos.tsx";
 import ResultadosProfesorPage from "./pages/ResultadosProfesorPage.tsx";
 
+
 import "./Styles/Styles.css";
 
 const MainLayout: React.FC = () => (
@@ -22,7 +24,16 @@ const MainLayout: React.FC = () => (
         <h1 className="app-header__title">Encuestas UNPSJB</h1>
       </div>
       <Navbar />
+      
     </header>
+    {/* <Grid container spacing={2}> */}
+      {/* <Tarjetas/> */}
+      {/* <Tarjetas/> */}
+      {/* <Tarjetas/> */}
+      {/* <Tarjetas/> */}
+    {/* </Grid> */}
+
+    
     <main className="app-main">
       <Outlet />
     </main>

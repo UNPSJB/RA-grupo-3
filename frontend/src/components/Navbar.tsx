@@ -10,13 +10,13 @@ export const Navbar: React.FC = () => {
     <nav className="navbar">
       <div className="flex items-center gap-2">
         {" "}
-        <Button
+        {/* <Button
           variant="ghost"
           className="navbar__button"
           onClick={() => navigate("/admin")}
         >
           Administrador
-        </Button>
+        </Button> */}
         <Button
           variant="ghost"
           className="navbar__button"
