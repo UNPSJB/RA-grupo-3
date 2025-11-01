@@ -7,6 +7,7 @@ const Home: React.FC = () => {
   const accesosRapidos = [
     {
       label: "Alumnos",
+      color: "#024990", 
       icon: (
         <span className="text-3xl" role="img" aria-hidden="true">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="size-14">
@@ -20,6 +21,7 @@ const Home: React.FC = () => {
     },
     {
       label: "Profesores",
+      color: "#024990",
       icon: (
         <span className="text-3xl" role="img" aria-hidden="true">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="size-14">
@@ -32,6 +34,7 @@ const Home: React.FC = () => {
     },
     {
       label: "Secretaria",
+      color: "#024990", 
       icon: (
         <span className="text-3xl" role="img" aria-hidden="true">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="size-14">
@@ -45,6 +48,7 @@ const Home: React.FC = () => {
     },
     {
       label: "Administracion",
+      color: "#024990", 
       icon: (
         <span className="text-3xl" role="img" aria-hidden="true">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="size-14">
@@ -60,8 +64,8 @@ const Home: React.FC = () => {
     <section className="min-h-screen bg-slate-100">
       <div className="mx-auto max-w-5xl px-6 py-12">
         <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
-          {accesosRapidos.map(({ label, icon, onClick }) => (
-            <Tarjeta key={label} text={label} icon={icon} onClick={onClick} />
+          {accesosRapidos.map(({ label, icon, onClick, color }) => (
+            <Tarjeta key={label} text={label} icon={icon} onClick={onClick} iconColor={color} />
           ))}
         </div>
       </div>

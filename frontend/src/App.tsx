@@ -17,23 +17,8 @@ import ResultadosProfesorPage from "./pages/ResultadosProfesorPage.tsx";
 import "./Styles/Styles.css";
 
 const MainLayout: React.FC = () => (
-  <div className="app">
-    <header className="app-header">
-      <div className="app-header__branding">
-        <img className="app-header__logo" src={logo} alt="Logo Universidad" />
-        <h1 className="app-header__title">Encuestas UNPSJB</h1>
-      </div>
-      <Navbar />
-      
-    </header>
-    {/* <Grid container spacing={2}> */}
-      {/* <Tarjetas/> */}
-      {/* <Tarjetas/> */}
-      {/* <Tarjetas/> */}
-      {/* <Tarjetas/> */}
-    {/* </Grid> */}
-
-    
+  <div className="app">  
+    <Navbar />
     <main className="app-main">
       <Outlet />
     </main>

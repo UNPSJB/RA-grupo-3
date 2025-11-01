@@ -28,12 +28,13 @@ export interface TarjetaProps {
   text: string;
   onClick?: () => void; // Prop opcional para hacerla clickeable
   className?: string;
+  iconColor?: string; // Nueva prop para el color del icono
 }
 
 /**
  * Componente de Tarjeta reutilizable con un icono y texto.
  */
-export const Tarjeta: React.FC<TarjetaProps> = ({ icon, text, onClick, className = "" }) => {
+export const Tarjeta: React.FC<TarjetaProps> = ({ icon, text, onClick, className = "", iconColor }) => {
   return (
     <button
       type="button"
@@ -49,16 +50,15 @@ export const Tarjeta: React.FC<TarjetaProps> = ({ icon, text, onClick, className
         border border-blue-100
         bg-white
         p-6
-        text-blue-700
         shadow-lg
         transition-all duration-300
         ease-in-out
         hover:-translate-y-1
-        hover:border-blue-300
+        hover:bg-gray-100 // Cambiado para un fondo sutil en hover
         hover:shadow-2xl
         focus:outline-none
         focus:ring-2
-        focus:ring-blue-500
+        focus:ring-gray-400 // Cambiado para un anillo de foco neutral
         focus:ring-opacity-50
         ${onClick ? 'cursor-pointer' : 'cursor-default'}
         ${className}
@@ -66,7 +66,10 @@ export const Tarjeta: React.FC<TarjetaProps> = ({ icon, text, onClick, className
     >
       {/* Contenedor del Icono */}
       {icon && (
-        <div className="text-blue-600 transition-transform duration-300 group-hover:scale-110">
+        <div 
+          className={`transition-transform duration-300 group-hover:scale-110 ${!iconColor ? 'text-blue-600' : ''}`}
+          style={{ color: iconColor }}
+        >
           {icon}
         </div>
       )}
