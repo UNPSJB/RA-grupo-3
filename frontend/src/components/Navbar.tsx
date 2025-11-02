@@ -1,5 +1,5 @@
 import React from "react";
-import "../Styles/Styles.css";
+
 import logoUnpsjb from "../img/Logo50Color_conletras.png"
 
 interface NavbarProps {}

@@ -14,7 +14,7 @@ import AlumnoHome from "./pages/AlumnoHome.tsx";
 import ResultadosProfesorPage from "./pages/ResultadosProfesorPage.tsx";
 
 
-import "./Styles/Styles.css";
+
 
 const MainLayout: React.FC = () => {
   const location = useLocation();

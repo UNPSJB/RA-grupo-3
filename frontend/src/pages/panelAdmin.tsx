@@ -1,7 +1,7 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 
-import "../Styles/Styles.css";
+
 
 type Shortcut = {
   label: string;

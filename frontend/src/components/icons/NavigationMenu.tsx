@@ -46,7 +46,7 @@ const DesktopDropdown: React.FC<DesktopDropdownProps> = ({ title, children }) =>
       {/* Botón del dropdown */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="btn-reset text-gray-700 hover:text-blue-600 flex items-center px-6 py-2 text-base font-medium"
+        className="text-gray-700 hover:text-blue-600 flex items-center px-6 py-2 text-base font-medium"
         type="button"
       >
         <span>{title}</span>

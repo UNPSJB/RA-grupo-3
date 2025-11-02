@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import "../Styles/Styles.css";
+
 
 interface EncuestaActivaAlumno {
   instancia_id: number;
