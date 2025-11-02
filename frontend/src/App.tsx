@@ -1,29 +1,37 @@
 import React from "react";
-import { Outlet, Route, Routes, Navigate } from "react-router-dom";
+import { Outlet, Route, Routes, Navigate, useLocation } from "react-router-dom";
 import Navbar from "./components/Navbar.tsx";
-import { Tarjetas } from "./components/Tarjetas.tsx";
 import EncuestasPage from "./pages/EncuestasPage.tsx";
 import EstadisticasPage from "./pages/EstadisticasPage.tsx";
 import CuentaPage from "./pages/CuentaPage.tsx";
-import logo from "./img/Logo50Color_conletras.png";
 import ResponderEncuesta from "./pages/ResponderEncuesta.tsx";
 import CrearEncuesta from "./pages/CrearEncuesta.tsx";
 import Home from "./pages/Home.tsx";
 import PanelAdmin from "./pages/panelAdmin.tsx";
 import ListaEncuestasAlumnos from "./pages/ListaEncuestasAlumnos.tsx";
+import NavigationMenu from "./components/icons/NavigationMenu.tsx";
+import AlumnoHome from "./pages/AlumnoHome.tsx";
 import ResultadosProfesorPage from "./pages/ResultadosProfesorPage.tsx";
 
 
 import "./Styles/Styles.css";
 
-const MainLayout: React.FC = () => (
-  <div className="app">  
-    <Navbar />
-    <main className="app-main">
-      <Outlet />
-    </main>
-  </div>
-);
+const MainLayout: React.FC = () => {
+  const location = useLocation();
+  const showNavMenu = location.pathname.startsWith('/alumno');
+
+  return (
+    <div className="app">  
+      <header className="w-full">
+        <Navbar />
+        {showNavMenu && <NavigationMenu />}
+      </header>
+      <main className="app-main">
+        <Outlet />
+      </main>
+    </div>
+  );
+};
 
 const App: React.FC = () => {
   return (
@@ -45,14 +53,14 @@ const App: React.FC = () => {
           </Route>
         </Route>
         {/* --- Rutas de Alumno --- */}
-        <Route
-          path="encuestas-activas"
-          element={<ListaEncuestasAlumnos />}
-        />{" "}
-        <Route
-          path="encuestas/instancia/:instanciaId/responder"
-          element={<ResponderEncuesta />}
-        />
+        <Route path="alumno" element={<Outlet />}>
+          <Route index element={<AlumnoHome />} />
+          <Route path="encuestas" element={<ListaEncuestasAlumnos />} />
+          <Route
+            path="encuestas/instancia/:instanciaId/responder"
+            element={<ResponderEncuesta />}
+          />
+        </Route>
         {/* --- Rutas de Profesor --- */}
         <Route
           path="resultados-profesor"

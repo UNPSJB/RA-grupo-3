@@ -17,7 +17,7 @@ const Home: React.FC = () => {
           </svg>
         </span>
       ),
-      onClick: () => navigate("/encuestas-activas"),
+      onClick: () => navigate("/alumno"),
     },
     {
       label: "Profesores",

@@ -1,8 +1,5 @@
 import React from "react";
-import { useNavigate } from "react-router-dom";
-import { Button } from "./Button";
 import "../Styles/Styles.css";
-import { ProfileIcon, ChartLineIcon, ClipboardListIcon } from "./icons";
 import logoUnpsjb from "../img/Logo50Color_conletras.png"
 
 interface NavbarProps {}
