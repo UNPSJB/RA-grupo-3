@@ -12,8 +12,13 @@ import ListaEncuestasAlumnos from "./pages/ListaEncuestasAlumnos.tsx";
 import VerEncuestas from "./pages/VerEncuestas.tsx";
 import GestionPerfil from "./pages/GestionPerfil.tsx";
 import NavigationMenu from "./components/icons/NavigationMenu.tsx";
+import SecretariaAcademicaNavigationMenu from "./components/icons/NavigationMenuSecretaria.tsx";
+import ProfesorNavigationMenu from "./components/icons/NavigationMenuProfesores.tsx";
 import AlumnoHome from "./pages/AlumnoHome.tsx";
 import ResultadosProfesorPage from "./pages/ResultadosProfesorPage.tsx";
+import SecretariaHome from "./pages/SecretariaHome.tsx";
+import SecretariaModelos from "./pages/SecretariaModelos.tsx";
+import ProfesoresHome from "./pages/ProfesoresHome.tsx"
 
 
 
@@ -21,12 +26,16 @@ import ResultadosProfesorPage from "./pages/ResultadosProfesorPage.tsx";
 const MainLayout: React.FC = () => {
   const location = useLocation();
   const showNavMenu = location.pathname.startsWith('/alumno');
+  const showSecretariaNavMenu = location.pathname.startsWith('/secretaria');
+  const showProfesorNavMenu = location.pathname.startsWith('/profesores');
 
   return (
     <div className="app">  
       <header className="w-full">
         <Navbar />
         {showNavMenu && <NavigationMenu />}
+        {showSecretariaNavMenu && <SecretariaAcademicaNavigationMenu />}
+        {showProfesorNavMenu && <ProfesorNavigationMenu />}
       </header>
       <main className="app-main">
         <Outlet />
@@ -66,12 +75,21 @@ const App: React.FC = () => {
           />
         </Route>
         {/* --- Rutas de Profesor --- */}
-        <Route
-          path="resultados-profesor"
-          element={<ResultadosProfesorPage />}
-        />
-        <Route path="estadisticas" element={<EstadisticasPage />} />
-        <Route path="cuenta" element={<CuentaPage />} />
+        <Route path="profesores" element={<Outlet />}>
+          <Route index element={<ProfesoresHome />} />
+          <Route path="reportes" element={<Outlet />} /> { /*ACA NO HAY NADA PARA PONER AUN*/ }
+          <Route path="otros" element={<Outlet />} /> { /*ACA NO HAY NADA PARA PONER AUN*/ }
+          <Route path="estadisticas" element={<EstadisticasPage />} />
+          <Route path="gestion" element={<CuentaPage />} />
+        </Route>
+        {/* --- Rutas de Secretaria Academica --- */}
+        <Route path="secretaria" element={<Outlet />}>
+          <Route index element={<SecretariaHome />} />
+          <Route path="modelos" element={<SecretariaModelos />} />
+          <Route path="otros" element={<Outlet />} /> { /*ACA NO HAY NADA PARA PONER AUN*/ }
+          <Route path="estadisticas" element={<EstadisticasPage />} />
+          <Route path="gestion" element={<CuentaPage />} />
+        </Route>
       </Route>
     </Routes>
   );

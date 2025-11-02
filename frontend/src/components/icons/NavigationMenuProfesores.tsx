@@ -120,7 +120,7 @@ const MobileDropdown: React.FC<MobileDropdownProps> = ({ title, children }) => {
 // --- Componente Principal del Menú de Navegación ---
 interface NavigationMenuProps {}
 
-const NavigationMenu: React.FC<NavigationMenuProps> = () => {
+const NavigationMenuProfesores: React.FC<NavigationMenuProps> = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   return (
@@ -156,7 +156,7 @@ const NavigationMenu: React.FC<NavigationMenuProps> = () => {
             
             {/* Ejemplo de Enlace Simple */}
             <Link 
-              to="/alumno"
+              to="/secretaria"
               className="text-gray-700 hover:text-blue-600 px-6 py-2 text-base font-medium"
             >
               Dashboard
@@ -164,13 +164,14 @@ const NavigationMenu: React.FC<NavigationMenuProps> = () => {
 
             {/* Ejemplo de Menú Desplegable 1 */}
             <DesktopDropdown title="Encuestas">
-              <DropdownItem to="/alumno/encuestas">Responder</DropdownItem>
-              <DropdownItem to="/alumno/encuestas/ver">Ver Existentes</DropdownItem>
+              <DropdownItem to="/profesores/reportes">Reportes</DropdownItem>
+              <DropdownItem to="/profesores/estadisticas">Estadisticas</DropdownItem>
+              <DropdownItem to="/secretaria/otros">Otros</DropdownItem>
             </DesktopDropdown>
 
             {/* Ejemplo de Menú de Usuario */}
-            <DesktopDropdown title="Mi Perfil">
-              <DropdownItem to="/secretaria/gestion">Gestión</DropdownItem>
+            <DesktopDropdown title="Cuenta">
+              <DropdownItem to="/profesores/gestion">Gestión</DropdownItem>
               <DropdownItem to="/">Cerrar Sesión</DropdownItem>
             </DesktopDropdown>
 
@@ -186,7 +187,7 @@ const NavigationMenu: React.FC<NavigationMenuProps> = () => {
             
             {/* Ejemplo de Enlace Simple (Móvil) */}
             <Link 
-              to="/alumno" 
+              to="/secretaria" 
               className="text-gray-700 hover:text-blue-600 block px-3 py-2 rounded-md text-base font-medium"
             >
               Dashboard
@@ -194,13 +195,14 @@ const NavigationMenu: React.FC<NavigationMenuProps> = () => {
 
             {/* Ejemplo de Menú Desplegable 1 (Móvil) */}
             <MobileDropdown title="Encuestas">
-              <DropdownItem to="/alumno/encuestas">Responder</DropdownItem>
-              <DropdownItem to="/alumno/encuestas/ver">Ver Existentes</DropdownItem>
+              <DropdownItem to="/secretaria/modelos">Modelos</DropdownItem>
+              <DropdownItem to="/secretaria/estadisticas">Estadisticas</DropdownItem>
+              <DropdownItem to="/secretaria/otros">Otros</DropdownItem>
             </MobileDropdown>
 
             {/* Ejemplo de Menú de Usuario (Móvil) */}
             <MobileDropdown title="Mi Perfil">
-              <DropdownItem to="/alumno/perfil/gestion">Gestión</DropdownItem>
+              <DropdownItem to="/secretaria/gestion">Gestión</DropdownItem>
               <DropdownItem to="/">Cerrar Sesión</DropdownItem>
             </MobileDropdown>
 
@@ -211,5 +213,5 @@ const NavigationMenu: React.FC<NavigationMenuProps> = () => {
   );
 };
 
-export default NavigationMenu;
+export default NavigationMenuProfesores;
 

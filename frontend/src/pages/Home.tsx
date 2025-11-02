@@ -30,7 +30,7 @@ const Home: React.FC = () => {
           </svg>
         </span>
       ),
-      onClick: () => navigate("/resultados-profesor"),
+      onClick: () => navigate("/profesores"),
     },
     {
       label: "Secretaria",
@@ -44,7 +44,7 @@ const Home: React.FC = () => {
           </svg>
         </span>
       ),
-      onClick: () => navigate("/estadisticas"),
+      onClick: () => navigate("/secretaria"),
     },
     {
       label: "Administracion",

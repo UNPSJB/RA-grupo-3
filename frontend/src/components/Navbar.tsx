@@ -28,7 +28,7 @@ const Navbar: React.FC<NavbarProps> = () => {
             
             {/* Título del sistema */}
             <span className="text-3xl font-semibold text-gray-800">
-              Sistema Encuestas UNPSJB
+              Sistema Encuestas
             </span>
             
           </a>
