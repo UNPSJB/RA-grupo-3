@@ -9,6 +9,8 @@ import CrearEncuesta from "./pages/CrearEncuesta.tsx";
 import Home from "./pages/Home.tsx";
 import PanelAdmin from "./pages/panelAdmin.tsx";
 import ListaEncuestasAlumnos from "./pages/ListaEncuestasAlumnos.tsx";
+import VerEncuestas from "./pages/VerEncuestas.tsx";
+import GestionPerfil from "./pages/GestionPerfil.tsx";
 import NavigationMenu from "./components/icons/NavigationMenu.tsx";
 import AlumnoHome from "./pages/AlumnoHome.tsx";
 import ResultadosProfesorPage from "./pages/ResultadosProfesorPage.tsx";
@@ -56,6 +58,8 @@ const App: React.FC = () => {
         <Route path="alumno" element={<Outlet />}>
           <Route index element={<AlumnoHome />} />
           <Route path="encuestas" element={<ListaEncuestasAlumnos />} />
+          <Route path="encuestas/ver" element={<VerEncuestas />} />
+          <Route path="perfil/gestion" element={<GestionPerfil />} />
           <Route
             path="encuestas/instancia/:instanciaId/responder"
             element={<ResponderEncuesta />}

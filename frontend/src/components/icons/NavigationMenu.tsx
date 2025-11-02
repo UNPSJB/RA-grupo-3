@@ -1,20 +1,24 @@
 import React, { useState, useEffect, useRef } from 'react';
 
 
+import { Link } from 'react-router-dom';
+
+// --- Componente de Item Desplegable ---
+// Se usa dentro de los menús
 interface DropdownItemProps {
-  href: string;
+  to: string;
   children: React.ReactNode;
 }
 
-const DropdownItem: React.FC<DropdownItemProps> = ({ href, children }) => {
+const DropdownItem: React.FC<DropdownItemProps> = ({ to, children }) => {
   return (
-    <a
-      href={href}
+    <Link
+      to={to}
       className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900"
       role="menuitem"
     >
       {children}
-    </a>
+    </Link>
   );
 };
 
@@ -121,8 +125,6 @@ const NavigationMenu: React.FC<NavigationMenuProps> = () => {
 
   return (
     // Contenedor principal del menú.
-    // Ajusta el color de fondo (bg-white) y la sombra (shadow-md) si lo
-    // necesitas, o quítalos si este componente se anida en otra barra.
     <nav className="bg-white shadow-md w-full border-t border-gray-200">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         {/* Contenedor alineado a la derecha en móvil (justify-end) y centrado en desktop (md:justify-center) */}
@@ -153,23 +155,23 @@ const NavigationMenu: React.FC<NavigationMenuProps> = () => {
           <div className="hidden md:flex md:items-center divide-x divide-gray-200">
             
             {/* Ejemplo de Enlace Simple */}
-            <a 
-              href="/dashboard" 
+            <Link 
+              to="/alumno"
               className="text-gray-700 hover:text-blue-600 px-6 py-2 text-base font-medium"
             >
               Dashboard
-            </a>
+            </Link>
 
             {/* Ejemplo de Menú Desplegable 1 */}
             <DesktopDropdown title="Encuestas">
-              <DropdownItem href="/encuestas/nueva">Responder</DropdownItem>
-              <DropdownItem href="/encuestas/ver">Ver Existentes</DropdownItem>
+              <DropdownItem to="/alumno/encuestas">Responder</DropdownItem>
+              <DropdownItem to="/alumno/encuestas/ver">Ver Existentes</DropdownItem>
             </DesktopDropdown>
 
             {/* Ejemplo de Menú de Usuario */}
             <DesktopDropdown title="Mi Perfil">
-              <DropdownItem href="/perfil">Cambv</DropdownItem>
-              <DropdownItem href="/logout">Cerrar Sesión</DropdownItem>
+              <DropdownItem to="/alumno/perfil/gestion">Gestión</DropdownItem>
+              <DropdownItem to="/">Cerrar Sesión</DropdownItem>
             </DesktopDropdown>
 
           </div>
@@ -183,30 +185,23 @@ const NavigationMenu: React.FC<NavigationMenuProps> = () => {
           <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
             
             {/* Ejemplo de Enlace Simple (Móvil) */}
-            <a 
-              href="/dashboard" 
+            <Link 
+              to="/alumno" 
               className="text-gray-700 hover:text-blue-600 block px-3 py-2 rounded-md text-base font-medium"
             >
               Dashboard
-            </a>
+            </Link>
 
             {/* Ejemplo de Menú Desplegable 1 (Móvil) */}
             <MobileDropdown title="Encuestas">
-              <DropdownItem href="/encuestas/pendientes">Encuestas</DropdownItem>
-              <DropdownItem href="/encuestas/ver">Ver Existentes</DropdownItem>
-              <DropdownItem href="/encuestas/resultados">Resultados</DropdownItem>
+              <DropdownItem to="/alumno/encuestas">Responder</DropdownItem>
+              <DropdownItem to="/alumno/encuestas/ver">Ver Existentes</DropdownItem>
             </MobileDropdown>
 
-            {/* Ejemplo de Menú Desplegable 2 (Móvil) */}
-            <MobileDropdown title="Administración">
-              <DropdownItem href="/admin/usuarios">Gestionar Usuarios</DropdownItem>
-              <DropdownItem href="/admin/configuracion">Configuración</DropdownItem>
-            </MobileDropdown>
-            
             {/* Ejemplo de Menú de Usuario (Móvil) */}
             <MobileDropdown title="Mi Perfil">
-              <DropdownItem href="/perfil">Ver Perfil</DropdownItem>
-              <DropdownItem href="/">Cerrar Sesión</DropdownItem>
+              <DropdownItem to="/alumno/perfil/gestion">Gestión</DropdownItem>
+              <DropdownItem to="/">Cerrar Sesión</DropdownItem>
             </MobileDropdown>
 
           </div>
