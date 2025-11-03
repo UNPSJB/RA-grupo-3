@@ -1,33 +1,48 @@
 import React from "react";
-import { Outlet, Route, Routes, Navigate } from "react-router-dom";
-import { Navbar } from "./components/Navbar.tsx";
+import { Outlet, Route, Routes, Navigate, useLocation } from "react-router-dom";
+import Navbar from "./components/Navbar.tsx";
 import EncuestasPage from "./pages/EncuestasPage.tsx";
 import EstadisticasPage from "./pages/EstadisticasPage.tsx";
 import CuentaPage from "./pages/CuentaPage.tsx";
-import logo from "./img/Logo50Color_conletras.png";
 import ResponderEncuesta from "./pages/ResponderEncuesta.tsx";
 import CrearEncuesta from "./pages/CrearEncuesta.tsx";
 import Home from "./pages/Home.tsx";
 import PanelAdmin from "./pages/panelAdmin.tsx";
 import ListaEncuestasAlumnos from "./pages/ListaEncuestasAlumnos.tsx";
+import VerEncuestas from "./pages/VerEncuestas.tsx";
+import GestionPerfil from "./pages/GestionPerfil.tsx";
+import NavigationMenu from "./components/NavigationMenu.tsx";
+import SecretariaAcademicaNavigationMenu from "./components/NavigationMenuSecretaria.tsx";
+import ProfesorNavigationMenu from "./components/NavigationMenuProfesores.tsx";
+import AlumnoHome from "./pages/AlumnoHome.tsx";
 import ResultadosProfesorPage from "./pages/ResultadosProfesorPage.tsx";
+import SecretariaHome from "./pages/SecretariaHome.tsx";
+import SecretariaModelos from "./pages/SecretariaModelos.tsx";
+import ProfesoresHome from "./pages/ProfesoresHome.tsx"
 
-import "./Styles/Styles.css";
 
-const MainLayout: React.FC = () => (
-  <div className="app">
-    <header className="app-header">
-      <div className="app-header__branding">
-        <img className="app-header__logo" src={logo} alt="Logo Universidad" />
-        <h1 className="app-header__title">Encuestas UNPSJB</h1>
-      </div>
-      <Navbar />
-    </header>
-    <main className="app-main">
-      <Outlet />
-    </main>
-  </div>
-);
+
+
+const MainLayout: React.FC = () => {
+  const location = useLocation();
+  const showNavMenu = location.pathname.startsWith('/alumno');
+  const showSecretariaNavMenu = location.pathname.startsWith('/secretaria');
+  const showProfesorNavMenu = location.pathname.startsWith('/profesores');
+
+  return (
+    <div className="app">  
+      <header className="w-full">
+        <Navbar />
+        {showNavMenu && <NavigationMenu />}
+        {showSecretariaNavMenu && <SecretariaAcademicaNavigationMenu />}
+        {showProfesorNavMenu && <ProfesorNavigationMenu />}
+      </header>
+      <main className="app-main">
+        <Outlet />
+      </main>
+    </div>
+  );
+};
 
 const App: React.FC = () => {
   return (
@@ -49,21 +64,32 @@ const App: React.FC = () => {
           </Route>
         </Route>
         {/* --- Rutas de Alumno --- */}
-        <Route
-          path="encuestas-activas"
-          element={<ListaEncuestasAlumnos />}
-        />{" "}
-        <Route
-          path="encuestas/instancia/:instanciaId/responder"
-          element={<ResponderEncuesta />}
-        />
+        <Route path="alumno" element={<Outlet />}>
+          <Route index element={<AlumnoHome />} />
+          <Route path="encuestas" element={<ListaEncuestasAlumnos />} />
+          <Route path="encuestas/ver" element={<VerEncuestas />} />
+          <Route path="perfil/gestion" element={<GestionPerfil />} />
+          <Route
+            path="encuestas/instancia/:instanciaId/responder"
+            element={<ResponderEncuesta />}
+          />
+        </Route>
         {/* --- Rutas de Profesor --- */}
-        <Route
-          path="resultados-profesor"
-          element={<ResultadosProfesorPage />}
-        />
-        <Route path="estadisticas" element={<EstadisticasPage />} />
-        <Route path="cuenta" element={<CuentaPage />} />
+        <Route path="profesores" element={<Outlet />}>
+          <Route index element={<ProfesoresHome />} />
+          <Route path="reportes" element={<Outlet />} /> { /*ACA NO HAY NADA PARA PONER AUN*/ }
+          <Route path="otros" element={<Outlet />} /> { /*ACA NO HAY NADA PARA PONER AUN*/ }
+          <Route path="estadisticas" element={<EstadisticasPage />} />
+          <Route path="gestion" element={<CuentaPage />} />
+        </Route>
+        {/* --- Rutas de Secretaria Academica --- */}
+        <Route path="secretaria" element={<Outlet />}>
+          <Route index element={<SecretariaHome />} />
+          <Route path="modelos" element={<SecretariaModelos />} />
+          <Route path="otros" element={<Outlet />} /> { /*ACA NO HAY NADA PARA PONER AUN*/ }
+          <Route path="estadisticas" element={<EstadisticasPage />} />
+          <Route path="gestion" element={<CuentaPage />} />
+        </Route>
       </Route>
     </Routes>
   );
