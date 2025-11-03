@@ -15,7 +15,7 @@ import NavigationMenu from "./components/NavigationMenu.tsx";
 import SecretariaAcademicaNavigationMenu from "./components/NavigationMenuSecretaria.tsx";
 import ProfesorNavigationMenu from "./components/NavigationMenuProfesores.tsx";
 import AlumnoHome from "./pages/AlumnoHome.tsx";
-import ResultadosProfesorPage from "./pages/ResultadosProfesorPage.tsx";
+//import ResultadosProfesorPage from "./pages/ResultadosProfesorPage.tsx";
 import SecretariaHome from "./pages/SecretariaHome.tsx";
 import SecretariaModelos from "./pages/SecretariaModelos.tsx";
 import ProfesoresHome from "./pages/ProfesoresHome.tsx"
