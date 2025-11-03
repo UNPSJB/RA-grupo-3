@@ -6,7 +6,7 @@ class SeccionBase(BaseModel):
     nombre: str = Field()
 
 class SeccionCreate(SeccionBase):
-    encuesta_id: int
+    instrumento_id: int
 
 
 class Seccion(SeccionBase):
