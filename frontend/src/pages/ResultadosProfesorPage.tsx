@@ -8,8 +8,8 @@ interface EncuestaCerradaInfo {
   };
   cursada?: {
     materia?: {
-      nombre: string;
-    };
+      nombre: String;
+      };
   };
 }
 
