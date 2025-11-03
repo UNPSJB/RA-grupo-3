@@ -142,7 +142,7 @@ def obtener_instancia_activa_por_cursada(db: Session, cursada_id: int) -> models
     )
     instancia = db.execute(stmt).scalar_one_or_none()
     if not instancia:
-        raise NotFound(f"No se encontró una encuesta activa para la cursada ID {cursada_id}.")
+        raise NotFound(detail=f"No se encontró una encuesta activa para la cursada ID {cursada_id}.") #modificado para alcararle a la excepción que le paso un string al campo detail
     return instancia
 
 def obtener_plantilla_para_instancia_activa(db: Session, instancia_id: int) -> models.Encuesta:
