@@ -17,15 +17,10 @@ class InstrumentoPlantilla(InstrumentoPlantillaCreate):
         from_attributes = True
 
 class InstrumentoPlantillaUpdate(BaseModel):
-    # Los campos son opcionales
+
     titulo: Optional[str] = None
     descripcion: Optional[str] = None
-    
-    # Nota: No incluimos 'tipo' ni 'estado' aquí,
-    # ya que 'tipo' no debería cambiar, y 'estado' 
-    # se maneja con el endpoint /publicar.
 
-# --- Schema de RESPUESTA (el que ya tenías) ---
 class InstrumentoPlantilla(InstrumentoPlantillaCreate):
     id: int
     tipo: TipoInstrumento

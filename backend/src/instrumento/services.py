@@ -77,7 +77,6 @@ def eliminar_plantilla(db: Session, plantilla_id: int):
     db.commit()
     return
 
-# --- 5. ACTUALIZAR (Para "Editar") ---
 def actualizar_plantilla(
     db: Session, 
     plantilla_id: int, 
@@ -87,7 +86,6 @@ def actualizar_plantilla(
     if not db_plantilla:
         raise HTTPException(status_code=404, detail="Plantilla no encontrada")
 
-    # Actualiza los campos que vienen en el request (ignora los Nones)
     update_data = data.model_dump(exclude_unset=True)
     for key, value in update_data.items():
         setattr(db_plantilla, key, value)

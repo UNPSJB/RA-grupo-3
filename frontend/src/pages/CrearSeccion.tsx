@@ -7,10 +7,10 @@ interface Seccion {
 }
 
 interface CrearSeccionProps {
-  encuestaId: number;
+  instrumentoId: number;
 }
 
-function CrearSeccion({ encuestaId }: CrearSeccionProps) {
+function CrearSeccion({ instrumentoId }: CrearSeccionProps) {
   const [nombre, setNombre] = useState<string>("");
   const [mensaje, setMensaje] = useState<string>("");
   const [cargando, setCargando] = useState<boolean>(false);
@@ -24,7 +24,7 @@ function CrearSeccion({ encuestaId }: CrearSeccionProps) {
     try {
       const seccionData = {
         nombre: nombre,
-        encuesta_id: encuestaId,
+        instrumento_id: instrumentoId,
       };
 
       const respuesta = await fetch("http://127.0.0.1:8000/secciones/", {
@@ -42,7 +42,6 @@ function CrearSeccion({ encuestaId }: CrearSeccionProps) {
       const data: Seccion = await respuesta.json();
       setMensaje(`Sección creada con ID: ${data.id}`);
       setSeccionCreada(data.id);
-      setNombre("");
     } catch (error) {
       console.error(error);
       setMensaje("Error al crear la sección");
@@ -58,6 +57,7 @@ function CrearSeccion({ encuestaId }: CrearSeccionProps) {
   const handleCrearOtraSeccion = () => {
     setSeccionCreada(null);
     setMensaje("");
+    setNombre("");
   };
 
   return (
