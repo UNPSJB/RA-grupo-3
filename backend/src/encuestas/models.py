@@ -17,7 +17,7 @@ class Encuesta(InstrumentoBase):
         "polymorphic_identity": TipoInstrumento.ENCUESTA,
     }
 
-    # estados de la encuesta
+
     instancias: Mapped[List["EncuestaInstancia"]] = relationship(
         back_populates="encuesta", cascade="all, delete-orphan"
     )
@@ -45,3 +45,4 @@ class EncuestaInstancia(InstrumentoInstancia):
         back_populates="encuesta_instancia", uselist=False,
         foreign_keys="[ActividadCurricularInstancia.encuesta_instancia_id]"
     )
+
