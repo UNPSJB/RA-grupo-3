@@ -121,7 +121,7 @@ const CrearEncuesta: React.FC = () => {
             </p>
           </div>
 
-          <CrearSeccion encuestaId={plantillaCreadaId} />
+          <CrearSeccion instrumentoId={plantillaCreadaId} />
 
           <button
             onClick={handleCrearOtra}
