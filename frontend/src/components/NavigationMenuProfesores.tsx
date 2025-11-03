@@ -154,22 +154,22 @@ const NavigationMenuProfesores: React.FC<NavigationMenuProps> = () => {
 
           <div className="hidden md:flex md:items-center divide-x divide-gray-200">
             
-            {/* Ejemplo de Enlace Simple */}
+            {/* Enlace Simple */}
             <Link 
-              to="/secretaria"
+              to="/profesores"
               className="text-gray-700 hover:text-blue-600 px-6 py-2 text-base font-medium"
             >
               Dashboard
             </Link>
 
-            {/* Ejemplo de Menú Desplegable 1 */}
+            {/* Menú Desplegable Encuestas */}
             <DesktopDropdown title="Encuestas">
               <DropdownItem to="/profesores/reportes">Reportes</DropdownItem>
               <DropdownItem to="/profesores/estadisticas">Estadisticas</DropdownItem>
-              <DropdownItem to="/secretaria/otros">Otros</DropdownItem>
+              <DropdownItem to="/profesores/otros">Otros</DropdownItem>
             </DesktopDropdown>
 
-            {/* Ejemplo de Menú de Usuario */}
+            {/* Menú de Cuenta*/}
             <DesktopDropdown title="Cuenta">
               <DropdownItem to="/profesores/gestion">Gestión</DropdownItem>
               <DropdownItem to="/">Cerrar Sesión</DropdownItem>
@@ -185,24 +185,24 @@ const NavigationMenuProfesores: React.FC<NavigationMenuProps> = () => {
         <div className="md:hidden" id="mobile-menu">
           <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
             
-            {/* Ejemplo de Enlace Simple (Móvil) */}
+            {/* Enlace Simple (Móvil) */}
             <Link 
-              to="/secretaria" 
+              to="/profesores" 
               className="text-gray-700 hover:text-blue-600 block px-3 py-2 rounded-md text-base font-medium"
             >
               Dashboard
             </Link>
 
-            {/* Ejemplo de Menú Desplegable 1 (Móvil) */}
+            {/* Menú Desplegable Encuestas (Móvil) */}
             <MobileDropdown title="Encuestas">
-              <DropdownItem to="/secretaria/modelos">Modelos</DropdownItem>
-              <DropdownItem to="/secretaria/estadisticas">Estadisticas</DropdownItem>
-              <DropdownItem to="/secretaria/otros">Otros</DropdownItem>
+              <DropdownItem to="/profesores/reportes">Reportes</DropdownItem>
+              <DropdownItem to="/profesores/estadisticas">Estadisticas</DropdownItem>
+              <DropdownItem to="/profesores/otros">Otros</DropdownItem>
             </MobileDropdown>
 
-            {/* Ejemplo de Menú de Usuario (Móvil) */}
+            {/* Menú de Usuario (Móvil) */}
             <MobileDropdown title="Mi Perfil">
-              <DropdownItem to="/secretaria/gestion">Gestión</DropdownItem>
+              <DropdownItem to="/profesores/gestion">Gestión</DropdownItem>
               <DropdownItem to="/">Cerrar Sesión</DropdownItem>
             </MobileDropdown>
 
