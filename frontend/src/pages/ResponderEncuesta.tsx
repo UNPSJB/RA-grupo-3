@@ -232,7 +232,7 @@ const ResponderEncuesta: React.FC = () => {
       )}
 
       <form onSubmit={handleSubmit} className="space-y-8">
-        {plantilla.secciones.map((seccion) => (
+        {plantilla.secciones?.map((seccion) => (
           <div key={seccion.id} className="border-t border-gray-200 pt-6">
             <h2 className="text-xl font-semibold mb-4 text-gray-700">
               {seccion.nombre}

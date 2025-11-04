@@ -2,6 +2,8 @@ from datetime import datetime
 from typing import List, Optional
 from pydantic import BaseModel, Field
 
+from src.seccion.schemas import Seccion
+
 from src.enumerados import EstadoInstancia,TipoPregunta,TipoInstrumento
 
 
@@ -23,6 +25,7 @@ class EncuestaAlumnoPlantillaCreate(InstrumentoBaseCreate):
     pass
 
 class EncuestaAlumnoPlantilla(InstrumentoBase):
+    secciones: Optional[List[Seccion]] = None   #Linea agregada para poder probar listar la encuesta con sus secciones y preguntas
     pass
 
 class EncuestaAlumnoPlantillaUpdate(BaseModel):
@@ -59,6 +62,7 @@ class EncuestaActivaAlumnoResponse(BaseModel):
     plantilla: PlantillaInfo 
     materia_nombre: Optional[str] = None 
     fecha_fin: Optional[datetime] = None 
+    ha_respondido: bool
 
     model_config = {"from_attributes": True}
 
