@@ -47,7 +47,7 @@ const Home: React.FC = () => {
       onClick: () => navigate("/secretaria"),
     },
     {
-      label: "Administracion",
+      label: "Departamento",
       color: "#024990", 
       icon: (
         <span className="text-3xl" role="img" aria-hidden="true">
@@ -56,7 +56,7 @@ const Home: React.FC = () => {
           </svg>
         </span>
       ),
-      onClick: () => navigate("/admin"),
+      onClick: () => navigate("/departamento"),
     },
   ];
 

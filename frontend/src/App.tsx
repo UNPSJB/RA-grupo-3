@@ -14,6 +14,7 @@ import GestionPerfil from "./pages/GestionPerfil.tsx";
 import NavigationMenu from "./components/NavigationMenu.tsx";
 import SecretariaAcademicaNavigationMenu from "./components/NavigationMenuSecretaria.tsx";
 import ProfesorNavigationMenu from "./components/NavigationMenuProfesores.tsx";
+import DepartamentoNavigationMenu from "./components/NavigationMenuDepartamento.tsx"
 import AlumnoHome from "./pages/AlumnoHome.tsx";
 import ResultadosProfesorPage from "./pages/ResultadosProfesorPage.tsx";
 import SecretariaHome from "./pages/SecretariaHome.tsx";
@@ -28,6 +29,8 @@ const MainLayout: React.FC = () => {
   const showNavMenu = location.pathname.startsWith('/alumno');
   const showSecretariaNavMenu = location.pathname.startsWith('/secretaria');
   const showProfesorNavMenu = location.pathname.startsWith('/profesores');
+  const showDepartamentoNavMenu = location.pathname.startsWith('/departamento');
+
 
   return (
     <div className="app">  
@@ -36,6 +39,7 @@ const MainLayout: React.FC = () => {
         {showNavMenu && <NavigationMenu />}
         {showSecretariaNavMenu && <SecretariaAcademicaNavigationMenu />}
         {showProfesorNavMenu && <ProfesorNavigationMenu />}
+        {showDepartamentoNavMenu && <DepartamentoNavigationMenu />}
       </header>
       <main className="app-main">
         <Outlet />
@@ -50,9 +54,13 @@ const App: React.FC = () => {
       <Route path="/" element={<MainLayout />}>
         <Route index element={<Home />} />
         {/* --- Rutas de Administración --- */}
-        <Route path="admin" element={<Outlet />}>
+        <Route path="departamento" element={<Outlet />}>
           {" "}
           {/* Agrupa rutas admin */}
+          <Route path="modelos" element={<SecretariaModelos />} />
+          <Route path="otros" element={<Outlet />} /> { /*ACA NO HAY NADA PARA PONER AUN*/ }
+          <Route path="estadisticas" element={<EstadisticasPage />} />
+          <Route path="gestion" element={<CuentaPage />} />
           <Route index element={<PanelAdmin />} />
           <Route path="plantillas" element={<Outlet />}>
             {" "}
