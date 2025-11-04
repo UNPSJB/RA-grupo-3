@@ -61,7 +61,7 @@ const Home: React.FC = () => {
   ];
 
   return (
-    <section className="min-h-screen bg-slate-100">
+    <section className="bg-slate-100">
       <div className="mx-auto max-w-5xl px-6 py-12">
         <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
           {accesosRapidos.map(({ label, icon, onClick, color }) => (

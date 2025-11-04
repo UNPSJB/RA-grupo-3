@@ -1,6 +1,7 @@
 import React from "react";
 import { Outlet, Route, Routes, Navigate, useLocation } from "react-router-dom";
 import Navbar from "./components/Navbar.tsx";
+import Footer from "./components/Footer.tsx";
 import EncuestasPage from "./pages/EncuestasPage.tsx";
 import EstadisticasPage from "./pages/EstadisticasPage.tsx";
 import CuentaPage from "./pages/CuentaPage.tsx";
@@ -30,16 +31,17 @@ const MainLayout: React.FC = () => {
   const showProfesorNavMenu = location.pathname.startsWith('/profesores');
 
   return (
-    <div className="app">  
+    <div className="app min-h-screen flex flex-col">  
       <header className="w-full">
         <Navbar />
         {showNavMenu && <NavigationMenu />}
         {showSecretariaNavMenu && <SecretariaAcademicaNavigationMenu />}
         {showProfesorNavMenu && <ProfesorNavigationMenu />}
       </header>
-      <main className="app-main">
+      <main className="app-main flex-grow">
         <Outlet />
       </main>
+      <Footer />
     </div>
   );
 };
@@ -49,6 +51,10 @@ const App: React.FC = () => {
     <Routes>
       <Route path="/" element={<MainLayout />}>
         <Route index element={<Home />} />
+        {/* --- Rutas de politica de privacidad --- */}
+        <Route path="privacidad" element={<Outlet/>}>
+          {/* Aca van las rutas de la politica por si son necesarias */}
+        </Route>
         {/* --- Rutas de Administración --- */}
         <Route path="admin" element={<Outlet />}>
           {" "}
