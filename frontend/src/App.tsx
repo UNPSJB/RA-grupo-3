@@ -1,6 +1,7 @@
 import React from "react";
 import { Outlet, Route, Routes, Navigate, useLocation } from "react-router-dom";
 import Navbar from "./components/Navbar.tsx";
+import Footer from "./components/Footer.tsx";
 import EncuestasPage from "./pages/EncuestasPage.tsx";
 import EstadisticasPage from "./pages/EstadisticasPage.tsx";
 import CuentaPage from "./pages/CuentaPage.tsx";
@@ -16,7 +17,7 @@ import SecretariaAcademicaNavigationMenu from "./components/NavigationMenuSecret
 import ProfesorNavigationMenu from "./components/NavigationMenuProfesores.tsx";
 import DepartamentoNavigationMenu from "./components/NavigationMenuDepartamento.tsx"
 import AlumnoHome from "./pages/AlumnoHome.tsx";
-import ResultadosProfesorPage from "./pages/ResultadosProfesorPage.tsx";
+//import ResultadosProfesorPage from "./pages/ResultadosProfesorPage.tsx";
 import SecretariaHome from "./pages/SecretariaHome.tsx";
 import SecretariaModelos from "./pages/SecretariaModelos.tsx";
 import ProfesoresHome from "./pages/ProfesoresHome.tsx"
@@ -33,7 +34,7 @@ const MainLayout: React.FC = () => {
 
 
   return (
-    <div className="app">  
+    <div className="app min-h-screen flex flex-col">  
       <header className="w-full">
         <Navbar />
         {showNavMenu && <NavigationMenu />}
@@ -41,9 +42,10 @@ const MainLayout: React.FC = () => {
         {showProfesorNavMenu && <ProfesorNavigationMenu />}
         {showDepartamentoNavMenu && <DepartamentoNavigationMenu />}
       </header>
-      <main className="app-main">
+      <main className="app-main flex-grow">
         <Outlet />
       </main>
+      <Footer />
     </div>
   );
 };
@@ -53,6 +55,10 @@ const App: React.FC = () => {
     <Routes>
       <Route path="/" element={<MainLayout />}>
         <Route index element={<Home />} />
+        {/* --- Rutas de politica de privacidad --- */}
+        <Route path="privacidad" element={<Outlet/>}>
+          {/* Aca van las rutas de la politica por si son necesarias */}
+        </Route>
         {/* --- Rutas de Administración --- */}
         <Route path="departamento" element={<Outlet />}>
           {" "}
