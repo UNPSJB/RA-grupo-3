@@ -37,7 +37,7 @@ const Footer: React.FC = () => {
               Contacto de Soporte
             </a>
             <a
-              href="/politica-de-privacidad" // Deberías crear esta ruta en tu app
+              href="/privacidad" // Deberías crear esta ruta en tu app
               className="text-sm text-slate-600 hover:text-blue-700 hover:underline transition-colors duration-200"
             >
               Política de Privacidad

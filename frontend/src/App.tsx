@@ -21,7 +21,8 @@ import AlumnoHome from "./pages/AlumnoHome.tsx";
 import SecretariaHome from "./pages/SecretariaHome.tsx";
 import SecretariaModelos from "./pages/SecretariaModelos.tsx";
 import ProfesoresHome from "./pages/ProfesoresHome.tsx"
-
+import PoliticasPrivacidad from "./pages/PoliticasPrivacidad.tsx";
+import ResponderReportes from "./pages/ResponderReportes";
 
 
 
@@ -42,7 +43,7 @@ const MainLayout: React.FC = () => {
         {showProfesorNavMenu && <ProfesorNavigationMenu />}
         {showDepartamentoNavMenu && <DepartamentoNavigationMenu />}
       </header>
-      <main className="app-main flex-grow">
+      <main className="app-main flex-grow  bg-[#f1f5f9] ">
         <Outlet />
       </main>
       <Footer />
@@ -56,9 +57,7 @@ const App: React.FC = () => {
       <Route path="/" element={<MainLayout />}>
         <Route index element={<Home />} />
         {/* --- Rutas de politica de privacidad --- */}
-        <Route path="privacidad" element={<Outlet/>}>
-          {/* Aca van las rutas de la politica por si son necesarias */}
-        </Route>
+        <Route path="privacidad" element={<PoliticasPrivacidad />} />
         {/* --- Rutas de Administración --- */}
         <Route path="departamento" element={<Outlet />}>
           {" "}
@@ -91,7 +90,7 @@ const App: React.FC = () => {
         {/* --- Rutas de Profesor --- */}
         <Route path="profesores" element={<Outlet />}>
           <Route index element={<ProfesoresHome />} />
-          <Route path="reportes" element={<Outlet />} /> { /*ACA NO HAY NADA PARA PONER AUN*/ }
+          <Route path="reportes" element={<ResponderReportes />} /> { /*ACA NO HAY NADA PARA PONER AUN*/ }
           <Route path="otros" element={<Outlet />} /> { /*ACA NO HAY NADA PARA PONER AUN*/ }
           <Route path="estadisticas" element={<EstadisticasPage />} />
           <Route path="gestion" element={<CuentaPage />} />
