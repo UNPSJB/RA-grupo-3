@@ -10,7 +10,7 @@ from src.exceptions import NotFound, BadRequest
 router = APIRouter(tags=["Respuestas"])
 
 @router.post(
-    "/instancia/{instancia_id}/responder",
+    "/encuestas-abiertas/instancia/{instancia_id}/responder",
     status_code=201
 )
 def responder_encuesta_completa(
@@ -23,6 +23,7 @@ def responder_encuesta_completa(
         respuesta_services.crear_submission_anonima(
             db=db,
             instancia_id=instancia_id,
+            alumno_id=alumno_actual.id,
             respuestas_data=respuestas_data
         )
         return {"message": "Respuestas enviadas correctamente. ¡Gracias!"}

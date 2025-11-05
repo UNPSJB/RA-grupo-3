@@ -33,7 +33,7 @@ class RespuestaResponse(BaseModel):
 
 class RespuestaSetResponse(BaseModel):
     id: int
-    encuesta_instancia_id: int
+    instrumento_instancia_id: int
     created_at: datetime
     respuestas: List[RespuestaResponse]
 
