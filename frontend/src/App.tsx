@@ -82,11 +82,27 @@ const App: React.FC = () => {
           <Route path="encuestas" element={<ListaEncuestasAlumnos />} />
           <Route path="encuestas/ver" element={<VerEncuestas />} />
           <Route path="perfil/gestion" element={<GestionPerfil />} />
-          <Route
-            path="encuestas/instancia/:instanciaId/responder"
+          {/*<Route
+            path="/alumno/encuestas-abiertas/instancia/:instanciaId/responder"
             element={<ResponderEncuesta />}
+          />*/}
+          <Route path="encuestas" element={<Outlet />}> 
+    
+          {/* /alumno/encuestas */}
+          <Route index element={<ListaEncuestasAlumnos />} /> 
+    
+    {/* /alumno/encuestas/ver */}
+          <Route path="ver" element={<VerEncuestas />} /> 
+    
+    {/* /alumno/encuestas/instancia/:instanciaId/responder */}
+          <Route
+          path="instancia/:instanciaId/responder" // Solo la parte que va después de /encuestas/
+          element={<ResponderEncuesta />}
           />
+
+  </Route>
         </Route>
+
         {/* --- Rutas de Profesor --- */}
         <Route path="profesores" element={<Outlet />}>
           <Route index element={<ProfesoresHome />} />

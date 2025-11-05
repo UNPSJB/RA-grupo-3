@@ -204,7 +204,7 @@ const ResponderEncuesta: React.FC = () => {
           </p>
           <div className="flex justify-center space-x-4">
             <button
-              onClick={() => navigate("/encuestas-activas")}
+              onClick={() => navigate("/alumno/encuestas")}
               className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
             >
               Ver mis encuestas

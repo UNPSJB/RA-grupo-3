@@ -167,7 +167,7 @@ const ListaEncuestasAlumno: React.FC = () => {
               </div>
             ) : (
               <Link
-                to={`/encuestas/instancia/${enc.instancia_id}/responder`}
+                to={`/alumno/encuestas/instancia/${enc.instancia_id}/responder`}
                 className="w-full sm:w-auto inline-block text-center bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-5 rounded-lg transition-colors duration-150 ease-in-out focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
               >
                 Responder Encuesta →
