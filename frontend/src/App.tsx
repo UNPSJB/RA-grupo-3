@@ -3,7 +3,7 @@ import { Outlet, Route, Routes, Navigate, useLocation } from "react-router-dom";
 import Navbar from "./components/Navbar.tsx";
 import Footer from "./components/Footer.tsx";
 import EncuestasPage from "./pages/EncuestasPage.tsx";
-import EstadisticasPage from "./pages/EstadisticasPage.tsx";
+//import EstadisticasPage from "./pages/EstadisticasPage.tsx";
 import CuentaPage from "./pages/CuentaPage.tsx";
 import ResponderEncuesta from "./pages/ResponderEncuesta.tsx";
 import CrearPlantilla from "./pages/CrearPlantilla.tsx";
@@ -15,27 +15,24 @@ import GestionPerfil from "./pages/GestionPerfil.tsx";
 import NavigationMenu from "./components/NavigationMenu.tsx";
 import SecretariaAcademicaNavigationMenu from "./components/NavigationMenuSecretaria.tsx";
 import ProfesorNavigationMenu from "./components/NavigationMenuProfesores.tsx";
-import DepartamentoNavigationMenu from "./components/NavigationMenuDepartamento.tsx"
+import DepartamentoNavigationMenu from "./components/NavigationMenuDepartamento.tsx";
 import AlumnoHome from "./pages/AlumnoHome.tsx";
-//import ResultadosProfesorPage from "./pages/ResultadosProfesorPage.tsx";
+import ResultadosProfesorPage from "./pages/ResultadosProfesorPage.tsx";
 import SecretariaHome from "./pages/SecretariaHome.tsx";
 import SecretariaModelos from "./pages/SecretariaModelos.tsx";
-import ProfesoresHome from "./pages/ProfesoresHome.tsx"
+import ProfesoresHome from "./pages/ProfesoresHome.tsx";
 import PoliticasPrivacidad from "./pages/PoliticasPrivacidad.tsx";
 import ResponderReportes from "./pages/ResponderReportes";
 
-
-
 const MainLayout: React.FC = () => {
   const location = useLocation();
-  const showNavMenu = location.pathname.startsWith('/alumno');
-  const showSecretariaNavMenu = location.pathname.startsWith('/secretaria');
-  const showProfesorNavMenu = location.pathname.startsWith('/profesores');
-  const showDepartamentoNavMenu = location.pathname.startsWith('/departamento');
-
+  const showNavMenu = location.pathname.startsWith("/alumno");
+  const showSecretariaNavMenu = location.pathname.startsWith("/secretaria");
+  const showProfesorNavMenu = location.pathname.startsWith("/profesores");
+  const showDepartamentoNavMenu = location.pathname.startsWith("/departamento");
 
   return (
-    <div className="app min-h-screen flex flex-col">  
+    <div className="app min-h-screen flex flex-col">
       <header className="w-full">
         <Navbar />
         {showNavMenu && <NavigationMenu />}
@@ -63,8 +60,9 @@ const App: React.FC = () => {
           {" "}
           {/* Agrupa rutas admin */}
           <Route path="modelos" element={<SecretariaModelos />} />
-          <Route path="otros" element={<Outlet />} /> { /*ACA NO HAY NADA PARA PONER AUN*/ }
-          <Route path="estadisticas" element={<EstadisticasPage />} />
+          <Route path="otros" element={<Outlet />} />{" "}
+          {/*ACA NO HAY NADA PARA PONER AUN*/}
+          {/* <Route path="estadisticas" element={<EstadisticasPage />} /> */}
           <Route path="gestion" element={<CuentaPage />} />
           <Route index element={<PanelAdmin />} />
           <Route path="plantillas" element={<Outlet />}>
@@ -86,30 +84,33 @@ const App: React.FC = () => {
             path="/alumno/encuestas-abiertas/instancia/:instanciaId/responder"
             element={<ResponderEncuesta />}
           />*/}
-          <Route path="encuestas" element={<Outlet />}> 
-          <Route index element={<ListaEncuestasAlumnos />} /> 
-          <Route path="ver" element={<VerEncuestas />} /> 
-          <Route
-            path="instancia/:instanciaId/responder" // Solo la parte que va después de /encuestas/
-            element={<ResponderEncuesta />}
-          />
+          <Route path="encuestas" element={<Outlet />}>
+            <Route index element={<ListaEncuestasAlumnos />} />
+            <Route path="ver" element={<VerEncuestas />} />
+            <Route
+              path="instancia/:instanciaId/responder" // Solo la parte que va después de /encuestas/
+              element={<ResponderEncuesta />}
+            />
           </Route>
         </Route>
 
         {/* --- Rutas de Profesor --- */}
         <Route path="profesores" element={<Outlet />}>
           <Route index element={<ProfesoresHome />} />
-          <Route path="reportes" element={<ResponderReportes />} /> { /*ACA NO HAY NADA PARA PONER AUN*/ }
-          <Route path="otros" element={<Outlet />} /> { /*ACA NO HAY NADA PARA PONER AUN*/ }
-          <Route path="estadisticas" element={<EstadisticasPage />} />
+          <Route path="reportes" element={<ResultadosProfesorPage />} />{" "}
+          {/*ACA NO HAY NADA PARA PONER AUN*/}
+          <Route path="otros" element={<Outlet />} />{" "}
+          {/*ACA NO HAY NADA PARA PONER AUN*/}
+          {/* <Route path="estadisticas" element={<EstadisticasPage />} /> */}
           <Route path="gestion" element={<CuentaPage />} />
         </Route>
         {/* --- Rutas de Secretaria Academica --- */}
         <Route path="secretaria" element={<Outlet />}>
           <Route index element={<SecretariaHome />} />
           <Route path="modelos" element={<SecretariaModelos />} />
-          <Route path="otros" element={<Outlet />} /> { /*ACA NO HAY NADA PARA PONER AUN*/ }
-          <Route path="estadisticas" element={<EstadisticasPage />} />
+          <Route path="otros" element={<Outlet />} />{" "}
+          {/*ACA NO HAY NADA PARA PONER AUN*/}
+          {/* <Route path="estadisticas" element={<EstadisticasPage />} /> */}
           <Route path="gestion" element={<CuentaPage />} />
         </Route>
       </Route>

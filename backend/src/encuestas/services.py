@@ -108,7 +108,7 @@ def activar_encuesta_para_cursada(db: Session, data: schemas.EncuestaInstanciaCr
     return nueva_instancia
 
 
-# Esta es la nueva función de tu amigo, limpiada y corregida
+
 def obtener_instancias_activas_alumno(db: Session, alumno_id: int) -> List[Dict[str, Any]]:
     now = datetime.now() 
     
@@ -136,7 +136,7 @@ def obtener_instancias_activas_alumno(db: Session, alumno_id: int) -> List[Dict[
             "instancia_id": instancia.id,
             "plantilla": plantilla_data, 
             "materia_nombre": instancia.cursada.materia.nombre if instancia.cursada and instancia.cursada.materia else None,
-            "fecha_fin": instancia.fecha_fin,
+            "fecha            #Descomentar para trabajar con las fechas de las encuestas_fin": instancia.fecha_fin,
             "ha_respondido": ha_respondido_flag 
         })
         
@@ -150,9 +150,8 @@ def obtener_instancia_activa_por_cursada(db: Session, cursada_id: int) -> models
         .where(
             models.EncuestaInstancia.cursada_id == cursada_id,
             models.EncuestaInstancia.estado == models.EstadoInstancia.ACTIVA,
-            #Descomentar para trabajar con las fechas de las encuestas
-            #models.EncuestaInstancia.fecha_inicio <= now,
-            #(models.EncuestaInstancia.fecha_fin == None) | (models.EncuestaInstancia.fecha_fin > now)
+            models.EncuestaInstancia.fecha_inicio <= now,
+            (models.EncuestaInstancia.fecha_fin == None) | (models.EncuestaInstancia.fecha_fin > now)
         )
         .options(selectinload(models.EncuestaInstancia.plantilla))
     )
