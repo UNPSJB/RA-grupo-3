@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import CrearSeccion from "./CrearSeccion";
 
-const CrearEncuesta: React.FC = () => {
+const CrearPlantilla: React.FC = () => {
   const [titulo, setTitulo] = useState<string>("");
   const [descripcion, setDescripcion] = useState<string>("");
   const [tipo, setTipo] = useState<string>("");
@@ -216,4 +216,4 @@ const CrearEncuesta: React.FC = () => {
   );
 };
 
-export default CrearEncuesta;
+export default CrearPlantilla;

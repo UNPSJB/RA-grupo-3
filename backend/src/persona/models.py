@@ -4,7 +4,11 @@ from sqlalchemy import Integer, String,Enum, ForeignKey,Boolean
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from src.models import ModeloBase
 from src.enumerados import TipoPersona
-from src.instrumento.models import ActividadCurricularInstancia
+from src.instrumento.models import ActividadCurricularInstancia 
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from src.materia.models import Cursada
+    from src.instrumento.models import ActividadCurricularInstancia
 class Persona(ModeloBase):
     __tablename__ = "persona"
     

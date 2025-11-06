@@ -1,13 +1,16 @@
 from __future__ import annotations
 from datetime import datetime
-from typing import List
+from typing import List, TYPE_CHECKING
 from sqlalchemy import Integer, String, DateTime, ForeignKey
 from sqlalchemy import Enum as SQLEnum
 from sqlalchemy.sql import func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from src.models import ModeloBase
 from src.enumerados import EstadoInstancia, TipoInstrumento
 from src.instrumento.models import ActividadCurricularInstancia, InstrumentoBase, InstrumentoInstancia
+
+if TYPE_CHECKING:
+    from src.instrumento.models import ActividadCurricularInstancia
+    from src.materia.models import Cursada
 
 class Encuesta(InstrumentoBase):
     __tablename__ = "encuesta" #cambio de nombre a encuesta singular por un tema de buenas practicas

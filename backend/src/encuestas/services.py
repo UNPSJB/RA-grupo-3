@@ -152,7 +152,7 @@ def obtener_plantilla_para_instancia_activa(db: Session, instancia_id: int) -> m
             models.EncuestaInstancia.estado == models.EstadoInstancia.ACTIVA,
         )\
         .options(
-            selectinload(models.EncuestaInstancia.plantilla)
+            selectinload(models.EncuestaInstancia.encuesta)
             .selectinload(models.Encuesta.secciones)
             .selectinload(Seccion.preguntas)
         )\
@@ -160,10 +160,10 @@ def obtener_plantilla_para_instancia_activa(db: Session, instancia_id: int) -> m
     if not instancia:
         raise NotFound(detail=f"No se encontró una encuesta activa con ID de instancia {instancia_id}.")
 
-    if not instancia.plantilla:
+    if not instancia:
          raise Exception(f"La instancia {instancia_id} no tiene una plantilla asociada.")
 
-    return instancia.plantilla
+    return instancia.encuesta
 
 #Para el profesor
 #Para mas adelante...

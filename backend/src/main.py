@@ -5,7 +5,7 @@ from fastapi import FastAPI
 from src.database import engine
 from src.models import ModeloBase
 
-from src.encuestas.router_admin import router as encuestas_router, router_gestion
+from src.encuestas.router_admin import  router_gestion
 from src.pregunta.router import router as pregunta_router
 from src.seccion.router import router as seccion_router
 from src.respuesta.router import router as respuesta_router 
@@ -39,7 +39,6 @@ app.add_middleware(
 
 # Rutas
 
-app.include_router(encuestas_router)
 app.include_router(router_gestion)
 app.include_router(pregunta_router)
 app.include_router(seccion_router)
