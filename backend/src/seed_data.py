@@ -16,10 +16,10 @@ from src.models import ModeloBase
 ID_ALUMNO_PRUEBA = 2
 
 def seed_initial_data(db: Session):
-    """
-    Inserta datos iniciales de simulación si no existen.
-    Crea: 1 Cuatrimestre, 4 Materias, 1 Profesor, 1 Alumno, 4 Cursadas, 1 Inscripcion.
-    """
+    
+    """Inserta datos iniciales de simulación si no existen.
+    Crea: 1 Cuatrimestre, 4 Materias, 1 Profesor, 1 Alumno, 4 Cursadas, 1 Inscripcion."""
+    
     print("Verificando/Insertando datos semilla...")
 
     # --- 1. Crear Cuatrimestre (si no existe) ---
@@ -238,7 +238,7 @@ def create_tables():
 if __name__ == "__main__":
     print("Iniciando script de carga de datos semilla...")
     # Descomenta si necesitas asegurarte que las tablas se creen/actualicen
-    # create_tables()
+    create_tables()
 
     db = SessionLocal()
     try:

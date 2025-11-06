@@ -22,7 +22,7 @@ class Encuesta(InstrumentoBase):
 
 
     instancias: Mapped[List["EncuestaInstancia"]] = relationship(
-        back_populates="encuesta", cascade="all, delete-orphan"
+        back_populates="plantilla", cascade="all, delete-orphan" #HICE OTRO CAMBIO EN back_populates DE encuesta a plantilla
     )
 
 
@@ -40,9 +40,9 @@ class EncuestaInstancia(InstrumentoInstancia):
     cursada_id: Mapped[int] = mapped_column(ForeignKey("cursada.id"), unique=True, nullable=False)
     cursada: Mapped["Cursada"] = relationship(back_populates="encuesta_instancia")
 
-    encuesta_id: Mapped[int] = mapped_column(ForeignKey("encuesta.id"), nullable=False)
+    plantilla_id: Mapped[int] = mapped_column(ForeignKey("encuesta.id"), nullable=False) #ACÁ HICE EL CAMBIO DE encuesta_id a plantilla_id
 
-    encuesta: Mapped["Encuesta"] = relationship(back_populates="instancias")
+    plantilla: Mapped["Encuesta"] = relationship(back_populates="instancias") #cambio de encuesta a plantilla
 
     actividad_curricular_instancia: Mapped["ActividadCurricularInstancia"] = relationship(
         back_populates="encuesta_instancia", uselist=False,

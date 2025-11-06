@@ -1,7 +1,7 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 
-import "../Styles/Styles.css";
+
 
 type Shortcut = {
   label: string;
@@ -10,9 +10,9 @@ type Shortcut = {
 
 const shortcuts: Shortcut[] = [
   { label: "Inicio", path: "/" },
-  { label: "Listado de Plantillas", path: "/admin/plantillas" },
-  { label: "Crear Plantilla", path: "/admin/plantillas/crear" },
-  { label: "Estadísticas", path: "/estadisticas" },
+  { label: "Listado de Plantillas", path: "/departamento/plantillas/borradores" },
+  { label: "Crear Plantilla", path: "/departamento/plantillas/crear" },
+  { label: "Estadísticas", path: "/departamento/estadisticas" },
   { label: "Cuenta", path: "/cuenta" },
   { label: "Resultados de Encuestas", path: "/resultados-profesor" },
 ];

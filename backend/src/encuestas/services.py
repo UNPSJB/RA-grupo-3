@@ -1,4 +1,4 @@
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Any
 from src.seccion.models import Seccion
 from sqlalchemy import select, update, func, Any
 import collections
@@ -11,6 +11,7 @@ from datetime import datetime
 from src.pregunta.models import Pregunta, PreguntaMultipleChoice
 from src.enumerados import EstadoInstancia, TipoPregunta,EstadoInstrumento
 from src.respuesta.models import Respuesta, RespuestaMultipleChoice, RespuestaRedaccion, RespuestaSet
+
 
 
 def crear_plantilla_encuesta(
@@ -106,7 +107,7 @@ def activar_encuesta_para_cursada(db: Session, data: schemas.EncuestaInstanciaCr
     return nueva_instancia
 
 
-def obtener_instancias_activas_alumno(db: Session, alumno_id: int) -> List[models.EncuestaInstancia]:
+"""def obtener_instancias_activas_alumno(db: Session, alumno_id: int) -> List[models.EncuestaInstancia]:
     now = datetime.now() 
     stmt = (
         select(models.EncuestaInstancia)
@@ -125,7 +126,40 @@ def obtener_instancias_activas_alumno(db: Session, alumno_id: int) -> List[model
 
     instancias_activas = db.execute(stmt).scalars().all()
     return instancias_activas
+"""
 
+def obtener_instancias_activas_alumno(db: Session, alumno_id: int) -> List[Dict[str, Any]]:
+    now = datetime.now() 
+    
+    stmt = (
+        select(models.EncuestaInstancia, Inscripcion.ha_respondido)
+        .join(Inscripcion,models.EncuestaInstancia.cursada_id == Inscripcion.cursada_id) 
+        .where(
+            Inscripcion.alumno_id == alumno_id,
+            models.EncuestaInstancia.estado == models.EstadoInstancia.ACTIVA,
+        )
+        .options(
+            joinedload(models.EncuestaInstancia.plantilla),
+            joinedload(models.EncuestaInstancia.cursada) 
+            .joinedload(Cursada.materia)
+        )
+        .distinct() 
+    )
+
+    results = db.execute(stmt).all()
+
+    response_list = []
+    for instancia, ha_respondido_flag in results:
+        plantilla_data = schemas.PlantillaInfo.model_validate(instancia.plantilla).model_dump()
+        response_list.append({
+            "instancia_id": instancia.id,
+            "plantilla": plantilla_data, 
+            "materia_nombre": instancia.cursada.materia.nombre if instancia.cursada and instancia.cursada.materia else None,
+            "fecha_fin": instancia.fecha_fin,
+            "ha_respondido": ha_respondido_flag 
+        })
+        
+    return response_list
 
 def obtener_instancia_activa_por_cursada(db: Session, cursada_id: int) -> models.EncuestaInstancia:
     now = datetime.now()
@@ -134,14 +168,15 @@ def obtener_instancia_activa_por_cursada(db: Session, cursada_id: int) -> models
         .where(
             models.EncuestaInstancia.cursada_id == cursada_id,
             models.EncuestaInstancia.estado == models.EstadoInstancia.ACTIVA,
-            models.EncuestaInstancia.fecha_inicio <= now,
-            (models.EncuestaInstancia.fecha_fin == None) | (models.EncuestaInstancia.fecha_fin > now)
+            #Descomentar para trabajar con las fechas de las encuestas
+            #models.EncuestaInstancia.fecha_inicio <= now,
+            #(models.EncuestaInstancia.fecha_fin == None) | (models.EncuestaInstancia.fecha_fin > now)
         )
         .options(selectinload(models.EncuestaInstancia.plantilla))
     )
     instancia = db.execute(stmt).scalar_one_or_none()
     if not instancia:
-        raise NotFound(f"No se encontró una encuesta activa para la cursada ID {cursada_id}.")
+        raise NotFound(detail=f"No se encontró una encuesta activa para la cursada ID {cursada_id}.") #modificado para aclararle a la excepción que le paso un string al campo detail
     return instancia
 
 def obtener_plantilla_para_instancia_activa(db: Session, instancia_id: int) -> models.Encuesta:

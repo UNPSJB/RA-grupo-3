@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import "../Styles/Styles.css";
+
 
 interface Opcion {
   id: number;
@@ -204,7 +204,7 @@ const ResponderEncuesta: React.FC = () => {
           </p>
           <div className="flex justify-center space-x-4">
             <button
-              onClick={() => navigate("/encuestas-activas")}
+              onClick={() => navigate("/alumno/encuestas")}
               className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
             >
               Ver mis encuestas
@@ -232,7 +232,7 @@ const ResponderEncuesta: React.FC = () => {
       )}
 
       <form onSubmit={handleSubmit} className="space-y-8">
-        {plantilla.secciones.map((seccion) => (
+        {plantilla.secciones?.map((seccion) => (
           <div key={seccion.id} className="border-t border-gray-200 pt-6">
             <h2 className="text-xl font-semibold mb-4 text-gray-700">
               {seccion.nombre}

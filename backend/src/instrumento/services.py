@@ -61,7 +61,7 @@ def publicar_plantilla(
         raise HTTPException(status_code=404, detail="Plantilla no encontrada")
     
     # Cambia el estado
-    db_plantilla.estado = EstadoInstrumento.PUBLICADO
+    db_plantilla.estado = EstadoInstrumento.PUBLICADA
     db.add(db_plantilla)
     db.commit()
     db.refresh(db_plantilla)

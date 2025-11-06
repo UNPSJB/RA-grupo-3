@@ -1,13 +1,16 @@
 from sqlalchemy.orm import Session
+from sqlalchemy import update
 from src.enumerados import EstadoInstancia
 from src.respuesta import models as respuesta_models, schemas as respuesta_schemas
 from src.encuestas.models import EncuestaInstancia
 from src.pregunta.models import Pregunta, Opcion, TipoPregunta
 from src.exceptions import NotFound, BadRequest
+from src.persona.models import Inscripcion
 
 def crear_submission_anonima( 
     db: Session,
     instancia_id: int,
+    alumno_id: int,
     respuestas_data: respuesta_schemas.RespuestaSetCreate
 ) -> respuesta_models.RespuestaSet:
 
@@ -20,7 +23,7 @@ def crear_submission_anonima(
 
 
     # 2. Creamos el RespuestaSet 
-    nuevo_set = respuesta_models.RespuestaSet(encuesta_instancia_id=instancia_id)
+    nuevo_set = respuesta_models.RespuestaSet(instrumento_instancia_id=instancia_id)
     db.add(nuevo_set)
     db.flush() # Para obtener el ID del set
 
@@ -61,6 +64,13 @@ def crear_submission_anonima(
 
         db.add(nueva_respuesta)
 
+    stmt_update = (
+        update(Inscripcion)
+        .where(Inscripcion.cursada_id == instancia.cursada_id) 
+        .where(Inscripcion.alumno_id == alumno_id) 
+        .values(ha_respondido=True)
+    )
+    db.execute(stmt_update)
     # 4. Commit de toda la transacción
     db.commit()
     db.refresh(nuevo_set)
