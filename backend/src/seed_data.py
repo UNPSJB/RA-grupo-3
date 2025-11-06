@@ -5,8 +5,11 @@ from src.database import SessionLocal, engine
 # Importa todos los modelos necesarios
 from src.materia.models import Materia, Cuatrimestre, Cursada
 from src.persona.models import Persona, Profesor, Alumno, Inscripcion
+from src.instrumento.models import InformeSintetico
+from src.seccion.models import Seccion
+from src.pregunta.models import PreguntaRedaccion, PreguntaMultipleChoice, Opcion
 # Importa los Enums necesarios
-from src.enumerados import TipoCuatrimestre
+from src.enumerados import TipoCuatrimestre, TipoInstrumento
 from src.persona.models import TipoPersona # Asumiendo que está definido en persona.models
 # Importa ModeloBase para crear tablas si no existen (opcional)
 from src.models import ModeloBase
@@ -14,6 +17,7 @@ from src.models import ModeloBase
 # --- CONFIGURACIÓN ---
 # ID que usará tu dependencia get_current_alumno simulada
 ID_ALUMNO_PRUEBA = 2
+
 
 def seed_initial_data(db: Session):
     
@@ -215,6 +219,42 @@ def seed_initial_data(db: Session):
             db.add(nueva_inscripcion3)
         else:
              print(f"   - Alumno ID {alumno_prueba.id} ya inscripto en Cursada ID {cursada3.id}.")
+
+    # --- 7. Crear Informe Sintético (si no existe) ---
+    informe = db.query(InformeSintetico).first()
+    if not informe:
+        print("   - Creando Informe Sintético de prueba...")
+        informe = InformeSintetico(
+            titulo="Informe Sintético de Prueba",
+            descripcion="Informe para probar la funcionalidad de responder reportes.",
+            tipo=TipoInstrumento.INFORME_SINTETICO
+        )
+        db.add(informe)
+        db.commit()
+        db.refresh(informe)
+
+        seccion1 = Seccion(nombre="Fortalezas y Debilidades", instrumento_id=informe.id)
+        seccion2 = Seccion(nombre="Sugerencias", instrumento_id=informe.id)
+        db.add_all([seccion1, seccion2])
+        db.commit()
+        db.refresh(seccion1)
+        db.refresh(seccion2)
+
+        preg1 = PreguntaRedaccion(texto="Describa las fortalezas pedagógicas observadas en la cursada.", seccion_id=seccion1.id)
+        preg2 = PreguntaMultipleChoice(texto="¿Cómo evaluaría la bibliografía proporcionada por la cátedra?", seccion_id=seccion1.id)
+        preg3 = PreguntaRedaccion(texto="Comentarios adicionales o sugerencias de mejora.", seccion_id=seccion2.id)
+        db.add_all([preg1, preg2, preg3])
+        db.commit()
+        db.refresh(preg2)
+
+        opcion1 = Opcion(texto="Muy Adecuada", pregunta_id=preg2.id)
+        opcion2 = Opcion(texto="Adecuada", pregunta_id=preg2.id)
+        opcion3 = Opcion(texto="Poco Adecuada", pregunta_id=preg2.id)
+        opcion4 = Opcion(texto="Inexistente o Irrelevante", pregunta_id=preg2.id)
+        db.add_all([opcion1, opcion2, opcion3, opcion4])
+        db.commit()
+    else:
+        print(f"   - Informe Sintético (ID: {informe.id}) ya existe.")
 
 
     db.commit() # Commit final

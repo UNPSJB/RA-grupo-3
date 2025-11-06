@@ -13,6 +13,7 @@ from src.persona.router import router as persona_router, router_profesor
 from src.encuestas.router_alumno import router_alumnos as encuesta_alumno_router
 from src.materia.router import router as materia_router
 from src.instrumento.router import router as instrumento_router
+from src.instrumento.router_public import router as instrumento_public_router
 
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -49,4 +50,5 @@ app.include_router(encuesta_alumno_router)
 app.include_router(materia_router)
 app.include_router(router_profesor)
 app.include_router(instrumento_router)
+app.include_router(instrumento_public_router)
     
