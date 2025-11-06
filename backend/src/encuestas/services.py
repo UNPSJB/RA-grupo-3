@@ -1,3 +1,4 @@
+# backend/src/encuestas/services.py
 from typing import List, Dict, Optional, Any
 from src.seccion.models import Seccion
 from sqlalchemy import select, update, func, Any
@@ -11,7 +12,6 @@ from datetime import datetime
 from src.pregunta.models import Pregunta, PreguntaMultipleChoice
 from src.enumerados import EstadoInstancia, TipoPregunta,EstadoInstrumento
 from src.respuesta.models import Respuesta, RespuestaMultipleChoice, RespuestaRedaccion, RespuestaSet
-
 
 
 def crear_plantilla_encuesta(
@@ -88,6 +88,7 @@ def activar_encuesta_para_cursada(db: Session, data: schemas.EncuestaInstanciaCr
     instancia_existente = db.execute(stmt_existente).scalar_one_or_none()
     if instancia_existente:
         raise BadRequest(detail=f"Ya existe una instancia de encuesta (ID: {instancia_existente.id}) para la cursada {data.cursada_id}.")
+    
     nueva_instancia = models.EncuestaInstancia(
         cursada_id=data.cursada_id,
         plantilla_id=data.plantilla_id,
@@ -107,27 +108,7 @@ def activar_encuesta_para_cursada(db: Session, data: schemas.EncuestaInstanciaCr
     return nueva_instancia
 
 
-"""def obtener_instancias_activas_alumno(db: Session, alumno_id: int) -> List[models.EncuestaInstancia]:
-    now = datetime.now() 
-    stmt = (
-        select(models.EncuestaInstancia)
-        .join(Inscripcion,models.EncuestaInstancia.cursada_id == Inscripcion.cursada_id) 
-        .where(
-            Inscripcion.alumno_id == alumno_id,
-           models.EncuestaInstancia.estado ==models.EstadoInstancia.ACTIVA,
-        )
-        .options(
-            joinedload(models.EncuestaInstancia.plantilla),
-            joinedload(models.EncuestaInstancia.cursada) 
-            .joinedload(Cursada.materia)
-        )
-        .distinct() 
-    )
-
-    instancias_activas = db.execute(stmt).scalars().all()
-    return instancias_activas
-"""
-
+# Esta es la nueva función de tu amigo, limpiada y corregida
 def obtener_instancias_activas_alumno(db: Session, alumno_id: int) -> List[Dict[str, Any]]:
     now = datetime.now() 
     
@@ -161,6 +142,7 @@ def obtener_instancias_activas_alumno(db: Session, alumno_id: int) -> List[Dict[
         
     return response_list
 
+
 def obtener_instancia_activa_por_cursada(db: Session, cursada_id: int) -> models.EncuestaInstancia:
     now = datetime.now()
     stmt = (
@@ -187,9 +169,11 @@ def obtener_plantilla_para_instancia_activa(db: Session, instancia_id: int) -> m
             models.EncuestaInstancia.estado == models.EstadoInstancia.ACTIVA,
         )\
         .options(
-            selectinload(models.EncuestaInstancia.encuesta)
+            selectinload(models.EncuestaInstancia.plantilla) 
             .selectinload(models.Encuesta.secciones)
-            .selectinload(Seccion.preguntas)
+            .selectinload(Seccion.preguntas.of_type(PreguntaMultipleChoice))
+            .selectinload(PreguntaMultipleChoice.opciones)
+
         )\
         .first()
     if not instancia:
@@ -198,7 +182,7 @@ def obtener_plantilla_para_instancia_activa(db: Session, instancia_id: int) -> m
     if not instancia:
          raise Exception(f"La instancia {instancia_id} no tiene una plantilla asociada.")
 
-    return instancia.encuesta
+    return instancia.plantilla
 
 #Para el profesor
 #Para mas adelante...
@@ -270,6 +254,7 @@ def obtener_resultados_agregados_profesor(
 
         resultados_preguntas_schema: List[schemas.ResultadoPregunta] = []
         for seccion in plantilla.secciones:
+            if not seccion.preguntas: continue # Añadido por seguridad
             for pregunta in seccion.preguntas:
                 resultados_opciones_schema: List[schemas.ResultadoOpcion] = []
                 respuestas_texto_schema: List[schemas.RespuestaTextoItem] = []
@@ -277,6 +262,8 @@ def obtener_resultados_agregados_profesor(
                 pregunta_resultados = resultados_por_pregunta_dict.get(pregunta.id)
 
                 if isinstance(pregunta, PreguntaMultipleChoice):
+                    # Añadido por seguridad
+                    if not pregunta.opciones: continue 
                     for opcion in pregunta.opciones:
                          cantidad = pregunta_resultados["opciones"].get(opcion.id, 0) if pregunta_resultados else 0
                          resultados_opciones_schema.append(
