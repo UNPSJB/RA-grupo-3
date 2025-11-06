@@ -22,7 +22,7 @@ import SecretariaHome from "./pages/SecretariaHome.tsx";
 import SecretariaModelos from "./pages/SecretariaModelos.tsx";
 import ProfesoresHome from "./pages/ProfesoresHome.tsx"
 import PoliticasPrivacidad from "./pages/PoliticasPrivacidad.tsx";
-import ResponderReportes from "./pages/ResponderReportes";
+import ResponderReportes from "./pages/ResponderReportes.tsx";
 
 
 
@@ -104,6 +104,8 @@ const App: React.FC = () => {
           <Route path="estadisticas" element={<EstadisticasPage />} />
           <Route path="gestion" element={<CuentaPage />} />
         </Route>
+
+        
         {/* --- Rutas de Secretaria Academica --- */}
         <Route path="secretaria" element={<Outlet />}>
           <Route index element={<SecretariaHome />} />
