@@ -1,12 +1,7 @@
 import React, { useMemo } from "react";
-// 1. IMPORTAMOS LOS NUEVOS COMPONENTES
 import PieChartGeneral from "./PieChartGeneral.tsx";
 import SectionBreakdownTable from "./SectionBreakdownTable.tsx";
-// 2. Importamos los tipos
-import type {
-  ResultadoCursada,
-  ResultadoPregunta,
-} from "../../types/estadisticas.ts";
+import type { ResultadoCursada } from "../../types/estadisticas.ts";
 
 // --- Helper para normalizar ---
 const normalizeLabel = (value: string) => value.trim().toLowerCase();
@@ -62,7 +57,7 @@ const CursadaResultados: React.FC<CursadaResultadosProps> = ({ resultado }) => {
     return map;
   }, [allMcPreguntas]);
 
-  // 3. Datos para el Gráfico de Opinión Global
+  // 3. Datos para el Gráfico de Opinión Global (Total de Respuestas)
   const opinionGlobalData = useMemo(() => {
     const preguntaOpinion = allMcPreguntas.find((p) =>
       p.pregunta_texto.includes("cómo evalúas tu experiencia")
@@ -73,40 +68,72 @@ const CursadaResultados: React.FC<CursadaResultadosProps> = ({ resultado }) => {
       .filter((opt) => opt.cantidad > 0)
       .map((opt) => ({
         name: opt.opcion_texto,
-        value: opt.cantidad,
+        value: opt.cantidad, // El valor es el CONTEO de alumnos
         color: seriesMap[normalizeLabel(opt.opcion_texto)]?.color,
       }));
   }, [allMcPreguntas, seriesMap]);
 
-  // 4. Datos para el Gráfico Resumen Sí/No/NPO
-  const siNoNpoData = useMemo(() => {
-    const resumen = {
-      Sí: { value: 0, color: PALETA_SI_NO["Sí"] },
-      No: { value: 0, color: PALETA_SI_NO["No"] },
-      "No puedo opinar (NPO)": {
-        value: 0,
-        color: PALETA_SI_NO["No puedo opinar (NPO)"],
-      },
-    };
+  // --- INICIO DE LA CORRECCIÓN "560" ---
 
+  // 4. Datos para el Gráfico Resumen Sí/No/NPO (Promedio de Porcentajes)
+  const siNoNpoData = useMemo(() => {
+    // Filtramos solo las preguntas Sí/No/NPO
     const preguntasSiNo = allMcPreguntas.filter(
       (p) => !p.pregunta_texto.includes("cómo evalúas tu experiencia")
     );
 
+    if (preguntasSiNo.length === 0) return []; // No hay preguntas para promediar
+
+    let totalPercentSi = 0;
+    let totalPercentNo = 0;
+    let totalPercentNPO = 0;
+
     preguntasSiNo.forEach((p) => {
-      p.resultados_opciones?.forEach((opt) => {
-        if (resumen[opt.opcion_texto as keyof typeof resumen]) {
-          resumen[opt.opcion_texto as keyof typeof resumen].value +=
-            opt.cantidad;
-        }
-      });
+      // Calculamos el total de respuestas SOLO para esta pregunta (ej. 20)
+      const totalRespuestasPregunta = (p.resultados_opciones || []).reduce(
+        (sum, opt) => sum + opt.cantidad,
+        0
+      );
+      if (totalRespuestasPregunta === 0) return; // Evitar división por cero
+
+      const optSi = p.resultados_opciones?.find((o) => o.opcion_texto === "Sí");
+      const optNo = p.resultados_opciones?.find((o) => o.opcion_texto === "No");
+      const optNPO = p.resultados_opciones?.find(
+        (o) => o.opcion_texto === "No puedo opinar (NPO)"
+      );
+
+      // Sumamos el PORCENTAJE de esta pregunta
+      totalPercentSi += (optSi?.cantidad ?? 0) / totalRespuestasPregunta;
+      totalPercentNo += (optNo?.cantidad ?? 0) / totalRespuestasPregunta;
+      totalPercentNPO += (optNPO?.cantidad ?? 0) / totalRespuestasPregunta;
     });
 
-    return Object.entries(resumen).map(([name, data]) => ({
-      name,
-      ...data,
-    }));
+    const numPreguntas = preguntasSiNo.length;
+
+    // Creamos los datos para el gráfico de torta con los promedios
+    const data = [
+      {
+        name: "Sí",
+        // Calculamos el promedio y lo formateamos a 1 decimal
+        value: parseFloat(((totalPercentSi / numPreguntas) * 100).toFixed(1)),
+        color: PALETA_SI_NO["Sí"],
+      },
+      {
+        name: "No",
+        value: parseFloat(((totalPercentNo / numPreguntas) * 100).toFixed(1)),
+        color: PALETA_SI_NO["No"],
+      },
+      {
+        name: "NPO",
+        value: parseFloat(((totalPercentNPO / numPreguntas) * 100).toFixed(1)),
+        color: PALETA_SI_NO["No puedo opinar (NPO)"],
+      },
+    ];
+
+    return data;
   }, [allMcPreguntas]);
+
+  // --- FIN DE LA CORRECCIÓN ---
 
   // --- RENDERIZADO ---
   return (
@@ -130,10 +157,12 @@ const CursadaResultados: React.FC<CursadaResultadosProps> = ({ resultado }) => {
         <PieChartGeneral
           title="Opinión Global (Pregunta G.1)"
           data={opinionGlobalData}
+          valueSuffix=" resp." // Le decimos que el valor es un conteo
         />
         <PieChartGeneral
-          title='Resumen "Sí / No / NPO" (Otras preguntas)'
+          title='Promedio "Sí / No / NPO" (Otras preguntas)'
           data={siNoNpoData}
+          valueSuffix="%" // Le decimos que el valor es un porcentaje
         />
       </div>
 

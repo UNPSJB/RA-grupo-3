@@ -41,8 +41,15 @@ except ImportError as e:
 
 # --- Constantes de Simulación ---
 NUM_ALUMNOS = 20
-# IDs de las instancias CERRADAS para las que queremos generar respuestas
-INSTANCIAS_A_RESPONDER = [1, 2] 
+
+# IDs de las instancias CERRADAS para Ciclo Básico
+# (Tus instancias 1 y 2 apuntan a plantilla_id 1, así que esto es correcto)
+INSTANCIAS_BASICO_A_RESPONDER = [1, 2] 
+
+# !! IMPORTANTE: ¡DEBES ACTUALIZAR ESTO!
+# Primero crea EncuestaInstancia para tu plantilla de "Ciclo Superior" (probablemente plantilla_id=2)
+# y luego pon los IDs de esas *nuevas* instancias aquí.
+INSTANCIAS_SUPERIOR_A_RESPONDER = [] # Ejemplo: [3, 4] si creas nuevas instancias para la plantilla 2
 
 
 def create_tables():
@@ -54,8 +61,8 @@ def create_tables():
 
 def seed_responses(db: Session):
     """
-    Inscribe 20 alumnos en las cursadas 1 y 2, y genera un RespuestaSet
-    para cada uno en las instancias de encuesta 1 y 2.
+    Inscribe 20 alumnos y genera un RespuestaSet para cada uno,
+    diferenciando entre encuestas de Ciclo Básico y Ciclo Superior.
     """
     print("Iniciando script de generación de respuestas...")
     
@@ -64,30 +71,62 @@ def seed_responses(db: Session):
     alumnos_creados = []
     alumnos_a_añadir = []
     for i in range(1, NUM_ALUMNOS + 1):
-        nombre_alumno = f"Alumno Simulado {i:02d}"
-        alumno_existente = db.scalar(select(Alumno).where(Alumno.nombre == nombre_alumno))
+        # Empezamos desde ID 100 para evitar colisiones con IDs de prueba (como el Alumno 2)
+        alumno_id_simulado = 100 + i 
+        alumno_existente = db.get(Alumno, alumno_id_simulado)
         
         if not alumno_existente:
-            print(f"   + Creando alumno: {nombre_alumno}")
-            nuevo_alumno = Alumno(nombre=nombre_alumno)
+            print(f"   + Creando alumno: 'Alumno Simulado {i:02d}' con ID={alumno_id_simulado}")
+            # Forzamos el ID para consistencia
+            nuevo_alumno = Alumno(id=alumno_id_simulado, nombre=f"Alumno Simulado {i:02d}")
             alumnos_a_añadir.append(nuevo_alumno)
-            alumnos_creados.append(nuevo_alumno) # Añadir a la lista para el siguiente paso
+            alumnos_creados.append(nuevo_alumno)
         else:
-            alumnos_creados.append(alumno_existente) # Usar el existente
+            alumnos_creados.append(alumno_existente)
 
     if alumnos_a_añadir:
-        db.add_all(alumnos_a_añadir)
-        db.commit()
-        print(f"   -> {len(alumnos_a_añadir)} alumnos nuevos creados.")
+        try:
+            db.add_all(alumnos_a_añadir)
+            db.commit()
+            print(f"   -> {len(alumnos_a_añadir)} alumnos nuevos creados.")
+        except Exception as e:
+            db.rollback()
+            print(f"\n   ! ERROR al insertar alumnos. ¿Quizás la BBDD no permite inserción de ID manual? Error: {e}")
+            print("   -> Intentando de nuevo sin forzar ID...")
+            db.rollback() # Limpia la sesión
+            alumnos_creados = [] # Resetea la lista
+            for i in range(1, NUM_ALUMNOS + 1):
+                nombre_alumno = f"Alumno Simulado {i:02d}"
+                alumno_existente = db.scalar(select(Alumno).where(Alumno.nombre == nombre_alumno))
+                if not alumno_existente:
+                    nuevo_alumno = Alumno(nombre=nombre_alumno)
+                    db.add(nuevo_alumno)
+                    db.commit() # Commit uno por uno
+                    db.refresh(nuevo_alumno)
+                    alumnos_creados.append(nuevo_alumno)
+                else:
+                    alumnos_creados.append(alumno_existente)
+            print(f"   -> {len(alumnos_creados)} alumnos listos (sin forzar ID).")
     else:
         print("   -> Todos los alumnos de prueba ya existían.")
 
     # --- 2. Cargar Plantillas de Instancias ---
+    INSTANCIAS_A_RESPONDER = INSTANCIAS_BASICO_A_RESPONDER + INSTANCIAS_SUPERIOR_A_RESPONDER
+    
+    if not INSTANCIAS_SUPERIOR_A_RESPONDER:
+        print("\n   ******************************************************************")
+        print("   ! ADVERTENCIA: No hay instancias de 'Ciclo Superior' configuradas.")
+        print("   ! El script solo generará respuestas para Ciclo Básico.")
+        print("   ! Edita 'INSTANCIAS_SUPERIOR_A_RESPONDER' en este script para probarlas.")
+        print("   ******************************************************************\n")
+        
+    if not INSTANCIAS_A_RESPONDER:
+        print("   ! ERROR: No hay instancias configuradas en 'INSTANCIAS_BASICO_A_RESPONDER' o 'INSTANCIAS_SUPERIOR_A_RESPONDER'. Saliendo.")
+        return
+
     print(f"--- Paso 2: Cargando plantillas para instancias {INSTANCIAS_A_RESPONDER} ---")
     instancias_con_preguntas = []
     for instancia_id in INSTANCIAS_A_RESPONDER:
-        # Usamos la misma consulta que 'obtener_plantilla_para_instancia_activa'
-        # pero sin filtrar por estado, ya que están CERRADAS.
         instancia = db.query(EncuestaInstancia)\
             .filter(EncuestaInstancia.id == instancia_id)\
             .options(
@@ -106,12 +145,11 @@ def seed_responses(db: Session):
             print(f"   ! ERROR: La Instancia ID={instancia_id} no tiene plantilla o secciones. Saltando...")
             continue
 
-        # Aplanamos la lista de preguntas para iterar fácilmente
         todas_las_preguntas = []
         for seccion in instancia.plantilla.secciones:
             todas_las_preguntas.extend(seccion.preguntas)
             
-        print(f"   -> Instancia {instancia_id} (Cursada {instancia.cursada_id}) cargada con {len(todas_las_preguntas)} preguntas.")
+        print(f"   -> Instancia {instancia_id} (Cursada {instancia.cursada_id}) cargada. Plantilla: '{instancia.plantilla.titulo}' ({len(todas_las_preguntas)} preguntas).")
         instancias_con_preguntas.append((instancia, todas_las_preguntas))
 
     # --- 3. Inscribir Alumnos y Generar Respuestas ---
@@ -130,18 +168,15 @@ def seed_responses(db: Session):
             )
             
             if not inscripcion:
-                #print(f"   - Inscribiendo Alumno {alumno.id} en Cursada {instancia.cursada_id}...")
                 inscripcion = Inscripcion(
                     alumno_id=alumno.id, 
                     cursada_id=instancia.cursada_id,
-                    ha_respondido=False # Se setea a True abajo
+                    ha_respondido=False
                 )
                 db.add(inscripcion)
-                # No hacemos commit aquí, lo hacemos junto con la respuesta
             
             # B. Verificar si ya respondió
             if inscripcion.ha_respondido:
-                #print(f"   - Alumno {alumno.id} ya respondió la Instancia {instancia.id}. Saltando.")
                 continue
 
             # C. Crear el Paquete de Respuestas (RespuestaSet)
@@ -149,35 +184,74 @@ def seed_responses(db: Session):
             nuevo_set = RespuestaSet(instrumento_instancia_id=instancia.id)
             
             respuestas_para_el_set = []
+            
+            # --- LÓGICA DE DECISIÓN DE PLANTILLA ---
+            is_ciclo_basico = "Ciclo Básico" in instancia.plantilla.titulo
+            is_ciclo_superior = "Ciclo Superior" in instancia.plantilla.titulo
+            
+            if not is_ciclo_basico and not is_ciclo_superior:
+                print(f"   ! ADVERTENCIA: Plantilla '{instancia.plantilla.titulo}' no reconocida. Saltando.")
+                continue
+
             for pregunta in preguntas:
-                if pregunta.tipo == TipoPregunta.MULTIPLE_CHOICE:
-                    if not pregunta.opciones: continue # Seguridad
-                    opcion_elegida = random.choice(pregunta.opciones)
-                    nueva_respuesta = RespuestaMultipleChoice(
-                        pregunta_id=pregunta.id,
-                        opcion_id=opcion_elegida.id,
-                        tipo=pregunta.tipo
+                if pregunta.tipo == TipoPregunta.REDACCION:
+                    texto_respuesta = f"Respuesta simulada por Alumno {alumno.id}."
+                    nueva_respuesta = RespuestaRedaccion(
+                        pregunta_id=pregunta.id, texto=texto_respuesta, tipo=pregunta.tipo
                     )
                     respuestas_para_el_set.append(nueva_respuesta)
                     
-                elif pregunta.tipo == TipoPregunta.REDACCION:
-                    texto_respuesta = f"Respuesta de redacción simulada por Alumno {alumno.id} para Pregunta {pregunta.id}."
-                    nueva_respuesta = RespuestaRedaccion(
-                        pregunta_id=pregunta.id,
-                        texto=texto_respuesta,
-                        tipo=pregunta.tipo
-                    )
-                    respuestas_para_el_set.append(nueva_respuesta)
+                elif pregunta.tipo == TipoPregunta.MULTIPLE_CHOICE:
+                    if not pregunta.opciones: continue 
+                    
+                    opcion_elegida = None
+                    texto_pregunta = pregunta.texto.lower()
+                    
+                    try:
+                        # --- SECCIÓN A (Común) ---
+                        if "cuántas veces te has inscripto" in texto_pregunta:
+                            opcion_elegida = random.choice([o for o in pregunta.opciones if o.texto in ["Una", "Más de una"]])
+                        elif "porcentaje de asistencia" in texto_pregunta:
+                            opcion_elegida = random.choice([o for o in pregunta.opciones if o.texto in ["Entre 0 y 50%", "Más 50%"]])
+                        elif "conocimientos previos" in texto_pregunta:
+                            opcion_elegida = random.choice([o for o in pregunta.opciones if o.texto in ["Escasos", "Suficientes"]])
+                        
+                        # --- Lógica CICLO BÁSICO (Anexo I) ---
+                        elif is_ciclo_basico:
+                            if "cómo evalúas tu experiencia" in texto_pregunta:
+                                # Es la G1 de Ciclo Básico (Escala Satisfactorio)
+                                opcion_elegida = random.choice([o for o in pregunta.opciones if "satisfactorio" in o.texto.lower()])
+                            else:
+                                # Es una pregunta Sí/No/NPO de Ciclo Básico
+                                opcion_elegida = random.choice([o for o in pregunta.opciones if o.texto in ["Sí", "No", "No puedo opinar (NPO)"]])
+                        
+                        # --- Lógica CICLO SUPERIOR (Anexo II) ---
+                        elif is_ciclo_superior:
+                            # Todas las preguntas de la B a la G usan la escala 4-1
+                            if any("bueno" in o.texto.lower() for o in pregunta.opciones):
+                                opcion_elegida = random.choice(pregunta.opciones)
+                        
+                        if not opcion_elegida:
+                             opcion_elegida = random.choice(pregunta.opciones)
+
+                        nueva_respuesta = RespuestaMultipleChoice(
+                            pregunta_id=pregunta.id, opcion_id=opcion_elegida.id, tipo=pregunta.tipo
+                        )
+                        respuestas_para_el_set.append(nueva_respuesta)
+
+                    except Exception as e:
+                        print(f"   ! ERROR procesando pregunta '{texto_pregunta[:30]}...'. Opciones: {[o.texto for o in pregunta.opciones]}. Error: {e}")
+                        continue
 
             # D. Vincular todo y marcar como respondido
             nuevo_set.respuestas = respuestas_para_el_set
             inscripcion.ha_respondido = True
             
-            db.add(nuevo_set) # Añade el set (con sus respuestas en cascada)
-            db.add(inscripcion) # Actualiza la inscripción
+            db.add(nuevo_set)
+            db.add(inscripcion)
 
             try:
-                db.commit() # Commit por cada alumno/encuesta
+                db.commit()
                 total_sets_creados += 1
             except Exception as e:
                 print(f"   ! ERROR al guardar RespuestaSet para Alumno {alumno.id}: {e}")
@@ -188,7 +262,7 @@ def seed_responses(db: Session):
 
 # --- Punto de entrada para ejecutar el script ---
 if __name__ == "__main__":
-    print("Iniciando script de carga de respuestas simuladas...")
+    print("Iniciando script de carga de respuestas simuladas (v2)...")
     
     # 1. Asegurarse que las tablas existan
     create_tables()
