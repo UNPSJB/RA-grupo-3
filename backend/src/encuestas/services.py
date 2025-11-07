@@ -197,10 +197,10 @@ def obtener_resultados_agregados_profesor(
             joinedload(Cursada.materia), 
             joinedload(Cursada.cuatrimestre), 
             selectinload(Cursada.encuesta_instancia)
-            .selectinload(models.EncuestaInstancia.plantilla)
+            .selectinload(models.EncuestaInstancia.plantilla) 
             .selectinload(models.Encuesta.secciones)
-            .selectinload(Seccion.preguntas)
-            .selectinload(Pregunta.opciones.of_type(PreguntaMultipleChoice)) # Carga Opciones solo para MC
+            .selectinload(Seccion.preguntas.of_type(PreguntaMultipleChoice))
+            .selectinload(PreguntaMultipleChoice.opciones)
         )
         .where(Cursada.profesor_id == profesor_id)
     )
@@ -228,7 +228,8 @@ def obtener_resultados_agregados_profesor(
         stmt_respuestas = (
             select(Respuesta)
             .join(RespuestaSet)
-            .where(RespuestaSet.encuesta_instancia_id == instancia.id)
+            # --- ¡CORRECCIÓN DE NOMBRE DE COLUMNA! ---
+            .where(RespuestaSet.instrumento_instancia_id == instancia.id) 
             .options(
                 selectinload(RespuestaMultipleChoice.opcion), 
                 selectinload(Respuesta.pregunta) 
@@ -236,7 +237,10 @@ def obtener_resultados_agregados_profesor(
         )
         todas_las_respuestas = db.execute(stmt_respuestas).scalars().all()
 
-        cantidad_sets = db.query(func.count(RespuestaSet.id)).filter(RespuestaSet.encuesta_instancia_id == instancia.id).scalar() or 0
+        # --- ¡CORRECCIÓN DE NOMBRE DE COLUMNA! ---
+        cantidad_sets = db.query(func.count(RespuestaSet.id)).filter(RespuestaSet.instrumento_instancia_id == instancia.id).scalar() or 0
+        
+        # OMITIMOS REPORTES SIN RESPUESTAS
         if cantidad_sets == 0 and not todas_las_respuestas: 
              continue
 
@@ -246,14 +250,22 @@ def obtener_resultados_agregados_profesor(
             pid = respuesta.pregunta_id
             if isinstance(respuesta, RespuestaMultipleChoice):
                 if respuesta.opcion_id is not None:
-                    resultados_por_pregunta_dict[pid]["opciones"][respuesta.opcion_id] += 1
+                     # Check por si la opción es None (dato corrupto)
+                    if respuesta.opcion:
+                        resultados_por_pregunta_dict[pid]["opciones"][respuesta.opcion_id] += 1
             elif isinstance(respuesta, RespuestaRedaccion):
                  if respuesta.texto is not None: 
                      resultados_por_pregunta_dict[pid]["textos"].append(schemas.RespuestaTextoItem(texto=respuesta.texto))
 
-        resultados_preguntas_schema: List[schemas.ResultadoPregunta] = []
+        
+        # --- ¡CORRECCIÓN DE AGRUPACIÓN POR SECCIÓN! ---
+        resultados_secciones_schema: List[schemas.ResultadoSeccion] = [] 
+
         for seccion in plantilla.secciones:
-            if not seccion.preguntas: continue # Añadido por seguridad
+            if not seccion.preguntas: continue
+            
+            preguntas_de_esta_seccion: List[schemas.ResultadoPregunta] = []
+
             for pregunta in seccion.preguntas:
                 resultados_opciones_schema: List[schemas.ResultadoOpcion] = []
                 respuestas_texto_schema: List[schemas.RespuestaTextoItem] = []
@@ -261,7 +273,6 @@ def obtener_resultados_agregados_profesor(
                 pregunta_resultados = resultados_por_pregunta_dict.get(pregunta.id)
 
                 if isinstance(pregunta, PreguntaMultipleChoice):
-                    # Añadido por seguridad
                     if not pregunta.opciones: continue 
                     for opcion in pregunta.opciones:
                          cantidad = pregunta_resultados["opciones"].get(opcion.id, 0) if pregunta_resultados else 0
@@ -272,7 +283,8 @@ def obtener_resultados_agregados_profesor(
                                  cantidad=cantidad
                              )
                          )
-                    resultados_preguntas_schema.append(
+                    
+                    preguntas_de_esta_seccion.append(
                         schemas.ResultadoPregunta(
                             pregunta_id=pregunta.id,
                             pregunta_texto=pregunta.texto,
@@ -283,7 +295,8 @@ def obtener_resultados_agregados_profesor(
                     )
                 elif pregunta.tipo == TipoPregunta.REDACCION:
                     respuestas_texto_schema = pregunta_resultados["textos"] if pregunta_resultados else []
-                    resultados_preguntas_schema.append(
+                    
+                    preguntas_de_esta_seccion.append(
                         schemas.ResultadoPregunta(
                             pregunta_id=pregunta.id,
                             pregunta_texto=pregunta.texto,
@@ -292,22 +305,33 @@ def obtener_resultados_agregados_profesor(
                             respuestas_texto=respuestas_texto_schema
                         )
                     )
+            
+            if preguntas_de_esta_seccion:
+                resultados_secciones_schema.append(
+                    schemas.ResultadoSeccion(
+                        seccion_nombre=seccion.nombre,
+                        resultados_por_pregunta=preguntas_de_esta_seccion
+                    )
+                )
+
         cuatri_info = "N/A"
         if cursada.cuatrimestre:
              periodo_val = cursada.cuatrimestre.periodo.value if cursada.cuatrimestre.periodo else '?'
              cuatri_info = f"{cursada.cuatrimestre.anio} - {periodo_val}"
+        
         resultados_finales.append(
             schemas.ResultadoCursada(
                 cursada_id=cursada.id,
                 materia_nombre=cursada.materia.nombre if cursada.materia else "N/A",
                 cuatrimestre_info=cuatri_info,
                 cantidad_respuestas=cantidad_sets,
-                resultados_por_pregunta=resultados_preguntas_schema
+                
+                # --- ¡CORRECCIÓN DE AGRUPACIÓN POR SECCIÓN! ---
+                resultados_por_seccion=resultados_secciones_schema 
             )
         )
 
     return resultados_finales
-
 
 def listar_instancias_cerradas_profesor(
     db: Session,

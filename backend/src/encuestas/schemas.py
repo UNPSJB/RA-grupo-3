@@ -90,11 +90,20 @@ class ResultadoPregunta(BaseModel):
     model_config = {"from_attributes": True} 
 
 
+# 1. AÑADIMOS ESTE NUEVO SCHEMA
+class ResultadoSeccion(BaseModel):
+    seccion_nombre: str
+    resultados_por_pregunta: List[ResultadoPregunta]
+    model_config = {"from_attributes": True}
+
 class ResultadoCursada(BaseModel):
     cursada_id: int
     materia_nombre: str
     cuatrimestre_info: str 
     cantidad_respuestas: int 
-    resultados_por_pregunta: List[ResultadoPregunta]
+    
+    # 2. MODIFICAMOS ESTA LÍNEA
+    # resultados_por_pregunta: List[ResultadoPregunta]  <-- LÍNEA ANTIGUA
+    resultados_por_seccion: List[ResultadoSeccion]  # <-- LÍNEA NUEVA
 
     model_config = {"from_attributes": True}
