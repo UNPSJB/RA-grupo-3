@@ -10,8 +10,9 @@ from src.persona.models import Inscripcion # Necesitas Alumno e Inscripcion
 from src.materia.models import Cursada,Cuatrimestre
 from datetime import datetime
 from src.pregunta.models import Pregunta, PreguntaMultipleChoice
-from src.enumerados import EstadoInstancia, TipoPregunta,EstadoInstrumento
+from src.enumerados import EstadoInstancia, TipoPregunta,EstadoInstrumento, EstadoInforme, TipoInstrumento
 from src.respuesta.models import Respuesta, RespuestaMultipleChoice, RespuestaRedaccion, RespuestaSet
+from src.instrumento import models as instrumento_models
 
 
 def crear_plantilla_encuesta(
@@ -108,7 +109,6 @@ def activar_encuesta_para_cursada(db: Session, data: schemas.EncuestaInstanciaCr
     return nueva_instancia
 
 
-# Esta es la nueva función de tu amigo, limpiada y corregida
 def obtener_instancias_activas_alumno(db: Session, alumno_id: int) -> List[Dict[str, Any]]:
     now = datetime.now() 
     
@@ -150,9 +150,8 @@ def obtener_instancia_activa_por_cursada(db: Session, cursada_id: int) -> models
         .where(
             models.EncuestaInstancia.cursada_id == cursada_id,
             models.EncuestaInstancia.estado == models.EstadoInstancia.ACTIVA,
-            #Descomentar para trabajar con las fechas de las encuestas
-            #models.EncuestaInstancia.fecha_inicio <= now,
-            #(models.EncuestaInstancia.fecha_fin == None) | (models.EncuestaInstancia.fecha_fin > now)
+            models.EncuestaInstancia.fecha_inicio <= now,
+            (models.EncuestaInstancia.fecha_fin == None) | (models.EncuestaInstancia.fecha_fin > now)
         )
         .options(selectinload(models.EncuestaInstancia.plantilla))
     )
@@ -335,6 +334,22 @@ def listar_instancias_cerradas_profesor(
     instancias_cerradas = db.execute(stmt).scalars().unique().all()
     return instancias_cerradas
 
+def _obtener_plantilla_informe_activa(db: Session) -> int:
+    """Busca y retorna el ID de la primera plantilla ActividadCurricular PUBLICADA."""
+    
+    # Buscamos la plantilla ActividadCurricular (el molde) que esté PUBLICADA
+    stmt = select(instrumento_models.ActividadCurricular.id).where(
+        instrumento_models.ActividadCurricular.estado == EstadoInstrumento.PUBLICADA,
+        instrumento_models.ActividadCurricular.tipo == TipoInstrumento.ACTIVIDAD_CURRICULAR
+    ).limit(1)
+    
+    plantilla_id = db.execute(stmt).scalar_one_or_none()
+    
+    if not plantilla_id:
+        raise BadRequest(detail="No se encontró una plantilla de Informe de Actividad Curricular PUBLICADA para instanciar.")
+        
+    return plantilla_id
+
 def cerrar_instancia_encuesta(db: Session, instancia_id: int) -> models.EncuestaInstancia:
 
     instancia = db.get(models.EncuestaInstancia, instancia_id)
@@ -351,6 +366,37 @@ def cerrar_instancia_encuesta(db: Session, instancia_id: int) -> models.Encuesta
         instancia.fecha_fin = datetime.now() 
 
     db.add(instancia)
+    try:
+        cursada_id = instancia.cursada_id
+        encuesta_instancia_id = instancia.id
+        plantilla_informe_id = _obtener_plantilla_informe_activa(db)
+        cursada = db.get(Cursada, cursada_id)
+        if not cursada or not cursada.profesor_id: 
+             raise BadRequest(detail=f"La Cursada con ID {cursada_id} no tiene un profesor asignado.")
+        
+        profesor_id = cursada.profesor_id
+        existe_instancia = db.query(instrumento_models.ActividadCurricularInstancia).filter(
+            instrumento_models.ActividadCurricularInstancia.cursada_id == cursada_id
+        ).first()
+        if existe_instancia:
+            raise BadRequest(detail=f"Ya existe un informe de actividad curricular (ID {existe_instancia.id}) para la cursada {cursada_id}. No se crea una nueva instancia.")
+
+        # Creamos la instancia del informe de actividad curricular
+        nueva_instancia_informe = instrumento_models.ActividadCurricularInstancia(
+            actividad_curricular_id=plantilla_informe_id,
+            cursada_id=cursada_id,
+            encuesta_instancia_id=encuesta_instancia_id,
+            profesor_id=profesor_id,
+            estado=EstadoInforme.PENDIENTE,
+            tipo=TipoInstrumento.ACTIVIDAD_CURRICULAR
+        )
+
+        db.add(nueva_instancia_informe)
+
+    except BadRequest as e:
+        print(f"ADVERTENCIA: No se pudo instanciar el Informe de Actividad Curricular. Causa: {e.detail}")
+    except Exception as e:
+        print(f"ERROR grave al intentar instanciar Informe de Actividad Curricular: {e}")
     try:
         db.commit()
         db.refresh(instancia)
