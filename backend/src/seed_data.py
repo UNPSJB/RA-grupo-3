@@ -198,6 +198,24 @@ def seed_initial_data(db: Session):
         else:
             print(f"   - Alumno ID {alumno_prueba.id} ya inscripto en Cursada ID {cursada1.id}.")
 
+
+# --- (NUEVO) Inscribir Alumno de Prueba en Cursada 2 (Programación I) ---
+    cursada2 = cursadas_obj.get("Programación I (Simulación)")
+    if not cursada2 or not hasattr(cursada2, 'id'):
+         print(f"   - Aviso: No se pudo obtener la Cursada 2 (Programación I) para inscripción.")
+    else:
+        inscripcion2 = db.query(Inscripcion).filter_by(alumno_id=alumno_prueba.id, cursada_id=cursada2.id).first()
+        if not inscripcion2:
+            print(f"   - (NUEVO) Inscribiendo Alumno ID {alumno_prueba.id} en Cursada ID {cursada2.id}...")
+            nueva_inscripcion2 = Inscripcion(
+                alumno_id=alumno_prueba.id,
+                cursada_id=cursada2.id,
+                ha_respondido=False
+            )
+            db.add(nueva_inscripcion2)
+        else:
+             print(f"   - Alumno ID {alumno_prueba.id} ya inscripto en Cursada ID {cursada2.id}.")
+
     # --- (Opcional) Inscribir Alumno de Prueba en Cursada 3 (Análisis) ---
     # Para tener otra cursada donde el alumno esté inscripto
     cursada3 = cursadas_obj.get("Análisis Matemático I (Simulación)")
@@ -216,10 +234,26 @@ def seed_initial_data(db: Session):
         else:
              print(f"   - Alumno ID {alumno_prueba.id} ya inscripto en Cursada ID {cursada3.id}.")
 
+# --- (NUEVO) Inscribir Alumno de Prueba en Cursada 4 (Física I) ---
+    cursada4 = cursadas_obj.get("Física I (Simulación)")
+    if not cursada4 or not hasattr(cursada4, 'id'):
+         print(f"   - Aviso: No se pudo obtener la Cursada 4 (Física I) para inscripción.")
+    else:
+        inscripcion4 = db.query(Inscripcion).filter_by(alumno_id=alumno_prueba.id, cursada_id=cursada4.id).first()
+        if not inscripcion4:
+            print(f"   - (NUEVO) Inscribiendo Alumno ID {alumno_prueba.id} en Cursada ID {cursada4.id}...")
+            nueva_inscripcion4 = Inscripcion(
+                alumno_id=alumno_prueba.id,
+                cursada_id=cursada4.id,
+                ha_respondido=False
+            )
+            db.add(nueva_inscripcion4)
+        else:
+             print(f"   - Alumno ID {alumno_prueba.id} ya inscripto en Cursada ID {cursada4.id}.")
+
 
     db.commit() # Commit final
     print("Datos semilla verificados/insertados.")
-
 
 def create_tables():
      print("Creando tablas si no existen...")

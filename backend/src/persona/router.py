@@ -6,8 +6,8 @@ from src.persona import schemas, services
 from src.dependencies import get_current_profesor 
 from src.persona.models import Profesor
 from src.encuestas import services as profesor_services 
-from src.exceptions import NotFound, BadRequest
-from src.encuestas.schemas import EncuestaInstancia
+from src.exceptions import BadRequest
+from src.encuestas import schemas as encuestas_schemas
 
 router = APIRouter(prefix="/alumnos", tags=["Alumnos"])
 
@@ -24,7 +24,7 @@ router_profesor = APIRouter(prefix="/profesor", tags=["Profesor"])
 
 @router_profesor.get(
     "/mis-resultados",
-    response_model=List[EncuestaInstancia]
+    response_model=List[encuestas_schemas.ResultadoCursada]
 )
 def get_mis_encuestas_cerradas(
     cuatrimestre_id: Optional[int] = None,
@@ -32,14 +32,14 @@ def get_mis_encuestas_cerradas(
     profesor_actual: Profesor = Depends(get_current_profesor)
 ):
     try:
-        instancias_cerradas = profesor_services.listar_instancias_cerradas_profesor(
+        instancias_cerradas = profesor_services.obtener_resultados_agregados_profesor(
             db,
             profesor_id=profesor_actual.id,
             cuatrimestre_id=cuatrimestre_id
         )
         return instancias_cerradas
     except Exception as e:
-        print(f"Error inesperado al listar encuestas cerradas para profesor {profesor_actual.id}: {e}")
+        print(f"Error inesperado al listar resultados para profesor {profesor_actual.id}: {e}")
         import traceback
         traceback.print_exc()
-        raise BadRequest(detail="Ocurrió un error al obtener las encuestas cerradas.")
+        raise BadRequest(detail="Ocurrió un error al obtener los resultados.")
