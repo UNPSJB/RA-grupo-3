@@ -1,20 +1,21 @@
 import React, { useState, useEffect, useMemo } from "react";
-// 1. Importa el nuevo componente y los tipos
+
 import CursadaResultados from "../components/estadisticas/CursadaResultados";
 import type { ResultadoCursada } from "../types/estadisticas";
+import { useNavigate } from "react-router-dom";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
 
 const ResultadosProfesorPage: React.FC = () => {
-  // 2. Usa el tipo de dato correcto
   const [resultados, setResultados] = useState<ResultadoCursada[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // 3. NUEVO ESTADO para saber qué cursada mostrar
   const [selectedCursadaId, setSelectedCursadaId] = useState<number | null>(
     null
   );
+
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchResultados = async () => {
@@ -38,7 +39,6 @@ const ResultadosProfesorPage: React.FC = () => {
     fetchResultados();
   }, []);
 
-  // 4. Lógica para mostrar la vista de detalle
   const selectedResultado = useMemo(() => {
     if (!selectedCursadaId) return null;
     return resultados.find((r) => r.cursada_id === selectedCursadaId) || null;
@@ -70,7 +70,6 @@ const ResultadosProfesorPage: React.FC = () => {
     );
   }
 
-  // 5. VISTA DE DETALLE (si hay una cursada seleccionada)
   if (selectedResultado) {
     return (
       <div className="p-6 max-w-5xl mx-auto space-y-6">
@@ -81,11 +80,23 @@ const ResultadosProfesorPage: React.FC = () => {
           &larr; Volver al listado
         </button>
         <CursadaResultados resultado={selectedResultado} />
+
+        <div className="flex justify-end pt-4 border-t border-gray-200">
+          <button
+            onClick={() =>
+              navigate(
+                `/profesores/reportes/crear/${selectedResultado.cursada_id}`
+              )
+            }
+            className="bg-green-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-green-700 transition duration-150 ease-in-out focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 shadow-md hover:shadow-lg"
+          >
+            Crear Informe de Actividad Curricular
+          </button>
+        </div>
       </div>
     );
   }
 
-  // 6. VISTA DE LISTA (por defecto, como en tu captura)
   return (
     <div className="p-6 max-w-4xl mx-auto">
       <h2 className="text-3xl font-bold mb-6 text-gray-800">

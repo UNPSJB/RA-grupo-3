@@ -3,7 +3,7 @@ import { Outlet, Route, Routes, Navigate, useLocation } from "react-router-dom";
 import Navbar from "./components/Navbar.tsx";
 import Footer from "./components/Footer.tsx";
 import EncuestasPage from "./pages/EncuestasPage.tsx";
-//import EstadisticasPage from "./pages/EstadisticasPage.tsx";
+
 import CuentaPage from "./pages/CuentaPage.tsx";
 import ResponderEncuesta from "./pages/ResponderEncuesta.tsx";
 import CrearPlantilla from "./pages/CrearPlantilla.tsx";
@@ -22,7 +22,7 @@ import SecretariaHome from "./pages/SecretariaHome.tsx";
 import SecretariaModelos from "./pages/SecretariaModelos.tsx";
 import ProfesoresHome from "./pages/ProfesoresHome.tsx";
 import PoliticasPrivacidad from "./pages/PoliticasPrivacidad.tsx";
-import ResponderReportes from "./pages/ResponderReportes";
+import ResponderReportes from "./pages/ResponderReportes.tsx";
 
 const MainLayout: React.FC = () => {
   const location = useLocation();
@@ -97,8 +97,11 @@ const App: React.FC = () => {
         {/* --- Rutas de Profesor --- */}
         <Route path="profesores" element={<Outlet />}>
           <Route index element={<ProfesoresHome />} />
-          <Route path="reportes" element={<ResultadosProfesorPage />} />{" "}
-          {/*ACA NO HAY NADA PARA PONER AUN*/}
+          {/* Ahora "reportes" es un layout que muestra la lista o el detalle */}
+          <Route path="reportes" element={<Outlet />}>
+            <Route index element={<ResultadosProfesorPage />} />
+            <Route path="crear/:cursadaId" element={<ResponderReportes />} />
+          </Route>
           <Route path="otros" element={<Outlet />} />{" "}
           {/*ACA NO HAY NADA PARA PONER AUN*/}
           {/* <Route path="estadisticas" element={<EstadisticasPage />} /> */}
