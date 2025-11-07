@@ -50,7 +50,7 @@ def responder_reporte_completa(
         respuesta_services.crear_submission_profesor(
             db=db,
             instancia_id = instancia_id,
-            alumno_id = profesor.id,
+            profesor_id = profesor.id,
             respuestas_data = respuestas_data
         )
         return {"message": "Respuestas enviadas correctamente. ¡Gracias!"}

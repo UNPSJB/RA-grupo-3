@@ -5,7 +5,8 @@ from src.database import SessionLocal, engine
 # Importa todos los modelos necesarios
 from src.materia.models import Materia, Cuatrimestre, Cursada
 from src.persona.models import Persona, Profesor, Alumno, Inscripcion
-from src.instrumento.models import InformeSintetico
+from src.instrumento.models import InformeSintetico, ActividadCurricularInstancia
+from src.encuestas.models import EncuestaInstancia
 from src.seccion.models import Seccion
 from src.pregunta.models import PreguntaRedaccion, PreguntaMultipleChoice, Opcion
 # Importa los Enums necesarios
@@ -255,6 +256,28 @@ def seed_initial_data(db: Session):
         db.commit()
     else:
         print(f"   - Informe Sintético (ID: {informe.id}) ya existe.")
+
+    # --- 8. Crear Instancia de Actividad Curricular (si no existe) ---
+    # Asocia el informe a la primera cursada de prueba
+    if informe and cursada1:
+        instancia_informe = db.query(ActividadCurricularInstancia).filter_by(
+            instrumento_id=informe.id,
+            cursada_id=cursada1.id
+        ).first()
+        if not instancia_informe:
+            print(f"   - Creando instancia de informe para la cursada ID {cursada1.id}...")
+            instancia_informe = ActividadCurricularInstancia(
+                instrumento_id=informe.id,
+                cursada_id=cursada1.id
+                # El estado por defecto es PENDIENTE
+            )
+            db.add(instancia_informe)
+        else:
+            print(f"   - Instancia de informe para la cursada ID {cursada1.id} (ID: {instancia_informe.id}) ya existe.")
+    else:
+        print("   - ERROR: No se pudo crear la instancia de informe por falta de Informe o Cursada 1.")
+
+
 
 
     db.commit() # Commit final

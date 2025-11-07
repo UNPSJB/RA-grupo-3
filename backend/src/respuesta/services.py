@@ -1,7 +1,8 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import update
-from src.enumerados import EstadoInstancia
+from src.enumerados import EstadoInstancia, EstadoInforme
 from src.respuesta import models as respuesta_models, schemas as respuesta_schemas
+from src.instrumento.models import ActividadCurricularInstancia
 from src.encuestas.models import EncuestaInstancia
 from src.pregunta.models import Pregunta, Opcion, TipoPregunta
 from src.exceptions import NotFound, BadRequest
@@ -85,11 +86,11 @@ def crear_submission_profesor(
 ) -> respuesta_models.RespuestaSet:
 
     # 1. Validamos la Instancia
-    instancia = db.get(EncuestaInstancia, instancia_id)
+    instancia = db.get(ActividadCurricularInstancia, instancia_id)
     if not instancia:
-        raise NotFound(f"EncuestaInstancia con id {instancia_id} no encontrada.")
-    if instancia.estado != EstadoInstancia.ACTIVA:
-         raise BadRequest(f"La encuesta instancia {instancia_id} no está activa.")
+        raise NotFound(f"ActividadCurricularInstancia con id {instancia_id} no encontrada.")
+    if instancia.estado != EstadoInforme.PENDIENTE:
+         raise BadRequest(f"El informe {instancia_id} no está pendiente.")
 
 
     # 2. Creamos el RespuestaSet 
@@ -134,13 +135,9 @@ def crear_submission_profesor(
 
         db.add(nueva_respuesta)
 
-    stmt_update = (
-        update(Inscripcion)
-        .where(Inscripcion.cursada_id == instancia.cursada_id) 
-        .where(Inscripcion.profesor_id == profesor_id) 
-        .values(ha_respondido=True)
-    )
-    db.execute(stmt_update)
+    instancia.estado = EstadoInforme.COMPLETADO
+    db.add(instancia)
+    
     # 4. Commit de toda la transacción
     db.commit()
     db.refresh(nuevo_set)
