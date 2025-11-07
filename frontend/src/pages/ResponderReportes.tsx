@@ -39,7 +39,7 @@ const ResponderReportes: React.FC = () => {
     const fetchReporte = async () => {
       try {
         // TODO: Hardcoded report ID should be dynamic based on context/routing
-        const response = await fetch(`${API_BASE_URL}/instrumentos/reportes-academicos/1`);
+        const response = await fetch(`${API_BASE_URL}/instrumentos/reportes-academicos/3`);
         const data = await response.json();
         setReporte(data);
       } catch (error) {
