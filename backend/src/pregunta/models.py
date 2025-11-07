@@ -1,12 +1,12 @@
 from __future__ import annotations
-from typing import List, Optional
-
-from src.seccion.models import Seccion
+from typing import List, Optional, TYPE_CHECKING
 from sqlalchemy import Integer, String, Enum, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from src.models import ModeloBase
 from src.enumerados import TipoPregunta
-
+if TYPE_CHECKING:
+    from src.seccion.models import Seccion
+    from src.respuesta.models import Respuesta, RespuestaMultipleChoice
 
 
 

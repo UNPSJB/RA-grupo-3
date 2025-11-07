@@ -19,7 +19,7 @@ type Seccion = {
   preguntas: Pregunta[];
 };
 
-const CrearEncuesta: React.FC = () => {
+const CrearPlantilla: React.FC = () => {
   const [titulo, setTitulo] = useState<string>("");
   const [descripcion, setDescripcion] = useState<string>("");
   const [tipo, setTipo] = useState<string>("");

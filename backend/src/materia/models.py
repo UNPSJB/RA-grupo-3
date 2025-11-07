@@ -8,7 +8,13 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from src.models import ModeloBase
 from src.enumerados import TipoCuatrimestre
 from src.instrumento.models import ActividadCurricularInstancia
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from src.encuestas.models import EncuestaInstancia
+    from src.instrumento.models import ActividadCurricularInstancia
+    from src.persona.models import Profesor, Inscripcion
 
+    
 class Materia(ModeloBase):
     __tablename__ = "materia"
 

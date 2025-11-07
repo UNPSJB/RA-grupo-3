@@ -6,7 +6,7 @@ import EncuestasPage from "./pages/EncuestasPage.tsx";
 import EstadisticasPage from "./pages/EstadisticasPage.tsx";
 import CuentaPage from "./pages/CuentaPage.tsx";
 import ResponderEncuesta from "./pages/ResponderEncuesta.tsx";
-import CrearEncuesta from "./pages/CrearEncuesta.tsx";
+import CrearPlantilla from "./pages/CrearPlantilla.tsx";
 import Home from "./pages/Home.tsx";
 import PanelAdmin from "./pages/panelAdmin.tsx";
 import ListaEncuestasAlumnos from "./pages/ListaEncuestasAlumnos.tsx";
@@ -73,7 +73,7 @@ const App: React.FC = () => {
             <Route index element={<Navigate to="borradores" replace />} />{" "}
             <Route path="borradores" element={<EncuestasPage />} />
             <Route path="publicadas" element={<EncuestasPage />} />
-            <Route path="crear" element={<CrearEncuesta />} />{" "}
+            <Route path="crear" element={<CrearPlantilla />} />{" "}
           </Route>
         </Route>
         {/* --- Rutas de Alumno --- */}

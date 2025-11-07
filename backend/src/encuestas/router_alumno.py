@@ -22,16 +22,6 @@ def listar_mis_encuestas_activas(
     try:
         #ajuste para devolver un dict en vez de un objeto
         lista_final = services_alumno.obtener_instancias_activas_alumno(db, alumno_id=alumno_actual.id)
-        """resultado = []
-        for inst in instancias:
-            resultado.append(
-                encuestas_schemas.EncuestaActivaAlumnoResponse(
-                    instancia_id=inst.id,
-                    plantilla=inst.plantilla,
-                    materia_nombre=inst.cursada.materia.nombre if inst.cursada and inst.cursada.materia else None,
-                    fecha_fin=inst.fecha_fin
-                )
-            )"""
         return lista_final
     except Exception as e:
         print(f"Error inesperado al listar encuestas activas para alumno {alumno_actual.id}: {e}")

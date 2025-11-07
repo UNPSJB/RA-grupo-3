@@ -11,6 +11,9 @@ from src.enumerados import EstadoInstrumento,TipoInstrumento,EstadoInforme
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from src.seccion.models import Seccion
+    from src.materia.models import Cursada
+    from src.encuestas.models import EncuestaInstancia
+    from src.persona.models import Profesor
 
 class InstrumentoBase(ModeloBase): 
     __tablename__ = "instrumento_base"
