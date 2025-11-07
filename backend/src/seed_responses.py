@@ -49,7 +49,7 @@ INSTANCIAS_BASICO_A_RESPONDER = [1, 2]
 # !! IMPORTANTE: ¡DEBES ACTUALIZAR ESTO!
 # Primero crea EncuestaInstancia para tu plantilla de "Ciclo Superior" (probablemente plantilla_id=2)
 # y luego pon los IDs de esas *nuevas* instancias aquí.
-INSTANCIAS_SUPERIOR_A_RESPONDER = [] # Ejemplo: [3, 4] si creas nuevas instancias para la plantilla 2
+INSTANCIAS_SUPERIOR_A_RESPONDER = [3,4] # Ejemplo: [3, 4] si creas nuevas instancias para la plantilla 2
 
 
 def create_tables():

@@ -8,7 +8,6 @@ import {
   ResponsiveContainer,
 } from "recharts";
 
-// --- Tipos de Datos ---
 interface PieChartData {
   name: string;
   value: number;
@@ -18,7 +17,6 @@ interface PieChartData {
 interface PieChartGeneralProps {
   data: PieChartData[];
   title: string;
-
   valueSuffix?: string;
 }
 
@@ -30,7 +28,7 @@ const PieChartGeneral: React.FC<PieChartGeneralProps> = ({
   const renderPercentLabel = (props: any) => {
     const RADIAN = Math.PI / 180;
     const { cx, cy, midAngle, outerRadius, percent, index } = props;
-    const radius = outerRadius * 1.1;
+    const radius = outerRadius * 1.05;
     const x = cx + radius * Math.cos(-midAngle * RADIAN);
     const y = cy + radius * Math.sin(-midAngle * RADIAN);
 
@@ -43,7 +41,7 @@ const PieChartGeneral: React.FC<PieChartGeneralProps> = ({
         fill={data[index].color}
         textAnchor={x > cx ? "start" : "end"}
         dominantBaseline="central"
-        className="text-xs font-semibold"
+        className="text-[0.65rem] font-semibold"
       >
         {`${(percent * 100).toFixed(0)}%`}
       </text>
@@ -53,9 +51,12 @@ const PieChartGeneral: React.FC<PieChartGeneralProps> = ({
   const renderLegend = (props: any) => {
     const { payload } = props;
     return (
-      <ul className="flex flex-wrap justify-center gap-x-4 gap-y-1 mt-4">
+      <ul className="flex flex-wrap justify-center gap-x-4 gap-y-1 mt-2">
         {payload.map((entry: any, index: number) => (
-          <li key={`item-${index}`} className="flex items-center text-xs">
+          <li
+            key={`item-${index}`}
+            className="flex items-center text-[0.68rem]"
+          >
             <span
               className="w-3 h-3 mr-1.5"
               style={{ backgroundColor: entry.color }}
@@ -98,7 +99,6 @@ const PieChartGeneral: React.FC<PieChartGeneralProps> = ({
           <Tooltip
             formatter={(value, name) => [`${value}${valueSuffix}`, name]}
           />
-          {/* Usar la nueva leyenda personalizada */}
           <Legend content={renderLegend} />
         </PieChart>
       </ResponsiveContainer>
