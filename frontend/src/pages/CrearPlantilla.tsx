@@ -241,7 +241,7 @@ const CrearPlantilla: React.FC = () => {
 
       await Promise.all([apiCall, delay]);
 
-      setMensaje("¡Plantilla de Encuesta creada exitosamente!");
+      setMensaje("¡Plantilla creada exitosamente!");
     } catch (error) {
       console.error("Error al crear plantilla:", error);
       setMensaje(
@@ -259,7 +259,7 @@ const CrearPlantilla: React.FC = () => {
   return (
     <div className="container mx-auto px-4 py-8 max-w-5xl">
       <h1 className="text-3xl font-bold text-gray-800 mb-6">
-        Creacion de Encuestas
+        Creacion de Plantillas
       </h1>
 
       {mensaje && (
@@ -460,7 +460,7 @@ const CrearPlantilla: React.FC = () => {
               ? "bg-gray-400 cursor-not-allowed"
               : "bg-blue-600 hover:bg-blue-700 cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
           }`}>
-          {cargando ? "Creando Encuesta..." : "Crear Encuesta"}
+          {cargando ? "Creando Plantilla..." : "Crear Plantilla"}
         </button>
       </div>
 
@@ -468,4 +468,4 @@ const CrearPlantilla: React.FC = () => {
   );
 };
 
-export default CrearEncuesta;
+export default CrearPlantilla;
