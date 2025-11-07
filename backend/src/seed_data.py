@@ -203,6 +203,24 @@ def seed_initial_data(db: Session):
         else:
             print(f"   - Alumno ID {alumno_prueba.id} ya inscripto en Cursada ID {cursada1.id}.")
 
+
+# --- (NUEVO) Inscribir Alumno de Prueba en Cursada 2 (Programación I) ---
+    cursada2 = cursadas_obj.get("Programación I (Simulación)")
+    if not cursada2 or not hasattr(cursada2, 'id'):
+         print(f"   - Aviso: No se pudo obtener la Cursada 2 (Programación I) para inscripción.")
+    else:
+        inscripcion2 = db.query(Inscripcion).filter_by(alumno_id=alumno_prueba.id, cursada_id=cursada2.id).first()
+        if not inscripcion2:
+            print(f"   - (NUEVO) Inscribiendo Alumno ID {alumno_prueba.id} en Cursada ID {cursada2.id}...")
+            nueva_inscripcion2 = Inscripcion(
+                alumno_id=alumno_prueba.id,
+                cursada_id=cursada2.id,
+                ha_respondido=False
+            )
+            db.add(nueva_inscripcion2)
+        else:
+             print(f"   - Alumno ID {alumno_prueba.id} ya inscripto en Cursada ID {cursada2.id}.")
+
     # --- (Opcional) Inscribir Alumno de Prueba en Cursada 3 (Análisis) ---
     # Para tener otra cursada donde el alumno esté inscripto
     cursada3 = cursadas_obj.get("Análisis Matemático I (Simulación)")
@@ -221,68 +239,26 @@ def seed_initial_data(db: Session):
         else:
              print(f"   - Alumno ID {alumno_prueba.id} ya inscripto en Cursada ID {cursada3.id}.")
 
-    # --- 7. Crear Informe Sintético (si no existe) ---
-    informe = db.query(InformeSintetico).first()
-    if not informe:
-        print("   - Creando Informe Sintético de prueba...")
-        informe = InformeSintetico(
-            titulo="Informe Sintético de Prueba",
-            descripcion="Informe para probar la funcionalidad de responder reportes.",
-            tipo=TipoInstrumento.INFORME_SINTETICO
-        )
-        db.add(informe)
-        db.commit()
-        db.refresh(informe)
-
-        seccion1 = Seccion(nombre="Fortalezas y Debilidades", instrumento_id=informe.id)
-        seccion2 = Seccion(nombre="Sugerencias", instrumento_id=informe.id)
-        db.add_all([seccion1, seccion2])
-        db.commit()
-        db.refresh(seccion1)
-        db.refresh(seccion2)
-
-        preg1 = PreguntaRedaccion(texto="Describa las fortalezas pedagógicas observadas en la cursada.", seccion_id=seccion1.id)
-        preg2 = PreguntaMultipleChoice(texto="¿Cómo evaluaría la bibliografía proporcionada por la cátedra?", seccion_id=seccion1.id)
-        preg3 = PreguntaRedaccion(texto="Comentarios adicionales o sugerencias de mejora.", seccion_id=seccion2.id)
-        db.add_all([preg1, preg2, preg3])
-        db.commit()
-        db.refresh(preg2)
-
-        opcion1 = Opcion(texto="Muy Adecuada", pregunta_id=preg2.id)
-        opcion2 = Opcion(texto="Adecuada", pregunta_id=preg2.id)
-        opcion3 = Opcion(texto="Poco Adecuada", pregunta_id=preg2.id)
-        opcion4 = Opcion(texto="Inexistente o Irrelevante", pregunta_id=preg2.id)
-        db.add_all([opcion1, opcion2, opcion3, opcion4])
-        db.commit()
+# --- (NUEVO) Inscribir Alumno de Prueba en Cursada 4 (Física I) ---
+    cursada4 = cursadas_obj.get("Física I (Simulación)")
+    if not cursada4 or not hasattr(cursada4, 'id'):
+         print(f"   - Aviso: No se pudo obtener la Cursada 4 (Física I) para inscripción.")
     else:
-        print(f"   - Informe Sintético (ID: {informe.id}) ya existe.")
-
-    # --- 8. Crear Instancia de Actividad Curricular (si no existe) ---
-    # Asocia el informe a la primera cursada de prueba
-    if informe and cursada1:
-        instancia_informe = db.query(ActividadCurricularInstancia).filter_by(
-            instrumento_id=informe.id,
-            cursada_id=cursada1.id
-        ).first()
-        if not instancia_informe:
-            print(f"   - Creando instancia de informe para la cursada ID {cursada1.id}...")
-            instancia_informe = ActividadCurricularInstancia(
-                instrumento_id=informe.id,
-                cursada_id=cursada1.id
-                # El estado por defecto es PENDIENTE
+        inscripcion4 = db.query(Inscripcion).filter_by(alumno_id=alumno_prueba.id, cursada_id=cursada4.id).first()
+        if not inscripcion4:
+            print(f"   - (NUEVO) Inscribiendo Alumno ID {alumno_prueba.id} en Cursada ID {cursada4.id}...")
+            nueva_inscripcion4 = Inscripcion(
+                alumno_id=alumno_prueba.id,
+                cursada_id=cursada4.id,
+                ha_respondido=False
             )
-            db.add(instancia_informe)
+            db.add(nueva_inscripcion4)
         else:
-            print(f"   - Instancia de informe para la cursada ID {cursada1.id} (ID: {instancia_informe.id}) ya existe.")
-    else:
-        print("   - ERROR: No se pudo crear la instancia de informe por falta de Informe o Cursada 1.")
-
-
+             print(f"   - Alumno ID {alumno_prueba.id} ya inscripto en Cursada ID {cursada4.id}.")
 
 
     db.commit() # Commit final
     print("Datos semilla verificados/insertados.")
-
 
 def create_tables():
      print("Creando tablas si no existen...")

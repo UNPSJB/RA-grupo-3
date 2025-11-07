@@ -10,8 +10,9 @@ from src.persona.models import Inscripcion # Necesitas Alumno e Inscripcion
 from src.materia.models import Cursada,Cuatrimestre
 from datetime import datetime
 from src.pregunta.models import Pregunta, PreguntaMultipleChoice
-from src.enumerados import EstadoInstancia, TipoPregunta,EstadoInstrumento
+from src.enumerados import EstadoInstancia, TipoPregunta,EstadoInstrumento, EstadoInforme, TipoInstrumento
 from src.respuesta.models import Respuesta, RespuestaMultipleChoice, RespuestaRedaccion, RespuestaSet
+from src.instrumento import models as instrumento_models
 
 
 def crear_plantilla_encuesta(
@@ -108,7 +109,6 @@ def activar_encuesta_para_cursada(db: Session, data: schemas.EncuestaInstanciaCr
     return nueva_instancia
 
 
-# Esta es la nueva función de tu amigo, limpiada y corregida
 def obtener_instancias_activas_alumno(db: Session, alumno_id: int) -> List[Dict[str, Any]]:
     now = datetime.now() 
     
@@ -136,7 +136,7 @@ def obtener_instancias_activas_alumno(db: Session, alumno_id: int) -> List[Dict[
             "instancia_id": instancia.id,
             "plantilla": plantilla_data, 
             "materia_nombre": instancia.cursada.materia.nombre if instancia.cursada and instancia.cursada.materia else None,
-            "fecha_fin": instancia.fecha_fin,
+            "fecha            #Descomentar para trabajar con las fechas de las encuestas_fin": instancia.fecha_fin,
             "ha_respondido": ha_respondido_flag 
         })
         
@@ -150,9 +150,8 @@ def obtener_instancia_activa_por_cursada(db: Session, cursada_id: int) -> models
         .where(
             models.EncuestaInstancia.cursada_id == cursada_id,
             models.EncuestaInstancia.estado == models.EstadoInstancia.ACTIVA,
-            #Descomentar para trabajar con las fechas de las encuestas
-            #models.EncuestaInstancia.fecha_inicio <= now,
-            #(models.EncuestaInstancia.fecha_fin == None) | (models.EncuestaInstancia.fecha_fin > now)
+            models.EncuestaInstancia.fecha_inicio <= now,
+            (models.EncuestaInstancia.fecha_fin == None) | (models.EncuestaInstancia.fecha_fin > now)
         )
         .options(selectinload(models.EncuestaInstancia.plantilla))
     )
@@ -198,10 +197,10 @@ def obtener_resultados_agregados_profesor(
             joinedload(Cursada.materia), 
             joinedload(Cursada.cuatrimestre), 
             selectinload(Cursada.encuesta_instancia)
-            .selectinload(models.EncuestaInstancia.plantilla)
+            .selectinload(models.EncuestaInstancia.plantilla) 
             .selectinload(models.Encuesta.secciones)
-            .selectinload(Seccion.preguntas)
-            .selectinload(Pregunta.opciones.of_type(PreguntaMultipleChoice)) # Carga Opciones solo para MC
+            .selectinload(Seccion.preguntas.of_type(PreguntaMultipleChoice))
+            .selectinload(PreguntaMultipleChoice.opciones)
         )
         .where(Cursada.profesor_id == profesor_id)
     )
@@ -229,7 +228,8 @@ def obtener_resultados_agregados_profesor(
         stmt_respuestas = (
             select(Respuesta)
             .join(RespuestaSet)
-            .where(RespuestaSet.encuesta_instancia_id == instancia.id)
+            # --- ¡CORRECCIÓN DE NOMBRE DE COLUMNA! ---
+            .where(RespuestaSet.instrumento_instancia_id == instancia.id) 
             .options(
                 selectinload(RespuestaMultipleChoice.opcion), 
                 selectinload(Respuesta.pregunta) 
@@ -237,7 +237,10 @@ def obtener_resultados_agregados_profesor(
         )
         todas_las_respuestas = db.execute(stmt_respuestas).scalars().all()
 
-        cantidad_sets = db.query(func.count(RespuestaSet.id)).filter(RespuestaSet.encuesta_instancia_id == instancia.id).scalar() or 0
+        # --- ¡CORRECCIÓN DE NOMBRE DE COLUMNA! ---
+        cantidad_sets = db.query(func.count(RespuestaSet.id)).filter(RespuestaSet.instrumento_instancia_id == instancia.id).scalar() or 0
+        
+        # OMITIMOS REPORTES SIN RESPUESTAS
         if cantidad_sets == 0 and not todas_las_respuestas: 
              continue
 
@@ -247,14 +250,22 @@ def obtener_resultados_agregados_profesor(
             pid = respuesta.pregunta_id
             if isinstance(respuesta, RespuestaMultipleChoice):
                 if respuesta.opcion_id is not None:
-                    resultados_por_pregunta_dict[pid]["opciones"][respuesta.opcion_id] += 1
+                     # Check por si la opción es None (dato corrupto)
+                    if respuesta.opcion:
+                        resultados_por_pregunta_dict[pid]["opciones"][respuesta.opcion_id] += 1
             elif isinstance(respuesta, RespuestaRedaccion):
                  if respuesta.texto is not None: 
                      resultados_por_pregunta_dict[pid]["textos"].append(schemas.RespuestaTextoItem(texto=respuesta.texto))
 
-        resultados_preguntas_schema: List[schemas.ResultadoPregunta] = []
+        
+        # --- ¡CORRECCIÓN DE AGRUPACIÓN POR SECCIÓN! ---
+        resultados_secciones_schema: List[schemas.ResultadoSeccion] = [] 
+
         for seccion in plantilla.secciones:
-            if not seccion.preguntas: continue # Añadido por seguridad
+            if not seccion.preguntas: continue
+            
+            preguntas_de_esta_seccion: List[schemas.ResultadoPregunta] = []
+
             for pregunta in seccion.preguntas:
                 resultados_opciones_schema: List[schemas.ResultadoOpcion] = []
                 respuestas_texto_schema: List[schemas.RespuestaTextoItem] = []
@@ -262,7 +273,6 @@ def obtener_resultados_agregados_profesor(
                 pregunta_resultados = resultados_por_pregunta_dict.get(pregunta.id)
 
                 if isinstance(pregunta, PreguntaMultipleChoice):
-                    # Añadido por seguridad
                     if not pregunta.opciones: continue 
                     for opcion in pregunta.opciones:
                          cantidad = pregunta_resultados["opciones"].get(opcion.id, 0) if pregunta_resultados else 0
@@ -273,7 +283,8 @@ def obtener_resultados_agregados_profesor(
                                  cantidad=cantidad
                              )
                          )
-                    resultados_preguntas_schema.append(
+                    
+                    preguntas_de_esta_seccion.append(
                         schemas.ResultadoPregunta(
                             pregunta_id=pregunta.id,
                             pregunta_texto=pregunta.texto,
@@ -284,7 +295,8 @@ def obtener_resultados_agregados_profesor(
                     )
                 elif pregunta.tipo == TipoPregunta.REDACCION:
                     respuestas_texto_schema = pregunta_resultados["textos"] if pregunta_resultados else []
-                    resultados_preguntas_schema.append(
+                    
+                    preguntas_de_esta_seccion.append(
                         schemas.ResultadoPregunta(
                             pregunta_id=pregunta.id,
                             pregunta_texto=pregunta.texto,
@@ -293,22 +305,33 @@ def obtener_resultados_agregados_profesor(
                             respuestas_texto=respuestas_texto_schema
                         )
                     )
+            
+            if preguntas_de_esta_seccion:
+                resultados_secciones_schema.append(
+                    schemas.ResultadoSeccion(
+                        seccion_nombre=seccion.nombre,
+                        resultados_por_pregunta=preguntas_de_esta_seccion
+                    )
+                )
+
         cuatri_info = "N/A"
         if cursada.cuatrimestre:
              periodo_val = cursada.cuatrimestre.periodo.value if cursada.cuatrimestre.periodo else '?'
              cuatri_info = f"{cursada.cuatrimestre.anio} - {periodo_val}"
+        
         resultados_finales.append(
             schemas.ResultadoCursada(
                 cursada_id=cursada.id,
                 materia_nombre=cursada.materia.nombre if cursada.materia else "N/A",
                 cuatrimestre_info=cuatri_info,
                 cantidad_respuestas=cantidad_sets,
-                resultados_por_pregunta=resultados_preguntas_schema
+                
+                # --- ¡CORRECCIÓN DE AGRUPACIÓN POR SECCIÓN! ---
+                resultados_por_seccion=resultados_secciones_schema 
             )
         )
 
     return resultados_finales
-
 
 def listar_instancias_cerradas_profesor(
     db: Session,
@@ -335,6 +358,22 @@ def listar_instancias_cerradas_profesor(
     instancias_cerradas = db.execute(stmt).scalars().unique().all()
     return instancias_cerradas
 
+def _obtener_plantilla_informe_activa(db: Session) -> int:
+    """Busca y retorna el ID de la primera plantilla ActividadCurricular PUBLICADA."""
+    
+    # Buscamos la plantilla ActividadCurricular (el molde) que esté PUBLICADA
+    stmt = select(instrumento_models.ActividadCurricular.id).where(
+        instrumento_models.ActividadCurricular.estado == EstadoInstrumento.PUBLICADA,
+        instrumento_models.ActividadCurricular.tipo == TipoInstrumento.ACTIVIDAD_CURRICULAR
+    ).limit(1)
+    
+    plantilla_id = db.execute(stmt).scalar_one_or_none()
+    
+    if not plantilla_id:
+        raise BadRequest(detail="No se encontró una plantilla de Informe de Actividad Curricular PUBLICADA para instanciar.")
+        
+    return plantilla_id
+
 def cerrar_instancia_encuesta(db: Session, instancia_id: int) -> models.EncuestaInstancia:
 
     instancia = db.get(models.EncuestaInstancia, instancia_id)
@@ -351,6 +390,37 @@ def cerrar_instancia_encuesta(db: Session, instancia_id: int) -> models.Encuesta
         instancia.fecha_fin = datetime.now() 
 
     db.add(instancia)
+    try:
+        cursada_id = instancia.cursada_id
+        encuesta_instancia_id = instancia.id
+        plantilla_informe_id = _obtener_plantilla_informe_activa(db)
+        cursada = db.get(Cursada, cursada_id)
+        if not cursada or not cursada.profesor_id: 
+             raise BadRequest(detail=f"La Cursada con ID {cursada_id} no tiene un profesor asignado.")
+        
+        profesor_id = cursada.profesor_id
+        existe_instancia = db.query(instrumento_models.ActividadCurricularInstancia).filter(
+            instrumento_models.ActividadCurricularInstancia.cursada_id == cursada_id
+        ).first()
+        if existe_instancia:
+            raise BadRequest(detail=f"Ya existe un informe de actividad curricular (ID {existe_instancia.id}) para la cursada {cursada_id}. No se crea una nueva instancia.")
+
+        # Creamos la instancia del informe de actividad curricular
+        nueva_instancia_informe = instrumento_models.ActividadCurricularInstancia(
+            actividad_curricular_id=plantilla_informe_id,
+            cursada_id=cursada_id,
+            encuesta_instancia_id=encuesta_instancia_id,
+            profesor_id=profesor_id,
+            estado=EstadoInforme.PENDIENTE,
+            tipo=TipoInstrumento.ACTIVIDAD_CURRICULAR
+        )
+
+        db.add(nueva_instancia_informe)
+
+    except BadRequest as e:
+        print(f"ADVERTENCIA: No se pudo instanciar el Informe de Actividad Curricular. Causa: {e.detail}")
+    except Exception as e:
+        print(f"ERROR grave al intentar instanciar Informe de Actividad Curricular: {e}")
     try:
         db.commit()
         db.refresh(instancia)

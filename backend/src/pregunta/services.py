@@ -1,12 +1,13 @@
 from sqlalchemy.orm import Session
 from src.pregunta import models, schemas
 from src.exceptions import NotFound 
+from src.seccion.models import Seccion
 
 
 def crear_pregunta(db: Session, pregunta_data: schemas.PreguntaCreate) -> models.Pregunta: # Devuelve el modelo base
 
     if pregunta_data.seccion_id:
-        seccion = db.get(models.Seccion, pregunta_data.seccion_id) # Asume que Seccion está en models
+        seccion = db.get(Seccion, pregunta_data.seccion_id) # Asume que Seccion está en models
         if not seccion:
             raise NotFound(f"Sección con id {pregunta_data.seccion_id} no encontrada.")
 

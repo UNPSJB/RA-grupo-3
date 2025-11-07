@@ -90,11 +90,18 @@ class ResultadoPregunta(BaseModel):
     model_config = {"from_attributes": True} 
 
 
+class ResultadoSeccion(BaseModel):
+    seccion_nombre: str
+    resultados_por_pregunta: List[ResultadoPregunta]
+    model_config = {"from_attributes": True}
+
 class ResultadoCursada(BaseModel):
     cursada_id: int
     materia_nombre: str
     cuatrimestre_info: str 
     cantidad_respuestas: int 
-    resultados_por_pregunta: List[ResultadoPregunta]
+    
+
+    resultados_por_seccion: List[ResultadoSeccion]  
 
     model_config = {"from_attributes": True}
