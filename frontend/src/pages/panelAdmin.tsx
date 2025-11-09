@@ -6,33 +6,33 @@ import { useNavigate } from "react-router-dom";
 type Shortcut = {
   label: string;
   path: string;
+  active: boolean;
 };
 
 const shortcuts: Shortcut[] = [
-  { label: "Inicio", path: "/" },
-  { label: "Listado de Plantillas", path: "/secretaria/plantillas/borradores" },
-  { label: "Crear Plantilla", path: "/secretaria/plantillas/crear" },
-  { label: "Estadísticas", path: "/secretaria/estadisticas" },
-  { label: "Cuenta", path: "/cuenta" },
-  { label: "Resultados de Encuestas", path: "/resultados-profesor" },
-  { label: "Gestion de Cuentas", path: "/secretaria/gestion" },
+  { label: "Listado de Plantillas", path: "/secretaria/plantillas/borradores", active: true },
+  { label: "Crear Plantilla", path: "/secretaria/plantillas/crear", active: true },
+  { label: "Estadísticas", path: "/secretaria/estadisticas", active: false },
+  { label: "Cuenta", path: "/cuenta", active: true },
+  { label: "Resultados de Encuestas", path: "/resultados-profesor", active: false },
+  { label: "Gestion de Cuentas", path: "/secretaria/gestion", active: false },
 ];
 const PanelAdmin: React.FC = () => {
   const navigate = useNavigate();
 
   return (
-    <section className="bg-gray-100 min-h-screen p-8">
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
-        {shortcuts.map(({ label, path }) => (
+    <section className="bg-gray-100 min-h-screen p-8 py-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+        {shortcuts.map(({ label, path, active }) => (
           <button
             key={path}
             type="button"
             onClick={() => navigate(path)}
-            className="
+            disabled={!active}
+            className={`
               flex flex-col items-center justify-center
               group
-              min-h-[8rem]
-              w-full
+              h-32 w-full
               gap-4
               rounded-2xl
               border border-blue-100
@@ -41,15 +41,12 @@ const PanelAdmin: React.FC = () => {
               shadow-lg
               transition-all duration-300
               ease-in-out
-              hover:-translate-y-1
-              hover:bg-gray-100
-              hover:shadow-2xl
+              ${active ? 'hover:-translate-y-1 hover:bg-gray-100 hover:shadow-2xl cursor-pointer' : 'opacity-50 cursor-not-allowed'}
               focus:outline-none
               focus:ring-2
               focus:ring-gray-400
               focus:ring-opacity-50
-              cursor-pointer
-            "
+            `}
           >
             <span className="text-lg font-semibold text-gray-800 text-center">{label}</span>
           </button>

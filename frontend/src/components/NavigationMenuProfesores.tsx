@@ -161,12 +161,21 @@ const NavigationMenuProfesores: React.FC<NavigationMenuProps> = () => {
             >
               Dashboard
             </Link>
+            
+            <Link 
+              to="/profesores/reportes"
+              className="text-gray-700 hover:text-blue-600 px-6 py-2 text-base font-medium"
+            >
+              Reportes
+            </Link>
 
-            {/* Menú Desplegable Encuestas */}
+            {/* Menú Desplegable Encuestas 
             <DesktopDropdown title="Encuestas">
               <DropdownItem to="/profesores/reportes">Reportes</DropdownItem>
               <DropdownItem to="/profesores/estadisticas">Estadisticas</DropdownItem>
             </DesktopDropdown>
+                */}
+
 
             {/* Menú de Cuenta*/}
             <DesktopDropdown title="Cuenta">
@@ -192,12 +201,21 @@ const NavigationMenuProfesores: React.FC<NavigationMenuProps> = () => {
               Dashboard
             </Link>
 
-            {/* Menú Desplegable Encuestas (Móvil) */}
+            <Link 
+              to="/profesores/reportes" 
+              className="text-gray-700 hover:text-blue-600 block px-3 py-2 rounded-md text-base font-medium"
+            >
+              Reportes
+            </Link>
+            
+            {/* Menú Desplegable Encuestas (Móvil) 
+            
             <MobileDropdown title="Encuestas">
               <DropdownItem to="/profesores/reportes">Reportes</DropdownItem>
               <DropdownItem to="/profesores/estadisticas">Estadisticas</DropdownItem>
             </MobileDropdown>
-
+            
+            */}
             {/* Menú de Usuario (Móvil) */}
             <MobileDropdown title="Mi Perfil">
               <DropdownItem to="/profesores/gestion">Gestión</DropdownItem>

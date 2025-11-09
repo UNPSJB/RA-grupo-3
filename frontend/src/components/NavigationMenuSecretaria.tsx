@@ -163,10 +163,12 @@ const NavigationMenuSecretaria: React.FC<NavigationMenuProps> = () => {
             </Link>
 
             {/* Ejemplo de Menú Desplegable 1 */}
-            <DesktopDropdown title="Encuestas">
-              <DropdownItem to="/secretaria/modelos">Modelos</DropdownItem>
-              <DropdownItem to="/secretaria/estadisticas">Estadisticas</DropdownItem>
-              <DropdownItem to="/secretaria/otros">Otros</DropdownItem>
+            <DesktopDropdown title="Plantillas">
+              <DropdownItem to="/secretaria/plantillas/publicadas">Publicadas</DropdownItem>
+              <DropdownItem to="/secretaria/plantillas/crear">Crear</DropdownItem>
+
+              {/*<DropdownItem to="/secretaria/otros">Otros</DropdownItem>*/}
+            
             </DesktopDropdown>
 
             {/* Ejemplo de Menú de Usuario */}
@@ -194,10 +196,12 @@ const NavigationMenuSecretaria: React.FC<NavigationMenuProps> = () => {
             </Link>
 
             {/* Ejemplo de Menú Desplegable 1 (Móvil) */}
-            <MobileDropdown title="Encuestas">
-              <DropdownItem to="/secretaria/modelos">Modelos</DropdownItem>
-              <DropdownItem to="/secretaria/estadisticas">Estadisticas</DropdownItem>
-              <DropdownItem to="/secretaria/otros">Otros</DropdownItem>
+            <MobileDropdown title="Plantillas">
+              <DropdownItem to="/secretaria/plantillas/publicadas">Publicadas</DropdownItem>
+              <DropdownItem to="/secretaria/plantillas/crear">Crear</DropdownItem>
+
+              {/*<DropdownItem to="/secretaria/otros">Otros</DropdownItem>*/}
+            
             </MobileDropdown>
 
             {/* Ejemplo de Menú de Usuario (Móvil) */}

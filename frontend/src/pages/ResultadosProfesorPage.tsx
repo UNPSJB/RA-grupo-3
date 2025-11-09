@@ -99,10 +99,6 @@ const ResultadosProfesorPage: React.FC = () => {
 
   return (
     <div className="p-6 max-w-4xl mx-auto">
-      <h2 className="text-3xl font-bold mb-6 text-gray-800">
-        Mis Encuestas Finalizadas
-      </h2>
-
       {resultados.length === 0 && (
         <div className="text-center py-10 text-gray-600 bg-white p-8 rounded-lg shadow-md border border-gray-200">
           <svg

@@ -21,6 +21,7 @@ import ProfesoresHome from "./pages/ProfesoresHome.tsx";
 import PoliticasPrivacidad from "./pages/PoliticasPrivacidad.tsx";
 import ResponderReportes from "./pages/ResponderReportes.tsx";
 import GestionCuentas from "./pages/GestionCuentas.tsx";
+import withLoading from "./components/withLoading.tsx";
 
 const MainLayout: React.FC = () => {
   const location = useLocation();
@@ -46,65 +47,80 @@ const MainLayout: React.FC = () => {
   );
 };
 
+const PoliticasPrivacidadWithLoading = withLoading(PoliticasPrivacidad);
+const SecretariaModelosWithLoading = withLoading(SecretariaModelos);
+const CuentaPageWithLoading = withLoading(GestionCuentas);
+const PanelAdminWithLoading = withLoading(PanelAdmin);
+const EncuestasPageWithLoading = withLoading(EncuestasPage);
+const CrearPlantillaWithLoading = withLoading(CrearPlantilla);
+const ListaEncuestasAlumnosWithLoading = withLoading(ListaEncuestasAlumnos);
+const GestionCuentasWithLoading = withLoading(GestionCuentas);
+const VerEncuestasWithLoading = withLoading(VerEncuestas);
+const ResponderEncuestaWithLoading = withLoading(ResponderEncuesta);
+const ProfesoresHomeWithLoading = withLoading(ProfesoresHome);
+const ResultadosProfesorPageWithLoading = withLoading(ResultadosProfesorPage);
+const ResponderReportesWithLoading = withLoading(ResponderReportes);
+
+
 const App: React.FC = () => {
   return (
     <Routes>
       <Route path="/" element={<MainLayout />}>
         <Route index element={<Home />} />
         {/* --- Rutas de politica de privacidad --- */}
-        <Route path="privacidad" element={<PoliticasPrivacidad />} />
+        <Route path="privacidad" element={<PoliticasPrivacidadWithLoading />} />
        
         {/* --- Rutas de Secretaria --- */}
         <Route path="secretaria" element={<Outlet />}>
           {" "}
           {/* Agrupa rutas admin */}
-          <Route path="modelos" element={<SecretariaModelos />} />
+          <Route path="modelos" element={<SecretariaModelosWithLoading />} />
           <Route path="otros" element={<Outlet />} />{" "}
           {/*ACA NO HAY NADA PARA PONER AUN*/}
           {/* <Route path="estadisticas" element={<EstadisticasPage />} /> */}
-          <Route path="gestion" element={<CuentaPage />} />
-          <Route index element={<PanelAdmin />} />
+          <Route path="gestion" element={<CuentaPageWithLoading />} />
+          <Route index element={<PanelAdminWithLoading />} />
           <Route path="plantillas" element={<Outlet />}>
             {" "}
             {/* Rutas para gestionar plantillas */}
             <Route index element={<Navigate to="borradores" replace />} />{" "}
-            <Route path="borradores" element={<EncuestasPage />} />
-            <Route path="publicadas" element={<EncuestasPage />} />
-            <Route path="crear" element={<CrearPlantilla />} />{" "}
+            <Route path="borradores" element={<EncuestasPageWithLoading />} />
+            <Route path="publicadas" element={<EncuestasPageWithLoading />} />
+            <Route path="crear" element={<CrearPlantillaWithLoading />} />{" "}
           </Route>
         </Route>
 
 
         {/* --- Rutas de Alumno --- */}
         <Route path="alumno" element={<Outlet />}>
-          <Route index element={<ListaEncuestasAlumnos />} />
-          <Route path="gestion" element={<GestionCuentas />} />
+          <Route index element={<ListaEncuestasAlumnosWithLoading />} />
+          <Route path="gestion" element={<GestionCuentasWithLoading />} />
           {/*<Route
             path="/alumno/encuestas-abiertas/instancia/:instanciaId/responder"
             element={<ResponderEncuesta />}
           />*/}
           <Route path="encuestas" element={<Outlet />}>
-            <Route index element={<ListaEncuestasAlumnos />} />
-            <Route path="ver" element={<VerEncuestas />} />
+            <Route index element={<ListaEncuestasAlumnosWithLoading />} />
+            <Route path="ver" element={<VerEncuestasWithLoading />} />
             <Route
               path="instancia/:instanciaId/responder" // Solo la parte que va después de /encuestas/
-              element={<ResponderEncuesta />}
+              element={<ResponderEncuestaWithLoading />}
             />
           </Route>
         </Route>
 
         {/* --- Rutas de Profesor --- */}
         <Route path="profesores" element={<Outlet />}>
-          <Route index element={<ProfesoresHome />} />
+          <Route index element={<ProfesoresHomeWithLoading />} />
           {/* Ahora "reportes" es un layout que muestra la lista o el detalle */}
           <Route path="reportes" element={<Outlet />}>
-            <Route index element={<ResultadosProfesorPage />} />
-            <Route path="crear/:cursadaId" element={<ResponderReportes />} />
+            <Route index element={<ResultadosProfesorPageWithLoading />} />
+            <Route path="crear/:cursadaId" element={<ResponderReportesWithLoading />} />
           </Route>
           <Route path="otros" element={<Outlet />} />{" "}
           {/*ACA NO HAY NADA PARA PONER AUN*/}
           {/* <Route path="estadisticas" element={<EstadisticasPage />} /> */}
-          <Route path="gestion" element={<GestionCuentas />} />
+          <Route path="gestion" element={<GestionCuentasWithLoading />} />
         </Route>
 
         

@@ -33,7 +33,7 @@ const GestionCuentas: React.FC = () => {
     };
 
     return (
-        <div className="flex justify-center min-h-screen bg-gray-100 pt-20">
+        <div className="flex justify-center min-h-screen bg-gray-100 pt-2">
             <div className="w-full max-w-md p-8 space-y-6 bg-white rounded-lg shadow-md h-fit">
                 <h2 className="text-2xl font-bold text-center text-gray-800">Cambiar Contraseña</h2>
                 <form onSubmit={handleSubmit} className="space-y-6">

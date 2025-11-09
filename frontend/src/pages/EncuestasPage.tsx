@@ -21,14 +21,14 @@ const EncuestasPage: React.FC = () => {
       label: "Borradores",
       icon: <TrashIcon />,
 
-      onClick: () => navigate("/departamento/plantillas/borradores"),
+      onClick: () => navigate("/secretaria/plantillas/borradores"),
       isActive: tipo === "borradores",
     },
     {
       id: "published",
       label: "Publicadas",
       icon: <CheckIcon />,
-      onClick: () => navigate("/departamento/plantillas/publicadas"),
+      onClick: () => navigate("/secretaria/plantillas/publicadas"),
       isActive: tipo === "publicadas",
     },
   ];

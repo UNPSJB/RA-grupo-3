@@ -1,5 +1,5 @@
 import React from "react";
-
+import Spinner from "./Spinner";
 import { useNavigate } from "react-router-dom";
 
 type TipoInstrumento =
@@ -139,6 +139,18 @@ export function Tabla({ tipo }: TablaProps) {
     }
   };
 
+  if (loading) {
+    return <Spinner />;
+  }
+
+  if (error) {
+    return <p className="text-red-500">{error}</p>;
+  }
+
+  if (data.length === 0) {
+    return <p>No hay plantillas para mostrar.</p>;
+  }
+
   return (
     <table className="min-w-full divide-y divide-gray-200">
       <thead className="bg-gray-50">
@@ -148,7 +160,7 @@ export function Tabla({ tipo }: TablaProps) {
             className="px-6 py-3 text-left ... cursor-pointer"
             onClick={sortByTitulo}
           >
-            Título {tituloAsc ? "🔼" : "🔽"}
+            Título {tituloAsc ? "↑" : "↓"}
           </th>
 
           {/* 👇 CAMBIO: Añadir onClick para ordenar */}
@@ -156,7 +168,7 @@ export function Tabla({ tipo }: TablaProps) {
             className="px-6 py-3 text-left ... cursor-pointer"
             onClick={sortByDescripcion}
           >
-            Descripción {descripcionAsc ? "🔼" : "🔽"}
+            Descripción {descripcionAsc ? "↑" : "↓"}
           </th>
 
           <th className="px-6 py-3 text-left ...">Tipo de Plantilla</th>
@@ -202,3 +214,4 @@ export function Tabla({ tipo }: TablaProps) {
     </table>
   );
 }
+
