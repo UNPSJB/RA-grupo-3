@@ -10,21 +10,18 @@ type Shortcut = {
 
 const shortcuts: Shortcut[] = [
   { label: "Inicio", path: "/" },
-  { label: "Listado de Plantillas", path: "/departamento/plantillas/borradores" },
-  { label: "Crear Plantilla", path: "/departamento/plantillas/crear" },
-  { label: "Estadísticas", path: "/departamento/estadisticas" },
+  { label: "Listado de Plantillas", path: "/secretaria/plantillas/borradores" },
+  { label: "Crear Plantilla", path: "/secretaria/plantillas/crear" },
+  { label: "Estadísticas", path: "/secretaria/estadisticas" },
   { label: "Cuenta", path: "/cuenta" },
   { label: "Resultados de Encuestas", path: "/resultados-profesor" },
+  { label: "Gestion de Cuentas", path: "/secretaria/gestion" },
 ];
 const PanelAdmin: React.FC = () => {
   const navigate = useNavigate();
 
   return (
     <section className="bg-gray-100 min-h-screen p-8">
-      <header className="text-center mb-12">
-        <h1 className="text-4xl font-bold text-gray-800">Panel de administración</h1>
-      </header>
-
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
         {shortcuts.map(({ label, path }) => (
           <button

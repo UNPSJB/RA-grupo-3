@@ -72,7 +72,7 @@ const ListaEncuestasAlumno: React.FC = () => {
     };
   }, []);
   return (
-    <div className="p-6 max-w-4xl mx-auto bg-gray-50 min-h-screen">
+    <div className="p-6 max-w-4xl mx-auto bg-#f1f5f9 min-h-screen">
       {" "}
       <h2 className="text-3xl font-bold mb-8 text-gray-800 text-center border-b pb-4 border-gray-300">
         Encuestas 

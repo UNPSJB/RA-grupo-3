@@ -11,18 +11,16 @@ import Home from "./pages/Home.tsx";
 import PanelAdmin from "./pages/panelAdmin.tsx";
 import ListaEncuestasAlumnos from "./pages/ListaEncuestasAlumnos.tsx";
 import VerEncuestas from "./pages/VerEncuestas.tsx";
-import GestionPerfil from "./pages/GestionPerfil.tsx";
 import NavigationMenu from "./components/NavigationMenu.tsx";
 import SecretariaAcademicaNavigationMenu from "./components/NavigationMenuSecretaria.tsx";
 import ProfesorNavigationMenu from "./components/NavigationMenuProfesores.tsx";
 import DepartamentoNavigationMenu from "./components/NavigationMenuDepartamento.tsx";
-import AlumnoHome from "./pages/AlumnoHome.tsx";
 import ResultadosProfesorPage from "./pages/ResultadosProfesorPage.tsx";
-import SecretariaHome from "./pages/SecretariaHome.tsx";
 import SecretariaModelos from "./pages/SecretariaModelos.tsx";
 import ProfesoresHome from "./pages/ProfesoresHome.tsx";
 import PoliticasPrivacidad from "./pages/PoliticasPrivacidad.tsx";
 import ResponderReportes from "./pages/ResponderReportes.tsx";
+import GestionCuentas from "./pages/GestionCuentas.tsx";
 
 const MainLayout: React.FC = () => {
   const location = useLocation();
@@ -55,8 +53,9 @@ const App: React.FC = () => {
         <Route index element={<Home />} />
         {/* --- Rutas de politica de privacidad --- */}
         <Route path="privacidad" element={<PoliticasPrivacidad />} />
-        {/* --- Rutas de Administración --- */}
-        <Route path="departamento" element={<Outlet />}>
+       
+        {/* --- Rutas de Secretaria --- */}
+        <Route path="secretaria" element={<Outlet />}>
           {" "}
           {/* Agrupa rutas admin */}
           <Route path="modelos" element={<SecretariaModelos />} />
@@ -74,12 +73,12 @@ const App: React.FC = () => {
             <Route path="crear" element={<CrearPlantilla />} />{" "}
           </Route>
         </Route>
+
+
         {/* --- Rutas de Alumno --- */}
         <Route path="alumno" element={<Outlet />}>
-          <Route index element={<AlumnoHome />} />
-          <Route path="encuestas" element={<ListaEncuestasAlumnos />} />
-          <Route path="encuestas/ver" element={<VerEncuestas />} />
-          <Route path="perfil/gestion" element={<GestionPerfil />} />
+          <Route index element={<ListaEncuestasAlumnos />} />
+          <Route path="gestion" element={<GestionCuentas />} />
           {/*<Route
             path="/alumno/encuestas-abiertas/instancia/:instanciaId/responder"
             element={<ResponderEncuesta />}
@@ -105,19 +104,20 @@ const App: React.FC = () => {
           <Route path="otros" element={<Outlet />} />{" "}
           {/*ACA NO HAY NADA PARA PONER AUN*/}
           {/* <Route path="estadisticas" element={<EstadisticasPage />} /> */}
-          <Route path="gestion" element={<CuentaPage />} />
+          <Route path="gestion" element={<GestionCuentas />} />
         </Route>
 
         
         {/* --- Rutas de Secretaria Academica --- */}
-        <Route path="secretaria" element={<Outlet />}>
+
+        {/* <Route path="secretaria" element={<Outlet />}>
           <Route index element={<SecretariaHome />} />
           <Route path="modelos" element={<SecretariaModelos />} />
           <Route path="otros" element={<Outlet />} />{" "}
-          {/*ACA NO HAY NADA PARA PONER AUN*/}
-          {/* <Route path="estadisticas" element={<EstadisticasPage />} /> */}
-          <Route path="gestion" element={<CuentaPage />} />
+          
+          <Route path="gestion" element={<GestionCuentas />} />
         </Route>
+         */}
       </Route>
     </Routes>
   );

@@ -44,7 +44,7 @@ export const Tarjeta: React.FC<TarjetaProps> = ({ icon, text, onClick, className
         flex flex-col items-center justify-center
         group
         min-h-[8rem]
-        w-full
+        w-64
         gap-4
         rounded-2xl
         border border-blue-100

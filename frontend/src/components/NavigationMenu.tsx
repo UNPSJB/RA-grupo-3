@@ -159,18 +159,11 @@ const NavigationMenu: React.FC<NavigationMenuProps> = () => {
               to="/alumno"
               className="text-gray-700 hover:text-blue-600 px-6 py-2 text-base font-medium"
             >
-              Dashboard
+              Encuestas
             </Link>
-
-            {/* Ejemplo de Menú Desplegable 1 */}
-            <DesktopDropdown title="Encuestas">
-              <DropdownItem to="/alumno/encuestas">Responder</DropdownItem>
-              <DropdownItem to="/alumno/encuestas/ver">Ver Existentes</DropdownItem>
-            </DesktopDropdown>
-
             {/* Ejemplo de Menú de Usuario */}
             <DesktopDropdown title="Mi Perfil">
-              <DropdownItem to="/secretaria/gestion">Gestión</DropdownItem>
+              <DropdownItem to="/alumno/gestion">Gestión</DropdownItem>
               <DropdownItem to="/">Cerrar Sesión</DropdownItem>
             </DesktopDropdown>
 
@@ -189,18 +182,11 @@ const NavigationMenu: React.FC<NavigationMenuProps> = () => {
               to="/alumno" 
               className="text-gray-700 hover:text-blue-600 block px-3 py-2 rounded-md text-base font-medium"
             >
-              Dashboard
+              Encuestas
             </Link>
-
-            {/* Ejemplo de Menú Desplegable 1 (Móvil) */}
-            <MobileDropdown title="Encuestas">
-              <DropdownItem to="/alumno/encuestas">Responder</DropdownItem>
-              <DropdownItem to="/alumno/encuestas/ver">Ver Existentes</DropdownItem>
-            </MobileDropdown>
-
             {/* Ejemplo de Menú de Usuario (Móvil) */}
             <MobileDropdown title="Mi Perfil">
-              <DropdownItem to="/alumno/perfil/gestion">Gestión</DropdownItem>
+              <DropdownItem to="/alumno/gestion">Gestión</DropdownItem>
               <DropdownItem to="/">Cerrar Sesión</DropdownItem>
             </MobileDropdown>
 

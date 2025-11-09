@@ -46,24 +46,24 @@ const Home: React.FC = () => {
       ),
       onClick: () => navigate("/secretaria"),
     },
-    {
-      label: "Departamento",
-      color: "#024990", 
-      icon: (
-        <span className="text-3xl" role="img" aria-hidden="true">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="size-14">
-            <path fill-rule="evenodd" d="M3 6a3 3 0 0 1 3-3h12a3 3 0 0 1 3 3v12a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3V6Zm14.25 6a.75.75 0 0 1-.22.53l-2.25 2.25a.75.75 0 1 1-1.06-1.06L15.44 12l-1.72-1.72a.75.75 0 1 1 1.06-1.06l2.25 2.25c.141.14.22.331.22.53Zm-10.28-.53a.75.75 0 0 0 0 1.06l2.25 2.25a.75.75 0 1 0 1.06-1.06L8.56 12l1.72-1.72a.75.75 0 1 0-1.06-1.06l-2.25 2.25Z" clip-rule="evenodd" />
-          </svg>
-        </span>
-      ),
-      onClick: () => navigate("/departamento"),
-    },
+    // { --- ACA ESTA EL BOTON DE DEPARTAMENTO ---
+    //   label: "Departamento",
+    //   color: "#024990", 
+    //   icon: (
+    //     <span className="text-3xl" role="img" aria-hidden="true">
+    //       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="size-14">
+    //         <path fill-rule="evenodd" d="M3 6a3 3 0 0 1 3-3h12a3 3 0 0 1 3 3v12a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3V6Zm14.25 6a.75.75 0 0 1-.22.53l-2.25 2.25a.75.75 0 1 1-1.06-1.06L15.44 12l-1.72-1.72a.75.75 0 1 1 1.06-1.06l2.25 2.25c.141.14.22.331.22.53Zm-10.28-.53a.75.75 0 0 0 0 1.06l2.25 2.25a.75.75 0 1 0 1.06-1.06L8.56 12l1.72-1.72a.75.75 0 1 0-1.06-1.06l-2.25 2.25Z" clip-rule="evenodd" />
+    //       </svg>
+    //     </span>
+    //   ),
+    //   onClick: () => navigate("/departamento"),
+    // },
   ];
 
   return (
-    <section className="bg-slate-100">
+    <section className="bg-#f1f5f9">
       <div className="mx-auto max-w-5xl px-6 py-12">
-        <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
+        <div className="flex flex-wrap justify-center gap-6">
           {accesosRapidos.map(({ label, icon, onClick, color }) => (
             <Tarjeta key={label} text={label} icon={icon} onClick={onClick} iconColor={color} />
           ))}

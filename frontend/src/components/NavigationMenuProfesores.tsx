@@ -166,7 +166,6 @@ const NavigationMenuProfesores: React.FC<NavigationMenuProps> = () => {
             <DesktopDropdown title="Encuestas">
               <DropdownItem to="/profesores/reportes">Reportes</DropdownItem>
               <DropdownItem to="/profesores/estadisticas">Estadisticas</DropdownItem>
-              <DropdownItem to="/profesores/otros">Otros</DropdownItem>
             </DesktopDropdown>
 
             {/* Menú de Cuenta*/}
@@ -197,7 +196,6 @@ const NavigationMenuProfesores: React.FC<NavigationMenuProps> = () => {
             <MobileDropdown title="Encuestas">
               <DropdownItem to="/profesores/reportes">Reportes</DropdownItem>
               <DropdownItem to="/profesores/estadisticas">Estadisticas</DropdownItem>
-              <DropdownItem to="/profesores/otros">Otros</DropdownItem>
             </MobileDropdown>
 
             {/* Menú de Usuario (Móvil) */}
