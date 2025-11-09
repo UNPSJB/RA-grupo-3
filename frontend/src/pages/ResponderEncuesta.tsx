@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 
-
+// --- Interfaces (sin cambios) ---
 interface Opcion {
   id: number;
   texto: string;
@@ -43,12 +43,18 @@ const ResponderEncuesta: React.FC = () => {
   const [encuestaCompletada, setEncuestaCompletada] = useState(false);
   const [cargandoEnvio, setCargandoEnvio] = useState(false);
 
+  const [activeTab, setActiveTab] = useState(0);
+
+  const [errorPreguntaId, setErrorPreguntaId] = useState<number | null>(null);
+
   useEffect(() => {
     let isMounted = true;
     const fetchPlantillaParaInstancia = async () => {
       setLoading(true);
       setMensaje(null);
       setPlantilla(null);
+      setErrorPreguntaId(null);
+      setActiveTab(0);
 
       if (!instanciaId || isNaN(Number(instanciaId))) {
         setMensaje("ID de instancia inválido en la URL.");
@@ -106,14 +112,53 @@ const ResponderEncuesta: React.FC = () => {
 
   const manejarCambio = (preguntaId: number, valor: string | number) => {
     setRespuestas((prev) => ({ ...prev, [preguntaId]: valor }));
+
+    if (errorPreguntaId === preguntaId) {
+      setErrorPreguntaId(null);
+      setMensaje(null);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!instanciaId) return;
+    if (!instanciaId || !plantilla) return;
+
+    setErrorPreguntaId(null);
+    setMensaje(null);
+
+    const preguntasObligatorias = plantilla.secciones
+      .flatMap((s) => s.preguntas)
+      .filter((p) => p.tipo === "MULTIPLE_CHOICE");
+
+    const primeraPreguntaSinRespuesta = preguntasObligatorias.find(
+      (p) => !respuestas[p.id]
+    );
+
+    if (primeraPreguntaSinRespuesta) {
+      let tabIndex = -1;
+      for (let i = 0; i < plantilla.secciones.length; i++) {
+        if (
+          plantilla.secciones[i].preguntas.some(
+            (p) => p.id === primeraPreguntaSinRespuesta.id
+          )
+        ) {
+          tabIndex = i;
+          break;
+        }
+      }
+
+      if (tabIndex !== -1) {
+        setActiveTab(tabIndex);
+      }
+
+      setErrorPreguntaId(primeraPreguntaSinRespuesta.id);
+      setMensaje(
+        "Por favor, responde todas las preguntas obligatorias (*). Hemos resaltado la primera que falta."
+      );
+      return;
+    }
 
     setCargandoEnvio(true);
-    setMensaje(null);
 
     const payload = {
       respuestas: Object.entries(respuestas).map(([preguntaId, valor]) => ({
@@ -163,7 +208,7 @@ const ResponderEncuesta: React.FC = () => {
       </p>
     );
 
-  if (mensaje && mensaje.toLowerCase().includes("error")) {
+  if (mensaje && mensaje.toLowerCase().includes("error") && !plantilla) {
     return (
       <p className="text-center mt-8 text-red-600 bg-red-100 p-4 rounded border border-red-300">
         Error: {mensaje}
@@ -186,7 +231,7 @@ const ResponderEncuesta: React.FC = () => {
               className="w-8 h-8 text-green-600"
               fill="none"
               stroke="currentColor"
-              viewBox="0 0 24 24"
+              viewBox="0 0 24"
             >
               <path
                 strokeLinecap="round"
@@ -220,8 +265,9 @@ const ResponderEncuesta: React.FC = () => {
       </div>
     );
   }
+
   return (
-    <div className="max-w-3xl mx-auto bg-white p-6 rounded-lg shadow-md mt-6 mb-8 border border-gray-200">
+    <div className="max-w-3xl mx-auto bg-white p-6 sm:p-8 rounded-lg shadow-md mt-6 mb-8 border border-gray-200">
       <h1 className="text-2xl font-bold mb-2 text-center text-indigo-800">
         {plantilla.titulo}
       </h1>
@@ -231,25 +277,55 @@ const ResponderEncuesta: React.FC = () => {
         </p>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-8">
-        {plantilla.secciones?.map((seccion) => (
-          <div key={seccion.id} className="border-t border-gray-200 pt-6">
-            <h2 className="text-xl font-semibold mb-4 text-gray-700">
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="flex border-b border-gray-300 mb-4 -mx-6 px-6 overflow-x-auto">
+          {plantilla.secciones?.map((seccion, index) => (
+            <button
+              key={seccion.id}
+              type="button"
+              onClick={() => {
+                setMensaje(null);
+                setErrorPreguntaId(null);
+                setActiveTab(index);
+              }}
+              className={`py-3 px-5 font-medium text-sm whitespace-nowrap ${
+                activeTab === index
+                  ? "border-b-2 border-indigo-600 text-indigo-600"
+                  : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
+              } transition-colors duration-150 focus:outline-none`}
+            >
               {seccion.nombre}
-            </h2>
-            <div className="space-y-5">
+            </button>
+          ))}
+        </div>
+
+        <div>
+          {plantilla.secciones?.map((seccion, index) => (
+            <div
+              key={seccion.id}
+              className={activeTab === index ? "block space-y-5" : "hidden"}
+            >
               {seccion.preguntas.map((pregunta) => {
                 const tipo = pregunta.tipo;
                 const esRedaccion = tipo === "REDACCION";
                 const esMultipleChoice = tipo === "MULTIPLE_CHOICE";
+                const hasError = errorPreguntaId === pregunta.id;
 
                 return (
                   <div
                     key={pregunta.id}
-                    className="p-4 bg-gray-50 rounded-md border border-gray-100"
+                    className={`p-4 bg-gray-50 rounded-md border ${
+                      hasError // Estilo de error
+                        ? "border-red-400 ring-2 ring-red-100"
+                        : "border-gray-100"
+                    } transition-all`}
                   >
                     <p className="font-medium mb-3 text-gray-800">
                       {pregunta.texto}
+
+                      {esMultipleChoice && (
+                        <span className="text-red-500 ml-1">*</span>
+                      )}
                     </p>
 
                     {esRedaccion ? (
@@ -261,7 +337,7 @@ const ResponderEncuesta: React.FC = () => {
                         onChange={(e) =>
                           manejarCambio(pregunta.id, e.target.value)
                         }
-                        required
+                        // --- Opcional: no lleva 'required' ---
                       />
                     ) : esMultipleChoice ? (
                       <div className="space-y-2">
@@ -281,7 +357,7 @@ const ResponderEncuesta: React.FC = () => {
                                 manejarCambio(pregunta.id, opcion.id)
                               }
                               className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300"
-                              required
+                              // --- Obligatorio: validado en handleSubmit ---
                             />
                             <span className="text-gray-700">
                               {opcion.texto}
@@ -298,12 +374,15 @@ const ResponderEncuesta: React.FC = () => {
                 );
               })}
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
+        {/* --- FIN: Contenido de Tabs --- */}
+
         {mensaje && (
           <p
             className={`text-center font-medium p-3 rounded border ${
-              mensaje.includes("Error")
+              mensaje.toLowerCase().includes("error") ||
+              errorPreguntaId !== null
                 ? "text-red-700 bg-red-100 border-red-300"
                 : "text-green-700 bg-green-100 border-green-300"
             }`}
