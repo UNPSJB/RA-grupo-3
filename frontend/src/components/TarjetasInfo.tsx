@@ -207,8 +207,8 @@ export default function App() {
   const endDate = new Date('2025-12-31T23:59:59');
 
   return (
-    <div className="min-h-screen bg-gray-100 font-sans antialiased">
-      <div className="min-h-screen p-8 flex justify-center p-8">
+    <div className="bg-gray-100 font-sans antialiased">
+      <div className="p-8 flex justify-center">
         <div className="w-full max-w-5xl">
           
           {/* Cuadrícula responsiva */}
