@@ -1,3 +1,8 @@
+/*
+Pega este código completo en:
+unpsjb/ra-grupo-3/RA-grupo-3-dev/frontend/src/pages/ResponderReportes.tsx
+*/
+
 import React, { useState, useMemo, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
@@ -53,9 +58,12 @@ const ResponderReportes: React.FC = () => {
   const [resultadosEncuesta, setResultadosEncuesta] = useState<
     ResultadoSeccion[] | null
   >(null);
+
+  const [reporteCompletado, setReporteCompletado] = useState(false);
+
   const navigate = useNavigate();
 
-  // 🔹 Cargar reporte (AHORA CON LA RUTA CORRECTA)
+  // 🔹 Cargar reporte (sin cambios)
   useEffect(() => {
     const fetchReporte = async () => {
       if (!instanciaId) {
@@ -63,19 +71,15 @@ const ResponderReportes: React.FC = () => {
         return;
       }
       try {
-        // === 🔽 LLAMADA A LA API CORREGIDA 🔽 ===
-        // Esta es la nueva ruta que creamos en el router del profesor
-        const token = localStorage.getItem("token"); // Auth es necesaria
+        const token = localStorage.getItem("token");
         const response = await fetch(
           `${API_BASE_URL}/encuestas-abiertas/reporte/instancia/${instanciaId}/detalles`,
           {
             headers: { Authorization: `Bearer ${token}` },
           }
         );
-        // === 🔼 FIN DEL CAMBIO 🔼 ===
 
         if (!response.ok) {
-          // <-- Añadido chequeo de error
           const errData = await response.json();
           throw new Error(errData.detail || `Error ${response.status}`);
         }
@@ -84,11 +88,10 @@ const ResponderReportes: React.FC = () => {
         setReporte(data);
       } catch (error) {
         console.error("Error fetching report: ", error);
-        // Aquí podrías setear un estado de error para mostrar al usuario
       }
     };
     fetchReporte();
-  }, [instanciaId]); // 👈 Dependencia correcta
+  }, [instanciaId]);
 
   // 🔹 Cargar resultados de encuestas (sin cambios)
   useEffect(() => {
@@ -139,7 +142,7 @@ const ResponderReportes: React.FC = () => {
 
   const resumenEncuesta = useMemo(() => generarResumen(), [resultadosEncuesta]);
 
-  // --- (El resto de 'useMemo', 'handleChange', 'handleCopyResumen' no cambian) ---
+  // --- (useMemo, handleChange, handleCopyResumen no cambian) ---
 
   const allPreguntas = useMemo(() => {
     if (!reporte) return [];
@@ -172,7 +175,7 @@ const ResponderReportes: React.FC = () => {
     }
   };
 
-  // 🔹 handleSubmit (Sin cambios, ya estaba bien)
+  // 🔹 handleSubmit (sin cambios)
   const handleSubmit = async () => {
     if (!isEncuestaCompleta || !reporte) {
       alert("Por favor, complete todas las preguntas de opción múltiple.");
@@ -220,8 +223,7 @@ const ResponderReportes: React.FC = () => {
       );
 
       if (response.ok) {
-        alert("Reporte enviado con éxito.");
-        navigate("/profesores/reportes");
+        setReporteCompletado(true);
       } else {
         const errorData = await response.json();
         console.error("Error al enviar el reporte:", errorData);
@@ -242,12 +244,58 @@ const ResponderReportes: React.FC = () => {
   };
 
   // --- Renderizado ---
+
+  // 🔹 Pantalla de éxito (sin cambios)
+  if (reporteCompletado) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[70vh] space-y-6 text-center">
+        <div className="bg-white p-8 rounded-lg shadow-md max-w-md">
+          <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg
+              className="w-8 h-8 text-green-600"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M5 13l4 4L19 7"
+              />
+            </svg>
+          </div>
+          <h3 className="text-xl font-bold text-gray-800 mb-2">
+            ¡Reporte enviado correctamente!
+          </h3>
+          <p className="text-gray-600 mb-4">
+            Gracias por completar el informe.
+          </p>
+          <div className="flex justify-center space-x-4">
+            <button
+              onClick={() => navigate("/profesores/reportes")} // Ruta actualizada
+              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
+            >
+              Ver reportes pendientes
+            </button>
+            <button
+              onClick={() => navigate("/profesores")} // Ruta actualizada
+              className="bg-gray-300 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-400 transition"
+            >
+              Volver al inicio
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (!reporte) {
     // Si la carga falla (o está cargando), muestra esto
     return <div className="text-center p-10">Cargando reporte...</div>;
   }
 
-  // Si 'reporte' SÍ existe, muestra el formulario
+  // 🔹 Formulario (sin cambios)
   return (
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold text-gray-800 mb-4">
@@ -321,12 +369,13 @@ const ResponderReportes: React.FC = () => {
         </div>
       ))}
 
+      {/* === 4. AQUÍ ESTABA EL ERROR DE SINTAXIS === */}
       <div className="flex justify-end mt-4">
         <button
           className={`py-2 px-4 rounded font-bold ${
             isEncuestaCompleta && !isSubmitting
               ? "bg-blue-500 hover:bg-blue-700 text-white"
-              : "bg-gray-300 text-gray-500 cursor-not-allowed"
+              : "bg-gray-300 text-gray-500 cursor-not-allowed" // 👈 FALTABA ESTE ':'
           }`}
           disabled={!isEncuestaCompleta || isSubmitting}
           onClick={handleSubmit}

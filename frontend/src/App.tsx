@@ -23,8 +23,6 @@ import ResponderReportes from "./pages/ResponderReportes.tsx";
 import GestionCuentas from "./pages/GestionCuentas.tsx";
 import withLoading from "./components/withLoading.tsx";
 
-import ListaReportesProfesores from "./pages/ListaReportesProfesores.tsx";
-
 const MainLayout: React.FC = () => {
   const location = useLocation();
   const showNavMenu = location.pathname.startsWith("/alumno");
@@ -62,8 +60,6 @@ const ResponderEncuestaWithLoading = withLoading(ResponderEncuesta);
 const ProfesoresHomeWithLoading = withLoading(ProfesoresHome);
 const ResultadosProfesorPageWithLoading = withLoading(ResultadosProfesorPage);
 const ResponderReportesWithLoading = withLoading(ResponderReportes);
-
-const ListaReportesProfesoresWithLoading = withLoading(ListaReportesProfesores);
 
 const App: React.FC = () => {
   return (
@@ -116,17 +112,14 @@ const App: React.FC = () => {
           <Route index element={<ProfesoresHomeWithLoading />} />
 
           <Route path="reportes" element={<Outlet />}>
-            {/* '/profesores/reportes' AHORA MUESTRA LA LISTA DE REPORTES PENDIENTES */}
-            <Route index element={<ListaReportesProfesoresWithLoading />} />
-
-            {/* ESTA ES LA RUTA PARA RESPONDER UN REPORTE (LA QUE NECESITABAS) */}
+            {/* SE MANTIENE LA RUTA PARA RESPONDER */}
             <Route
               path="instancia/:instanciaId/responder"
               element={<ResponderReportesWithLoading />}
             />
           </Route>
 
-          {/* ESTA ES LA NUEVA RUTA PARA VER LOS RESULTADOS DE ENCUESTAS CERRADAS */}
+          {/* RUTA PARA VER LOS RESULTADOS */}
           <Route
             path="resultados"
             element={<ResultadosProfesorPageWithLoading />}
@@ -134,17 +127,6 @@ const App: React.FC = () => {
 
           <Route path="gestion" element={<GestionCuentasWithLoading />} />
         </Route>
-
-        {/* --- Rutas de Secretaria Academica --- */}
-
-        {/* <Route path="secretaria" element={<Outlet />}>
-          <Route index element={<SecretariaHome />} />
-          <Route path="modelos" element={<SecretariaModelos />} />
-          <Route path="otros" element={<Outlet />} />{" "}
-          
-          <Route path="gestion" element={<GestionCuentas />} />
-        </Route>
-         */}
       </Route>
     </Routes>
   );

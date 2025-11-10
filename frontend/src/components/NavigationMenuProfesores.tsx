@@ -1,8 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 
-// --- Componente de Item Desplegable ---
-// Se usa dentro de los menús
 interface DropdownItemProps {
   to: string;
   children: React.ReactNode;
@@ -74,7 +72,6 @@ const DesktopDropdown: React.FC<DesktopDropdownProps> = ({
         </svg>
       </button>
 
-      {/* Contenido del dropdown (posicionado absoluto) */}
       {isOpen && (
         <div className="absolute right-0 mt-2 w-56 origin-top-right bg-white rounded-md shadow-lg z-10">
           <div className="py-1" role="menu" aria-orientation="vertical">
@@ -96,14 +93,13 @@ const MobileDropdown: React.FC<MobileDropdownProps> = ({ title, children }) => {
 
   return (
     <div className="w-full">
-      {/* Botón del acordeón */}
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="text-gray-700 hover:text-blue-600 flex items-center justify-between px-3 py-2 rounded-md text-base font-medium w-full"
         type="button"
       >
         <span>{title}</span>
-        {/* Icono de flecha */}
+
         <svg
           className={`w-5 h-5 ml-1 transition-transform duration-200 ${
             isOpen ? "rotate-180" : "rotate-0"
@@ -120,13 +116,11 @@ const MobileDropdown: React.FC<MobileDropdownProps> = ({ title, children }) => {
         </svg>
       </button>
 
-      {/* Contenido del acordeón (inline) */}
       {isOpen && <div className="pl-4 mt-1 space-y-1">{children}</div>}
     </div>
   );
 };
 
-// --- Componente Principal del Menú de Navegación ---
 interface NavigationMenuProps {}
 
 const NavigationMenuProfesores: React.FC<NavigationMenuProps> = () => {
@@ -193,15 +187,6 @@ const NavigationMenuProfesores: React.FC<NavigationMenuProps> = () => {
               Dashboard
             </Link>
 
-            {/* === ENLACE CORREGIDO === */}
-            <Link
-              to="/profesores/reportes"
-              className="text-gray-700 hover:text-blue-600 px-6 py-2 text-base font-medium"
-            >
-              Reportes Pendientes
-            </Link>
-
-            {/* === ENLACE NUEVO === */}
             <Link
               to="/profesores/resultados"
               className="text-gray-700 hover:text-blue-600 px-6 py-2 text-base font-medium"
@@ -231,15 +216,17 @@ const NavigationMenuProfesores: React.FC<NavigationMenuProps> = () => {
               Dashboard
             </Link>
 
-            {/* === ENLACE MÓVIL CORREGIDO === */}
-            <Link
-              to="/profesores/reportes"
+            {/* === ENLACE MÓVIL ELIMINADO === */}
+            {/*
+            <Link 
+              to="/profesores/reportes" 
               className="text-gray-700 hover:text-blue-600 block px-3 py-2 rounded-md text-base font-medium"
             >
               Reportes Pendientes
             </Link>
+            */}
 
-            {/* === ENLACE MÓVIL NUEVO === */}
+            {/* === ENLACE MÓVIL MANTENIDO === */}
             <Link
               to="/profesores/resultados"
               className="text-gray-700 hover:text-blue-600 block px-3 py-2 rounded-md text-base font-medium"
