@@ -122,7 +122,9 @@ def obtener_instancias_activas_alumno(db: Session, alumno_id: int) -> List[Dict[
         .options(
             joinedload(models.EncuestaInstancia.plantilla),
             joinedload(models.EncuestaInstancia.cursada) 
-            .joinedload(Cursada.materia)
+            .joinedload(Cursada.materia),
+            joinedload(models.EncuestaInstancia.cursada)
+            .joinedload(Cursada.profesor)
         )
         .distinct() 
     )
@@ -136,7 +138,8 @@ def obtener_instancias_activas_alumno(db: Session, alumno_id: int) -> List[Dict[
             "instancia_id": instancia.id,
             "plantilla": plantilla_data, 
             "materia_nombre": instancia.cursada.materia.nombre if instancia.cursada and instancia.cursada.materia else None,
-            "fecha            #Descomentar para trabajar con las fechas de las encuestas_fin": instancia.fecha_fin,
+            "profesor_nombre": instancia.cursada.profesor.nombre if instancia.cursada and instancia.cursada.profesor else None,
+            "fecha_fin": instancia.fecha_fin,
             "ha_respondido": ha_respondido_flag 
         })
         
@@ -184,7 +187,6 @@ def obtener_plantilla_para_instancia_activa(db: Session, instancia_id: int) -> m
     return instancia.plantilla
 
 #Para el profesor
-#Para mas adelante...
 def obtener_resultados_agregados_profesor(
     db: Session,
     profesor_id: int,

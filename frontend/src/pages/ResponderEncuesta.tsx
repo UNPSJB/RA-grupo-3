@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 // --- Interfaces (sin cambios) ---
 interface Opcion {
   id: number;
@@ -32,6 +31,12 @@ const API_BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
 const ResponderEncuesta: React.FC = () => {
   const { instanciaId } = useParams<{ instanciaId: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const { materiaNombre, profesorNombre } = (location.state as {
+    materiaNombre?: string;
+    profesorNombre?: string;
+  }) || { materiaNombre: "Encuesta", profesorNombre: undefined };
 
   const [plantilla, setPlantilla] = useState<PlantillaEncuesta | null>(null);
   const [respuestas, setRespuestas] = useState<{
@@ -268,17 +273,18 @@ const ResponderEncuesta: React.FC = () => {
 
   return (
     <div className="max-w-3xl mx-auto bg-white p-6 sm:p-8 rounded-lg shadow-md mt-6 mb-8 border border-gray-200">
-      <h1 className="text-2xl font-bold mb-2 text-center text-indigo-800">
-        {plantilla.titulo}
-      </h1>
-      {plantilla.descripcion && (
-        <p className="text-sm text-gray-500 mb-6 text-center">
-          {plantilla.descripcion}
-        </p>
-      )}
-
+      <div className="pb-4 mb-4 border-b border-gray-200">
+        <h1 className="text-2xl font-bold text-center text-indigo-800">
+          {materiaNombre || "Encuesta"}
+        </h1>
+        {profesorNombre && (
+          <p className="text-sm text-gray-600 text-center mt-1">
+            Profesor: {profesorNombre}
+          </p>
+        )}
+      </div>
       <form onSubmit={handleSubmit} className="space-y-6">
-        <div className="flex border-b border-gray-300 mb-4 -mx-6 px-6 overflow-x-auto">
+        <div className="flex border-b border-gray-300 mb-4 -mx-6 sm:-mx-8 px-6 sm:px-8 overflow-x-auto">
           {plantilla.secciones?.map((seccion, index) => (
             <button
               key={seccion.id}
@@ -315,7 +321,7 @@ const ResponderEncuesta: React.FC = () => {
                   <div
                     key={pregunta.id}
                     className={`p-4 bg-gray-50 rounded-md border ${
-                      hasError // Estilo de error
+                      hasError
                         ? "border-red-400 ring-2 ring-red-100"
                         : "border-gray-100"
                     } transition-all`}
@@ -337,7 +343,6 @@ const ResponderEncuesta: React.FC = () => {
                         onChange={(e) =>
                           manejarCambio(pregunta.id, e.target.value)
                         }
-                        // --- Opcional: no lleva 'required' ---
                       />
                     ) : esMultipleChoice ? (
                       <div className="space-y-2">
@@ -357,7 +362,6 @@ const ResponderEncuesta: React.FC = () => {
                                 manejarCambio(pregunta.id, opcion.id)
                               }
                               className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300"
-                              // --- Obligatorio: validado en handleSubmit ---
                             />
                             <span className="text-gray-700">
                               {opcion.texto}
@@ -376,7 +380,6 @@ const ResponderEncuesta: React.FC = () => {
             </div>
           ))}
         </div>
-        {/* --- FIN: Contenido de Tabs --- */}
 
         {mensaje && (
           <p
