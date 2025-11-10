@@ -31,4 +31,5 @@ export interface ResultadoCursada {
   cantidad_respuestas: number;
 
   resultados_por_seccion: ResultadoSeccion[];
+  informe_curricular_instancia_id?: number | null;
 }

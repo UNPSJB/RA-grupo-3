@@ -23,6 +23,8 @@ import ResponderReportes from "./pages/ResponderReportes.tsx";
 import GestionCuentas from "./pages/GestionCuentas.tsx";
 import withLoading from "./components/withLoading.tsx";
 
+import ListaReportesProfesores from "./pages/ListaReportesProfesores.tsx";
+
 const MainLayout: React.FC = () => {
   const location = useLocation();
   const showNavMenu = location.pathname.startsWith("/alumno");
@@ -61,6 +63,7 @@ const ProfesoresHomeWithLoading = withLoading(ProfesoresHome);
 const ResultadosProfesorPageWithLoading = withLoading(ResultadosProfesorPage);
 const ResponderReportesWithLoading = withLoading(ResponderReportes);
 
+const ListaReportesProfesoresWithLoading = withLoading(ListaReportesProfesores);
 
 const App: React.FC = () => {
   return (
@@ -69,7 +72,7 @@ const App: React.FC = () => {
         <Route index element={<Home />} />
         {/* --- Rutas de politica de privacidad --- */}
         <Route path="privacidad" element={<PoliticasPrivacidadWithLoading />} />
-       
+
         {/* --- Rutas de Secretaria --- */}
         <Route path="secretaria" element={<Outlet />}>
           {" "}
@@ -90,7 +93,6 @@ const App: React.FC = () => {
           </Route>
         </Route>
 
-
         {/* --- Rutas de Alumno --- */}
         <Route path="alumno" element={<Outlet />}>
           <Route index element={<ListaEncuestasAlumnosWithLoading />} />
@@ -109,21 +111,30 @@ const App: React.FC = () => {
           </Route>
         </Route>
 
-        {/* --- Rutas de Profesor --- */}
+        {/* === 3. BLOQUE DE RUTAS DE PROFESOR CORREGIDO === */}
         <Route path="profesores" element={<Outlet />}>
           <Route index element={<ProfesoresHomeWithLoading />} />
-          {/* Ahora "reportes" es un layout que muestra la lista o el detalle */}
+
           <Route path="reportes" element={<Outlet />}>
-            <Route index element={<ResultadosProfesorPageWithLoading />} />
-            <Route path="crear/:cursadaId" element={<ResponderReportesWithLoading />} />
+            {/* '/profesores/reportes' AHORA MUESTRA LA LISTA DE REPORTES PENDIENTES */}
+            <Route index element={<ListaReportesProfesoresWithLoading />} />
+
+            {/* ESTA ES LA RUTA PARA RESPONDER UN REPORTE (LA QUE NECESITABAS) */}
+            <Route
+              path="instancia/:instanciaId/responder"
+              element={<ResponderReportesWithLoading />}
+            />
           </Route>
-          <Route path="otros" element={<Outlet />} />{" "}
-          {/*ACA NO HAY NADA PARA PONER AUN*/}
-          {/* <Route path="estadisticas" element={<EstadisticasPage />} /> */}
+
+          {/* ESTA ES LA NUEVA RUTA PARA VER LOS RESULTADOS DE ENCUESTAS CERRADAS */}
+          <Route
+            path="resultados"
+            element={<ResultadosProfesorPageWithLoading />}
+          />
+
           <Route path="gestion" element={<GestionCuentasWithLoading />} />
         </Route>
 
-        
         {/* --- Rutas de Secretaria Academica --- */}
 
         {/* <Route path="secretaria" element={<Outlet />}>

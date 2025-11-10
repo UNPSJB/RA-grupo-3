@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useMemo } from "react";
-
 import CursadaResultados from "../components/estadisticas/CursadaResultados";
 import type { ResultadoCursada } from "../types/estadisticas";
 import { useNavigate } from "react-router-dom";
@@ -10,11 +9,9 @@ const ResultadosProfesorPage: React.FC = () => {
   const [resultados, setResultados] = useState<ResultadoCursada[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
   const [selectedCursadaId, setSelectedCursadaId] = useState<number | null>(
     null
   );
-
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -22,7 +19,15 @@ const ResultadosProfesorPage: React.FC = () => {
       setLoading(true);
       setError(null);
       try {
-        const response = await fetch(`${API_BASE_URL}/profesor/mis-resultados`);
+        const token = localStorage.getItem("token"); // <-- Asegúrate de tener un token
+        const response = await fetch(
+          `${API_BASE_URL}/profesor/mis-resultados`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
         if (!response.ok) {
           throw new Error(
             `Error ${response.status}: No se pudieron cargar los resultados.`
@@ -70,6 +75,7 @@ const ResultadosProfesorPage: React.FC = () => {
     );
   }
 
+  // --- VISTA DETALLADA DE UN RESULTADO ---
   if (selectedResultado) {
     return (
       <div className="p-6 max-w-5xl mx-auto space-y-6">
@@ -81,22 +87,29 @@ const ResultadosProfesorPage: React.FC = () => {
         </button>
         <CursadaResultados resultado={selectedResultado} />
 
-        <div className="flex justify-end pt-4 border-t border-gray-200">
-          <button
-            onClick={() =>
-              navigate(
-                `/profesores/reportes/crear/${selectedResultado.cursada_id}`
-              )
-            }
-            className="bg-green-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-green-700 transition duration-150 ease-in-out focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 shadow-md hover:shadow-lg"
-          >
-            Crear Informe de Actividad Curricular
-          </button>
-        </div>
+        {/* === 🔽 AQUÍ ESTÁ EL BOTÓN CORREGIDO 🔽 === */}
+        {/* Solo muestra el botón SI existe un informe pendiente */}
+        {selectedResultado.informe_curricular_instancia_id && (
+          <div className="flex justify-end pt-4 border-t border-gray-200">
+            <button
+              onClick={() =>
+                navigate(
+                  // Navega directamente a la pantalla de responder
+                  `/profesores/reportes/instancia/${selectedResultado.informe_curricular_instancia_id}/responder`
+                )
+              }
+              className="bg-green-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-green-700 transition duration-150 ease-in-out focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 shadow-md hover:shadow-lg"
+            >
+              {/* Este es el texto que querías */}
+              Crear Informe de Actividad Curricular
+            </button>
+          </div>
+        )}
       </div>
     );
   }
 
+  // --- VISTA DE LISTA DE RESULTADOS ---
   return (
     <div className="p-6 max-w-4xl mx-auto">
       {resultados.length === 0 && (
