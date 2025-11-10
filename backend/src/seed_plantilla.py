@@ -128,7 +128,7 @@ def crear_pregunta_mc(db: Session, seccion: Seccion, texto_pregunta: str, opcion
     )
     db.add(nueva_pregunta)
 
-def crear_pregunta_redaccion(db: Session, seccion: Seccion, texto_pregunta: str):
+def crear_pregunta_redaccion(db: Session, seccion: Seccion, texto_pregunta: str, origen_datos: str|None=None):
     """Crea una pregunta de Redacción si no existe en la sección."""
     stmt = select(Pregunta).where(
         Pregunta.seccion_id == seccion.id,
@@ -144,7 +144,8 @@ def crear_pregunta_redaccion(db: Session, seccion: Seccion, texto_pregunta: str)
     nueva_pregunta = PreguntaRedaccion(
         texto=texto_pregunta,
         tipo=TipoPregunta.REDACCION,
-        seccion_id=seccion.id
+        seccion_id=seccion.id,
+        origen_datos=origen_datos
     )
     db.add(nueva_pregunta)
 
@@ -315,6 +316,8 @@ def seed_plantillas_data(db: Session):
         seccion_2_inf = find_or_create_seccion(db, plantilla_informe_curricular, "2. Desarrollo de la Actividad Curricular")
         crear_pregunta_redaccion(db, seccion_2_inf, "2. Porcentaje de horas de clases TEÓRICAS dictadas (respecto del total establecido en el plan de estudios) y justificación si es necesario.")
         # ... (el resto de las preguntas de redacción del informe) ...
+        crear_pregunta_redaccion(db, seccion_2_inf, "2.A. ¿Se logró desarrollar la totalidad de los contenidos planificados? Consigne el porcentaje de contenidos planificados alcanzados. En caso de ser necesario mencione las estrategias que planificará para el próximo dictado a fin de ajustar el cronograma.")
+        crear_pregunta_redaccion(db, seccion_2_inf, "2.B. Consigne los valores que figuran en el reporte de la Encuesta a alumnos correspondientes a: B: 'Comunicación y desarrollo de la asignatura', C: 'Metodología', D: 'Evaluacion', E: 'Actuación de los miembros de la Cátedra (teoría y práctica)'.", origen_datos="resultados_encuesta")
         crear_pregunta_redaccion(db, seccion_2_inf, "2.C. Resumen de la reflexión sobre la práctica docente y nuevas estrategias a implementar (cambio de cronograma, modificación del proceso de evaluación, etc.).")
 
         seccion_3_inf = find_or_create_seccion(db, plantilla_informe_curricular, "3. Actividades del Equipo de Cátedra")

@@ -19,6 +19,7 @@ class Opcion(OpcionBase):
 class PreguntaBase(BaseModel):
     texto: str = Field(..., min_length=5, max_length=500)
     tipo: TipoPregunta
+    origen_datos: Optional[str] = None
 
 
 class PreguntaCreate(PreguntaBase):
