@@ -101,5 +101,7 @@ class ResultadoCursada(BaseModel):
     cuatrimestre_info: str 
     cantidad_respuestas: int 
     resultados_por_seccion: List[ResultadoSeccion]  
+    
+    informe_curricular_instancia_id: Optional[int] = None 
 
     model_config = {"from_attributes": True}

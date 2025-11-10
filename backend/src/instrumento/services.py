@@ -1,11 +1,12 @@
 from sqlalchemy.orm import Session, selectinload
 from src.instrumento import models, schemas
-from src.enumerados import TipoInstrumento,EstadoInstrumento
+from src.enumerados import TipoInstrumento,EstadoInstrumento,EstadoInforme
 from src.encuestas.models import Encuesta
 from typing import List
 from sqlalchemy import select
 from fastapi import HTTPException
 from src.seccion.models import Seccion
+from src.instrumento.models import ActividadCurricularInstancia
 from src.pregunta.models import Pregunta, PreguntaMultipleChoice
 
 def get_instrumento_completo(db: Session, instrumento_id: int) -> models.InstrumentoBase:
@@ -109,3 +110,46 @@ def actualizar_plantilla(
     db.commit()
     db.refresh(db_plantilla)
     return db_plantilla
+
+def get_plantilla_para_instancia_reporte(
+    db: Session, 
+    instancia_id: int,
+    profesor_id: int # Para verificar permisos
+) -> models.InstrumentoBase:
+    """
+    Obtiene la plantilla (InstrumentoBase) completa con preguntas y opciones
+    para una instancia de Actividad Curricular (un reporte) específica,
+    verificando que pertenezca al profesor.
+    """
+    
+    # 1. Busca la Instancia del Reporte
+    instancia = db.query(ActividadCurricularInstancia)\
+        .filter(ActividadCurricularInstancia.id == instancia_id)\
+        .options(
+            # 2. Carga la Plantilla (ActividadCurricular) asociada
+            selectinload(ActividadCurricularInstancia.actividad_curricular) 
+            # 3. Carga las Secciones de esa plantilla
+            .selectinload(models.ActividadCurricular.secciones) 
+            # 4. Carga las Preguntas de esas secciones
+            .selectinload(Seccion.preguntas.of_type(PreguntaMultipleChoice)) 
+            # 5. Carga las Opciones de esas preguntas
+            .selectinload(PreguntaMultipleChoice.opciones)
+        )\
+        .first()
+
+    if not instancia:
+        raise HTTPException(status_code=404, detail=f"Instancia de reporte con ID {instancia_id} no encontrada.")
+    
+    # Verificación de permisos
+    if instancia.profesor_id != profesor_id:
+        raise HTTPException(status_code=403, detail="No tienes permiso para responder este reporte.")
+    
+    # Verificación de estado
+    if instancia.estado != EstadoInforme.PENDIENTE:
+            raise HTTPException(status_code=400, detail=f"El reporte {instancia_id} no está pendiente, no se puede responder.")
+
+    if not instancia.actividad_curricular:
+            raise HTTPException(status_code=500, detail=f"La instancia {instancia_id} no tiene una plantilla de reporte asociada.")
+
+    # Devuelve la plantilla (InstrumentoBase) completa
+    return instancia.actividad_curricular

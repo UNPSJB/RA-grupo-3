@@ -5,6 +5,8 @@ from src.encuestas import schemas as encuestas_schemas
 from src.encuestas import services as services_encuestas
 from src.persona.models import Profesor
 from src.dependencies import get_current_profesor
+from src.instrumento import services as services_instrumento
+from src.instrumento import schemas as schemas_instrumento
 
 router_profesores = APIRouter(prefix="/encuestas-abiertas", tags=["Encuestas Profesores"])
 
@@ -24,4 +26,31 @@ def listar_mis_reportes_activos(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Ocurrió un error al obtener los reportes activos."
+        )
+
+@router_profesores.get(
+    "/reporte/instancia/{instancia_id}/detalles",
+    response_model=schemas_instrumento.InstrumentoCompleto
+)
+def get_detalles_reporte_para_responder(
+    instancia_id: int,
+    db: Session = Depends(get_db),
+    profesor_actual: Profesor = Depends(get_current_profesor)
+):
+    try:
+        plantilla_completa = services_instrumento.get_plantilla_para_instancia_reporte(
+            db=db, 
+            instancia_id=instancia_id,
+            profesor_id=profesor_actual.id  # Pasa el ID del profesor para auth
+        )
+        return plantilla_completa
+        
+    except HTTPException as e:
+        # Re-lanza las excepciones HTTP (404, 403, 400)
+        raise e
+    except Exception as e:
+        print(f"Error inesperado al obtener detalles de reporte {instancia_id}: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail="Ocurrió un error al obtener los detalles del reporte."
         )

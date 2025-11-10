@@ -145,6 +145,55 @@ def obtener_instancias_activas_alumno(db: Session, alumno_id: int) -> List[Dict[
         
     return response_list
 
+def obtener_instancias_activas_profesor(db: Session, profesor_id: int) -> List[Dict[str, Any]]:
+ 
+    
+    # Consulta las Instancias de Actividad Curricular (no EncuestaInstancia)
+    stmt = (
+        select(instrumento_models.ActividadCurricularInstancia)
+        .join(Cursada, instrumento_models.ActividadCurricularInstancia.cursada_id == Cursada.id)
+        .where(
+            instrumento_models.ActividadCurricularInstancia.profesor_id == profesor_id,
+            # Un reporte "activo" para un profesor es uno que está "PENDIENTE"
+            instrumento_models.ActividadCurricularInstancia.estado == EstadoInforme.PENDIENTE 
+        )
+        .options(
+            # Carga la plantilla (el Instrumento "ActividadCurricular")
+            joinedload(instrumento_models.ActividadCurricularInstancia.actividad_curricular),
+            # Carga Cursada -> Materia
+            joinedload(instrumento_models.ActividadCurricularInstancia.cursada)
+            .joinedload(Cursada.materia),
+            # Carga Cursada -> Profesor (para el nombre)
+            joinedload(instrumento_models.ActividadCurricularInstancia.cursada)
+            .joinedload(Cursada.profesor)
+        )
+        .distinct()
+    )
+
+    results = db.execute(stmt).scalars().all()
+
+    response_list = []
+    for instancia in results:
+        
+        # La "plantilla" en este caso es el instrumento base 'actividad_curricular'
+        if not instancia.actividad_curricular:
+            continue
+            
+        plantilla_data = schemas.PlantillaInfo.model_validate(instancia.actividad_curricular).model_dump()
+        
+        # 'ha_respondido' es FALSO si el estado es PENDIENTE
+        ha_respondido = instancia.estado != EstadoInforme.PENDIENTE
+
+        response_list.append({
+            "instancia_id": instancia.id,
+            "plantilla": plantilla_data, 
+            "materia_nombre": instancia.cursada.materia.nombre if instancia.cursada and instancia.cursada.materia else None,
+            "profesor_nombre": instancia.cursada.profesor.nombre if instancia.cursada and instancia.cursada.profesor else None,
+            "fecha_fin": instancia.fecha_fin,
+            "ha_respondido": ha_respondido
+        })
+        
+    return response_list
 
 def obtener_instancia_activa_por_cursada(db: Session, cursada_id: int) -> models.EncuestaInstancia:
     now = datetime.now()
@@ -187,6 +236,9 @@ def obtener_plantilla_para_instancia_activa(db: Session, instancia_id: int) -> m
     return instancia.plantilla
 
 #Para el profesor
+# Reemplaza la función 'obtener_resultados_agregados_profesor'
+# (aprox. línea 189) con esto:
+
 def obtener_resultados_agregados_profesor(
     db: Session,
     profesor_id: int,
@@ -202,7 +254,10 @@ def obtener_resultados_agregados_profesor(
             .selectinload(models.EncuestaInstancia.plantilla) 
             .selectinload(models.Encuesta.secciones)
             .selectinload(Seccion.preguntas.of_type(PreguntaMultipleChoice))
-            .selectinload(PreguntaMultipleChoice.opciones)
+            .selectinload(PreguntaMultipleChoice.opciones),
+            
+
+            selectinload(Cursada.actividad_curricular_instancia) 
         )
         .where(Cursada.profesor_id == profesor_id)
     )
@@ -319,18 +374,26 @@ def obtener_resultados_agregados_profesor(
              periodo_val = cursada.cuatrimestre.periodo.value if cursada.cuatrimestre.periodo else '?'
              cuatri_info = f"{cursada.cuatrimestre.anio} - {periodo_val}"
         
+        # === 2. AÑADE ESTA LÓGICA PARA OBTENER EL ID ===
+        informe_id = None
+        # Revisa si la instancia del informe existe Y si está PENDIENTE
+        if (cursada.actividad_curricular_instancia and 
+            cursada.actividad_curricular_instancia.estado == EstadoInforme.PENDIENTE):
+            informe_id = cursada.actividad_curricular_instancia.id
+        
         resultados_finales.append(
             schemas.ResultadoCursada(
                 cursada_id=cursada.id,
                 materia_nombre=cursada.materia.nombre if cursada.materia else "N/A",
                 cuatrimestre_info=cuatri_info,
                 cantidad_respuestas=cantidad_sets,
-                resultados_por_seccion=resultados_secciones_schema 
+                resultados_por_seccion=resultados_secciones_schema,
+                # === 3. PASA EL ID AL SCHEMA ===
+                informe_curricular_instancia_id=informe_id 
             )
         )
 
     return resultados_finales
-
 def listar_instancias_cerradas_profesor(
     db: Session,
     profesor_id: int,
