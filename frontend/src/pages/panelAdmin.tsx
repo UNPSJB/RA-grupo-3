@@ -20,20 +20,41 @@ const PanelAdmin: React.FC = () => {
   const navigate = useNavigate();
 
   return (
-    <section className="admin-panel">
-      <header className="admin-panel__header">
-        <h1 className="admin-panel__title">Panel de administración</h1>
+    <section className="bg-gray-100 min-h-screen p-8">
+      <header className="text-center mb-12">
+        <h1 className="text-4xl font-bold text-gray-800">Panel de administración</h1>
       </header>
 
-      <div className="admin-shortcuts">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
         {shortcuts.map(({ label, path }) => (
           <button
             key={path}
             type="button"
             onClick={() => navigate(path)}
-            className="admin-shortcut"
+            className="
+              flex flex-col items-center justify-center
+              group
+              min-h-[8rem]
+              w-full
+              gap-4
+              rounded-2xl
+              border border-blue-100
+              bg-white
+              p-6
+              shadow-lg
+              transition-all duration-300
+              ease-in-out
+              hover:-translate-y-1
+              hover:bg-gray-100
+              hover:shadow-2xl
+              focus:outline-none
+              focus:ring-2
+              focus:ring-gray-400
+              focus:ring-opacity-50
+              cursor-pointer
+            "
           >
-            <span className="admin-shortcut__label">{label}</span>
+            <span className="text-lg font-semibold text-gray-800 text-center">{label}</span>
           </button>
         ))}
       </div>

@@ -1,10 +1,25 @@
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 from src.instrumento import models, schemas
 from src.enumerados import TipoInstrumento,EstadoInstrumento
 from src.encuestas.models import Encuesta
 from typing import List
 from sqlalchemy import select
 from fastapi import HTTPException
+from src.seccion.models import Seccion
+from src.pregunta.models import Pregunta, PreguntaMultipleChoice
+
+def get_instrumento_completo(db: Session, instrumento_id: int) -> models.InstrumentoBase:
+    instrumento = db.query(models.InstrumentoBase).options(
+        selectinload(models.InstrumentoBase.secciones).options(
+            selectinload(Seccion.preguntas.of_type(PreguntaMultipleChoice)).options(
+                selectinload(PreguntaMultipleChoice.opciones)
+            )
+        )
+    ).filter(models.InstrumentoBase.id == instrumento_id).first()
+
+    if not instrumento:
+        raise HTTPException(status_code=404, detail="Instrumento no encontrado")
+    return instrumento
 
 def crear_instrumento_plantilla(
     db: Session, 

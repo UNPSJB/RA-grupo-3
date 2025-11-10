@@ -7,10 +7,10 @@ class DetailedHTTPException(HTTPException):
     STATUS_CODE = status.HTTP_500_INTERNAL_SERVER_ERROR
     DETAIL = "Error en el servidor"
 
-    def __init__(self, **kwargs: Any) -> None:
+    def __init__(self, detail: str = None, **kwargs: Any) -> None:
         # Usar los atributos de clase si no se proporcionan en kwargs
         status_code = kwargs.pop('status_code', self.STATUS_CODE)
-        detail = kwargs.pop('detail', self.DETAIL)
+        detail = detail or self.DETAIL
         super().__init__(status_code=status_code, detail=detail, **kwargs)
 
 

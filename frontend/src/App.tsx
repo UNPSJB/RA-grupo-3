@@ -107,6 +107,8 @@ const App: React.FC = () => {
           {/* <Route path="estadisticas" element={<EstadisticasPage />} /> */}
           <Route path="gestion" element={<CuentaPage />} />
         </Route>
+
+        
         {/* --- Rutas de Secretaria Academica --- */}
         <Route path="secretaria" element={<Outlet />}>
           <Route index element={<SecretariaHome />} />

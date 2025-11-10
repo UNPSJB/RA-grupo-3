@@ -5,8 +5,12 @@ from src.database import SessionLocal, engine
 # Importa todos los modelos necesarios
 from src.materia.models import Materia, Cuatrimestre, Cursada
 from src.persona.models import Persona, Profesor, Alumno, Inscripcion
+from src.instrumento.models import InformeSintetico, ActividadCurricularInstancia
+from src.encuestas.models import EncuestaInstancia
+from src.seccion.models import Seccion
+from src.pregunta.models import PreguntaRedaccion, PreguntaMultipleChoice, Opcion
 # Importa los Enums necesarios
-from src.enumerados import TipoCuatrimestre
+from src.enumerados import TipoCuatrimestre, TipoInstrumento
 from src.persona.models import TipoPersona # Asumiendo que está definido en persona.models
 # Importa ModeloBase para crear tablas si no existen (opcional)
 from src.models import ModeloBase
@@ -14,6 +18,7 @@ from src.models import ModeloBase
 # --- CONFIGURACIÓN ---
 # ID que usará tu dependencia get_current_alumno simulada
 ID_ALUMNO_PRUEBA = 2
+
 
 def seed_initial_data(db: Session):
     
