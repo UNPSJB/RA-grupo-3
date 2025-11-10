@@ -25,7 +25,7 @@ class EncuestaAlumnoPlantillaCreate(InstrumentoBaseCreate):
     pass
 
 class EncuestaAlumnoPlantilla(InstrumentoBase):
-    secciones: Optional[List[Seccion]] = None   #Linea agregada para poder probar listar la encuesta con sus secciones y preguntas
+    secciones: Optional[List[Seccion]] = None   
     pass
 
 class EncuestaAlumnoPlantillaUpdate(BaseModel):
@@ -61,11 +61,11 @@ class EncuestaActivaAlumnoResponse(BaseModel):
     instancia_id: int
     plantilla: PlantillaInfo 
     materia_nombre: Optional[str] = None 
+    profesor_nombre: Optional[str] = None
     fecha_fin: Optional[datetime] = None 
     ha_respondido: bool
 
     model_config = {"from_attributes": True}
-
 
 class InstanciaConPlantillaResponse(BaseModel):
      instancia_id: int
@@ -100,8 +100,6 @@ class ResultadoCursada(BaseModel):
     materia_nombre: str
     cuatrimestre_info: str 
     cantidad_respuestas: int 
-    
-
     resultados_por_seccion: List[ResultadoSeccion]  
 
     model_config = {"from_attributes": True}

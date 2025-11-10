@@ -23,6 +23,10 @@ class Pregunta(ModeloBase):
     tipo: Mapped[TipoPregunta] = mapped_column(
         Enum(TipoPregunta), nullable=False
     )
+
+    # origen de datos dinámicos: Para mostrar estadisticas en la seccion 2.B del informe curricular
+    origen_datos: Mapped[Optional[str]] = mapped_column(String(100), nullable=True) 
+
     respuestas: Mapped[List["Respuesta"]] = relationship(
         "Respuesta", back_populates="pregunta"
     )
