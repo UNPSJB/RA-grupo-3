@@ -1,14 +1,10 @@
-/*
-Pega este código completo en:
-unpsjb/ra-grupo-3/RA-grupo-3-dev/frontend/src/pages/ResponderReportes.tsx
-*/
 
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import ResumenEncuesta from "../components/estadisticas/ResumenEncuesta";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
 
-// --- (Interfaces no cambian) ---
 interface ResultadoOpcion {
   opcion_id: number;
   opcion_texto: string;
@@ -53,6 +49,7 @@ const ResponderReportes: React.FC = () => {
   const [preguntas, setPreguntas] = useState<{
     [key: number]: string | number;
   }>({});
+  const resumenRef = useRef<string>("");
   const [reporte, setReporte] = useState<ReporteAcademico | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [resultadosEncuesta, setResultadosEncuesta] = useState<
@@ -63,7 +60,6 @@ const ResponderReportes: React.FC = () => {
 
   const navigate = useNavigate();
 
-  // 🔹 Cargar reporte (sin cambios)
   useEffect(() => {
     const fetchReporte = async () => {
       if (!instanciaId) {
@@ -93,7 +89,6 @@ const ResponderReportes: React.FC = () => {
     fetchReporte();
   }, [instanciaId]);
 
-  // 🔹 Cargar resultados de encuestas (sin cambios)
   useEffect(() => {
     const fetchResultados = async () => {
       try {
@@ -111,38 +106,10 @@ const ResponderReportes: React.FC = () => {
     };
     fetchResultados();
   }, []);
-
-  // 🔹 Generar resumen de texto (sin cambios)
-  const generarResumen = (): string => {
-    if (!resultadosEncuesta) return "";
-    let resumen = "";
-    resultadosEncuesta.forEach((seccion) => {
-      seccion.resultados_por_pregunta.forEach((pregunta) => {
-        if (
-          pregunta.pregunta_tipo === "MULTIPLE_CHOICE" &&
-          pregunta.resultados_opciones
-        ) {
-          const total = pregunta.resultados_opciones.reduce(
-            (sum, o) => sum + o.cantidad,
-            0
-          );
-          resumen += `Pregunta: ${pregunta.pregunta_texto}\n`;
-          resumen += `Total de respuestas: ${total}\n`;
-          pregunta.resultados_opciones.forEach((op) => {
-            const porcentaje =
-              total > 0 ? ((op.cantidad / total) * 100).toFixed(1) : "0.0";
-            resumen += `- ${op.opcion_texto}: ${op.cantidad} respuestas (${porcentaje}%)\n`;
-          });
-          resumen += "\n";
-        }
-      });
-    });
-    return resumen.trim();
-  };
-
-  const resumenEncuesta = useMemo(() => generarResumen(), [resultadosEncuesta]);
-
-  // --- (useMemo, handleChange, handleCopyResumen no cambian) ---
+  
+  const handleResumenGenerado=(texto: string) => {
+    resumenRef.current = texto;
+  }
 
   const allPreguntas = useMemo(() => {
     if (!reporte) return [];
@@ -166,16 +133,17 @@ const ResponderReportes: React.FC = () => {
     }));
   };
 
+
   const handleCopyResumen = (preguntaId: number) => {
-    if (resumenEncuesta) {
+    const resumenTexto = resumenRef.current;
+    if (resumenTexto) {
       setPreguntas((prev) => ({
         ...prev,
-        [preguntaId]: resumenEncuesta,
+        [preguntaId]: resumenTexto,
       }));
     }
   };
 
-  // 🔹 handleSubmit (sin cambios)
   const handleSubmit = async () => {
     if (!isEncuestaCompleta || !reporte) {
       alert("Por favor, complete todas las preguntas de opción múltiple.");
@@ -243,9 +211,7 @@ const ResponderReportes: React.FC = () => {
     }
   };
 
-  // --- Renderizado ---
-
-  // 🔹 Pantalla de éxito (sin cambios)
+  // Renderizado 
   if (reporteCompletado) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[70vh] space-y-6 text-center">
@@ -295,7 +261,6 @@ const ResponderReportes: React.FC = () => {
     return <div className="text-center p-10">Cargando reporte...</div>;
   }
 
-  // 🔹 Formulario (sin cambios)
   return (
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold text-gray-800 mb-4">
@@ -330,17 +295,20 @@ const ResponderReportes: React.FC = () => {
                     className="w-full p-2 border border-gray-300 rounded-md resize-none mb-3 focus:ring-2 focus:ring-blue-400"
                     rows={6}
                   />
-                  {pregunta.origen_datos === "resultados_encuesta" &&
-                    resumenEncuesta && (
-                      <div className="flex justify-end">
-                        <button
-                          type="button"
-                          onClick={() => handleCopyResumen(pregunta.id)}
-                          className="bg-blue-500 hover:bg-blue-600 text-white font-medium py-1.5 px-3 rounded-md text-sm transition-colors"
-                        >
-                          Copiar resumen a la respuesta
-                        </button>
-                      </div>
+                  {pregunta.origen_datos === "resultados_encuesta" && (
+                    <div className="flex justify-end">
+                      <ResumenEncuesta
+                        resultadosEncuesta={resultadosEncuesta}
+                        onGenerarResumen={handleResumenGenerado}
+                      />
+                      <button
+                            type="button"
+                            onClick={() => handleCopyResumen(pregunta.id)}
+                            className="bg-blue-500 hover:bg-blue-600 text-white font-medium py-1.5 px-3 rounded-md text-sm transition-colors"
+                      >
+                        Copiar resumen a la respuesta
+                      </button>
+                    </div>
                     )}
                 </>
               ) : (
