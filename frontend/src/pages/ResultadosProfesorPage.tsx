@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import CursadaResultados from "../components/estadisticas/CursadaResultados";
 import type { ResultadoCursada } from "../types/estadisticas";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../auth/AuthContext";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
 
@@ -14,7 +15,15 @@ const ResultadosProfesorPage: React.FC = () => {
   );
   const navigate = useNavigate();
 
+  const { token, logout} = useAuth();
+
   useEffect(() => {
+    if (!token) {
+      setLoading(false);
+      setError("Necesitas iniciar sesión para ver tus resultados.");
+      return;
+    }
+
     const fetchResultados = async () => {
       setLoading(true);
       setError(null);
@@ -29,6 +38,11 @@ const ResultadosProfesorPage: React.FC = () => {
           }
         );
         if (!response.ok) {
+          if (response.status === 401 || response.status === 403) {
+            setError("Tu sesión expiró. Por favor, inicia sesión de nuevo.");
+            logout();
+            return;
+          }
           throw new Error(
             `Error ${response.status}: No se pudieron cargar los resultados.`
           );
@@ -42,7 +56,7 @@ const ResultadosProfesorPage: React.FC = () => {
       }
     };
     fetchResultados();
-  }, []);
+  }, [token, logout]);
 
   const selectedResultado = useMemo(() => {
     if (!selectedCursadaId) return null;

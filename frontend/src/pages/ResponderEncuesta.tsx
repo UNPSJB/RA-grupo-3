@@ -215,6 +215,10 @@ const ResponderEncuesta: React.FC = () => {
       );
 
       if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+          logout();
+          return;
+        }
         let errorDetail = `Error ${response.status}: ${response.statusText}`;
         try {
           const errorData = await response.json();
