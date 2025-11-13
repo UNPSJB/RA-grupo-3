@@ -2,6 +2,7 @@
 import React, { useState, useMemo, useEffect, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import ResumenEncuesta from "../components/estadisticas/ResumenEncuesta";
+import { useAuth } from "../auth/AuthContext";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
 
@@ -60,7 +61,13 @@ const ResponderReportes: React.FC = () => {
 
   const navigate = useNavigate();
 
+  const { token, logout } = useAuth();
+
   useEffect(() => {
+    if (!token) {
+      console.error("No hay token, no se puede cargar el reporte.");
+      return; 
+    }
     const fetchReporte = async () => {
       if (!instanciaId) {
         console.error("No se proporcionó ID de instancia");
@@ -76,6 +83,9 @@ const ResponderReportes: React.FC = () => {
         );
 
         if (!response.ok) {
+          if (response.status === 401 || response.status === 403) {
+            logout();
+          }
           const errData = await response.json();
           throw new Error(errData.detail || `Error ${response.status}`);
         }
@@ -87,16 +97,24 @@ const ResponderReportes: React.FC = () => {
       }
     };
     fetchReporte();
-  }, [instanciaId]);
+  }, [instanciaId, token, logout]);
 
   useEffect(() => {
+    if (!token) {
+      console.error("No hay token, no se pueden cargar los resultados.");
+      return;
+    }
     const fetchResultados = async () => {
       try {
         const token = localStorage.getItem("token");
         const res = await fetch(`${API_BASE_URL}/profesor/mis-resultados`, {
-          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+          headers: { Authorization: `Bearer ${token}` },
         });
-        if (!res.ok) throw new Error("Error al obtener resultados de encuesta");
+        if (!res.ok) {if (res.status === 401 || res.status === 403) {
+            logout();
+          }
+          throw new Error("Error al obtener resultados de encuesta");
+        }
         const json = await res.json();
         const first = Array.isArray(json) && json.length > 0 ? json[0] : null;
         setResultadosEncuesta(first ? first.resultados_por_seccion : []);
@@ -105,7 +123,7 @@ const ResponderReportes: React.FC = () => {
       }
     };
     fetchResultados();
-  }, []);
+  }, [token, logout]);
   
   const handleResumenGenerado=(texto: string) => {
     resumenRef.current = texto;
@@ -145,6 +163,11 @@ const ResponderReportes: React.FC = () => {
   };
 
   const handleSubmit = async () => {
+    if (!token) {
+      alert("Tu sesión expiró. Por favor, inicia sesión de nuevo.");
+      logout();
+      return;
+    }
     if (!isEncuestaCompleta || !reporte) {
       alert("Por favor, complete todas las preguntas de opción múltiple.");
       return;
@@ -193,6 +216,10 @@ const ResponderReportes: React.FC = () => {
       if (response.ok) {
         setReporteCompletado(true);
       } else {
+        if (response.status === 401 || response.status === 403) {
+          logout();
+          return;
+        }
         const errorData = await response.json();
         console.error("Error al enviar el reporte:", errorData);
         alert(
