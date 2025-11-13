@@ -29,7 +29,7 @@
     "recharts": "^3.2.1"
   },
   "devDependencies": {
-    "@types/react": "^19.2.0",
+    "@types/react": "^18.3.3",
     "@types/react-dom": "^19.2.1",
     "@typescript-eslint/eslint-plugin": "^8.18.2",
     "@typescript-eslint/parser": "^8.18.2",

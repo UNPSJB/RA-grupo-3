@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
+import { useAuth } from "../auth/AuthContext";
 
 interface EncuestaActivaAlumno {
   instancia_id: number;
@@ -22,8 +23,16 @@ const ListaEncuestasAlumno: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const { token, logout } = useAuth();
+  
   useEffect(() => {
     let isMounted = true;
+
+    if (!token){
+      setLoading(false);
+      setError("Necesitas iniciar sesion para ver tus encuestas.")
+      return;
+    }
 
     const fetchEncuestasActivas = async () => {
       setLoading(true);
@@ -32,10 +41,20 @@ const ListaEncuestasAlumno: React.FC = () => {
 
       try {
         const response = await fetch(
-          `${API_BASE_URL}/encuestas-abiertas/mis-instancias-activas`
+          `${API_BASE_URL}/encuestas-abiertas/mis-instancias-activas`,
+          {
+            headers: { 
+              "Autorization": `Bearer ${token}`
+            }
+          }
         );
 
         if (!response.ok) {
+          if (response.status === 401 || response.status === 403) {
+            setError("Tu sesión expiró. Por favor, inicia sesión de nuevo.");
+            logout(); // Limpia la sesión y redirige al login
+            return; 
+          }
           let errorDetail = `Error ${response.status}: ${response.statusText}`;
           try {
             const errorData = await response.json();
@@ -70,7 +89,7 @@ const ListaEncuestasAlumno: React.FC = () => {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [token, logout]);
 
   return (
     <div className="p-6 max-w-4xl mx-auto bg-#f1f5f9 min-h-screen">

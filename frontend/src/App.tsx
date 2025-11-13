@@ -4,6 +4,7 @@ import Navbar from "./components/Navbar.tsx";
 import Footer from "./components/Footer.tsx";
 import EncuestasPage from "./pages/EncuestasPage.tsx";
 
+
 import CuentaPage from "./pages/CuentaPage.tsx";
 import ResponderEncuesta from "./pages/ResponderEncuesta.tsx";
 import CrearPlantilla from "./pages/CrearPlantilla.tsx";
@@ -22,6 +23,9 @@ import PoliticasPrivacidad from "./pages/PoliticasPrivacidad.tsx";
 import ResponderReportes from "./pages/ResponderReportes.tsx";
 import GestionCuentas from "./pages/GestionCuentas.tsx";
 import withLoading from "./components/withLoading.tsx";
+
+import LoginPage from "./pages/LoginPage.tsx"
+import ProtectedRoute from "./auth/ProtectedRoute.tsx";
 
 const MainLayout: React.FC = () => {
   const location = useLocation();
@@ -60,75 +64,158 @@ const ResponderEncuestaWithLoading = withLoading(ResponderEncuesta);
 const ProfesoresHomeWithLoading = withLoading(ProfesoresHome);
 const ResultadosProfesorPageWithLoading = withLoading(ResultadosProfesorPage);
 const ResponderReportesWithLoading = withLoading(ResponderReportes);
+const LoginPageWithLoading = withLoading(LoginPage); 
+
 
 const App: React.FC = () => {
   return (
     <Routes>
       <Route path="/" element={<MainLayout />}>
         <Route index element={<Home />} />
-        {/* --- Rutas de politica de privacidad --- */}
+        
+        {/* --- NUEVA RUTA DE LOGIN --- */}
+        {/* La ponemos fuera de las rutas protegidas */}
+        <Route path="login" element={<LoginPageWithLoading />} /> 
+        
         <Route path="privacidad" element={<PoliticasPrivacidadWithLoading />} />
 
-        {/* --- Rutas de Secretaria --- */}
-        <Route path="secretaria" element={<Outlet />}>
-          {" "}
-          {/* Agrupa rutas admin */}
-          <Route path="modelos" element={<SecretariaModelosWithLoading />} />
-          <Route path="otros" element={<Outlet />} />{" "}
-          {/*ACA NO HAY NADA PARA PONER AUN*/}
-          {/* <Route path="estadisticas" element={<EstadisticasPage />} /> */}
-          <Route path="gestion" element={<CuentaPageWithLoading />} />
-          <Route index element={<PanelAdminWithLoading />} />
-          <Route path="plantillas" element={<Outlet />}>
-            {" "}
-            {/* Rutas para gestionar plantillas */}
-            <Route index element={<Navigate to="borradores" replace />} />{" "}
-            <Route path="borradores" element={<EncuestasPageWithLoading />} />
-            <Route path="publicadas" element={<EncuestasPageWithLoading />} />
-            <Route path="crear" element={<CrearPlantillaWithLoading />} />{" "}
+        {/* --- RUTAS PROTEGIDAS --- */}
+        
+        {/* --- Rutas de Secretaria (Protegidas) --- */}
+        <Route element={<ProtectedRoute allowedRoles={["ADMIN"]} />}>
+          <Route path="secretaria" element={<Outlet />}>
+            {/* ... (todas tus rutas de secretaria anidadas aquí) ... */}
+            <Route path="modelos" element={<SecretariaModelosWithLoading />} />
+            <Route path="gestion" element={<CuentaPageWithLoading />} />
+            <Route index element={<PanelAdminWithLoading />} />
+            <Route path="plantillas" element={<Outlet />}>
+              <Route index element={<Navigate to="borradores" replace />} />
+              <Route path="borradores" element={<EncuestasPageWithLoading />} />
+              <Route path="publicadas" element={<EncuestasPageWithLoading />} />
+              <Route path="crear" element={<CrearPlantillaWithLoading />} />
+            </Route>
           </Route>
         </Route>
 
-        {/* --- Rutas de Alumno --- */}
-        <Route path="alumno" element={<Outlet />}>
-          <Route index element={<ListaEncuestasAlumnosWithLoading />} />
-          <Route path="gestion" element={<GestionCuentasWithLoading />} />
-          {/*<Route
-            path="/alumno/encuestas-abiertas/instancia/:instanciaId/responder"
-            element={<ResponderEncuesta />}
-          />*/}
-          <Route path="encuestas" element={<Outlet />}>
+        {/* --- Rutas de Alumno (Protegidas) --- */}
+        <Route element={<ProtectedRoute allowedRoles={["ALUMNO"]} />}>
+          <Route path="alumno" element={<Outlet />}>
+            {/* ... (todas tus rutas de alumno anidadas aquí) ... */}
             <Route index element={<ListaEncuestasAlumnosWithLoading />} />
-            <Route path="ver" element={<VerEncuestasWithLoading />} />
-            <Route
-              path="instancia/:instanciaId/responder" // Solo la parte que va después de /encuestas/
-              element={<ResponderEncuestaWithLoading />}
-            />
+            <Route path="gestion" element={<GestionCuentasWithLoading />} />
+            <Route path="encuestas" element={<Outlet />}>
+              <Route index element={<ListaEncuestasAlumnosWithLoading />} />
+              <Route path="ver" element={<VerEncuestasWithLoading />} />
+              <Route
+                path="instancia/:instanciaId/responder"
+                element={<ResponderEncuestaWithLoading />}
+              />
+            </Route>
           </Route>
         </Route>
 
-        {/* === 3. BLOQUE DE RUTAS DE PROFESOR CORREGIDO === */}
-        <Route path="profesores" element={<Outlet />}>
-          <Route index element={<ProfesoresHomeWithLoading />} />
-
-          <Route path="reportes" element={<Outlet />}>
-            {/* SE MANTIENE LA RUTA PARA RESPONDER */}
+        {/* --- Rutas de Profesor (Protegidas) --- */}
+        <Route element={<ProtectedRoute allowedRoles={["DOCENTE"]} />}>
+          <Route path="profesores" element={<Outlet />}>
+            {/* ... (todas tus rutas de profesor anidadas aquí) ... */}
+            <Route index element={<ProfesoresHomeWithLoading />} />
+            <Route path="reportes" element={<Outlet />}>
+              <Route
+                path="instancia/:instanciaId/responder"
+                element={<ResponderReportesWithLoading />}
+              />
+            </Route>
             <Route
-              path="instancia/:instanciaId/responder"
-              element={<ResponderReportesWithLoading />}
+              path="resultados"
+              element={<ResultadosProfesorPageWithLoading />}
             />
+            <Route path="gestion" element={<GestionCuentasWithLoading />} />
           </Route>
-
-          {/* RUTA PARA VER LOS RESULTADOS */}
-          <Route
-            path="resultados"
-            element={<ResultadosProfesorPageWithLoading />}
-          />
-
-          <Route path="gestion" element={<GestionCuentasWithLoading />} />
         </Route>
+        
+        {/* (Opcional) Una ruta genérica para 'gestion' si es compartida */}
+        {/* <Route element={<ProtectedRoute allowedRoles={["ALUMNO", "DOCENTE", "ADMIN"]} />}>
+           <Route path="gestion" element={<GestionCuentasWithLoading />} />
+        </Route>
+        */}
+        
       </Route>
     </Routes>
   );
 };
 export default App;
+
+
+// LO VIEJO
+
+// const App: React.FC = () => {
+//   return (
+//     <Routes>
+//       <Route path="/" element={<MainLayout />}>
+//         <Route index element={<Home />} />
+//         {/* --- Rutas de politica de privacidad --- */}
+//         <Route path="privacidad" element={<PoliticasPrivacidadWithLoading />} />
+
+//         {/* --- Rutas de Secretaria --- */}
+//         <Route path="secretaria" element={<Outlet />}>
+//           {" "}
+//           {/* Agrupa rutas admin */}
+//           <Route path="modelos" element={<SecretariaModelosWithLoading />} />
+//           <Route path="otros" element={<Outlet />} />{" "}
+//           {/*ACA NO HAY NADA PARA PONER AUN*/}
+//           {/* <Route path="estadisticas" element={<EstadisticasPage />} /> */}
+//           <Route path="gestion" element={<CuentaPageWithLoading />} />
+//           <Route index element={<PanelAdminWithLoading />} />
+//           <Route path="plantillas" element={<Outlet />}>
+//             {" "}
+//             {/* Rutas para gestionar plantillas */}
+//             <Route index element={<Navigate to="borradores" replace />} />{" "}
+//             <Route path="borradores" element={<EncuestasPageWithLoading />} />
+//             <Route path="publicadas" element={<EncuestasPageWithLoading />} />
+//             <Route path="crear" element={<CrearPlantillaWithLoading />} />{" "}
+//           </Route>
+//         </Route>
+
+//         {/* --- Rutas de Alumno --- */}
+//         <Route path="alumno" element={<Outlet />}>
+//           <Route index element={<ListaEncuestasAlumnosWithLoading />} />
+//           <Route path="gestion" element={<GestionCuentasWithLoading />} />
+//           {/*<Route
+//             path="/alumno/encuestas-abiertas/instancia/:instanciaId/responder"
+//             element={<ResponderEncuesta />}
+//           />*/}
+//           <Route path="encuestas" element={<Outlet />}>
+//             <Route index element={<ListaEncuestasAlumnosWithLoading />} />
+//             <Route path="ver" element={<VerEncuestasWithLoading />} />
+//             <Route
+//               path="instancia/:instanciaId/responder" // Solo la parte que va después de /encuestas/
+//               element={<ResponderEncuestaWithLoading />}
+//             />
+//           </Route>
+//         </Route>
+
+//         {/* === 3. BLOQUE DE RUTAS DE PROFESOR CORREGIDO === */}
+//         <Route path="profesores" element={<Outlet />}>
+//           <Route index element={<ProfesoresHomeWithLoading />} />
+
+//           <Route path="reportes" element={<Outlet />}>
+//             {/* SE MANTIENE LA RUTA PARA RESPONDER */}
+//             <Route
+//               path="instancia/:instanciaId/responder"
+//               element={<ResponderReportesWithLoading />}
+//             />
+//           </Route>
+
+//           {/* RUTA PARA VER LOS RESULTADOS */}
+//           <Route
+//             path="resultados"
+//             element={<ResultadosProfesorPageWithLoading />}
+//           />
+
+//           <Route path="gestion" element={<GestionCuentasWithLoading />} />
+//         </Route>
+//       </Route>
+//     </Routes>
+//   );
+// };
+// export default App;
