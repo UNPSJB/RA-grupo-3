@@ -17,6 +17,7 @@ class Persona(ModeloBase):
     nombre: Mapped[str] = mapped_column(String(100), nullable=False)
     tipo: Mapped[TipoPersona] = mapped_column(Enum(TipoPersona), nullable=False)
     
+    #   Campos nuevos para la gestion de usuario y contraseña
     username: Mapped[str] = mapped_column(String(100), unique=True, index=True, nullable=False)
     password: Mapped[str] = mapped_column(String, nullable=False)
     
