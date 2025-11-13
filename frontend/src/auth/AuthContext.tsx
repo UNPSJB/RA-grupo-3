@@ -16,6 +16,7 @@ interface UserData {
 interface AuthContextType {
   token: string | null;
   role: UserData["role"] | null;
+  username: string | null;
   login: (username: string, password: string) => Promise<void>;
   logout: () => void;
   isLoading: boolean;
@@ -29,6 +30,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [token, setToken] = useState<string | null>(localStorage.getItem("token"));
   const [role, setRole] = useState<UserData["role"] | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [username, setUsername] = useState<string | null>(null);
   const navigate = useNavigate();
 
   // Efecto para decodificar el rol cuando el token cambia (o al cargar la app)
@@ -42,6 +44,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         // Verificar si el token ha expirado
         if (userData.exp * 1000 > Date.now()) {
           setRole(userData.role);
+          setUsername(userData.sub);
           localStorage.setItem("token", token);
         } else {
           // Token expirado
@@ -54,6 +57,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     } else {
       localStorage.removeItem("token");
       setRole(null);
+      setUsername(null);
     }
   }, [token]);
 
@@ -123,12 +127,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const logout = () => {
     setToken(null);
     setRole(null);
+    setUsername(null);
     localStorage.removeItem("token");
     navigate("/login"); // Redirige al Login
   };
 
   return (
-    <AuthContext.Provider value={{ token, role, login, logout, isLoading }}>
+    <AuthContext.Provider value={{ token, role, username, login, logout, isLoading }}>
       {children}
     </AuthContext.Provider>
   );
