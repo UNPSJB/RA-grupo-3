@@ -12,7 +12,7 @@ const shortcuts: Shortcut[] = [
   { label: "Listado de Plantillas", path: "/departamento/plantillas/borradores", active: true },
   { label: "Crear Plantilla", path: "/departamento/plantillas/crear", active: true },
   { label: "Estadísticas", path: "/departamento/estadisticas", active: false },
-  { label: "Cuenta", path: "/cuenta", active: true },
+  { label: "Cuenta", path: "/cuenta", active: true }, // Esto parece un bug, quizás deba ser /departamento/gestion
   { label: "Resultados de Encuestas", path: "/resultados-profesor", active: false },
   { label: "Gestion de Cuentas", path: "/departamento/gestion", active: true },
 ];

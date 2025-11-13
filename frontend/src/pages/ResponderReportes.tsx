@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useEffect, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import ResumenEncuesta from "../components/estadisticas/ResumenEncuesta";
@@ -6,6 +5,7 @@ import { useAuth } from "../auth/AuthContext";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
 
+// --- (Interfaces no cambian) ---
 interface ResultadoOpcion {
   opcion_id: number;
   opcion_texto: string;
@@ -44,6 +44,7 @@ interface ReporteAcademico {
   descripcion: string;
   secciones: Seccion[];
 }
+// --- (Fin de Interfaces) ---
 
 const ResponderReportes: React.FC = () => {
   const { instanciaId } = useParams<{ instanciaId: string }>();
@@ -56,14 +57,14 @@ const ResponderReportes: React.FC = () => {
   const [resultadosEncuesta, setResultadosEncuesta] = useState<
     ResultadoSeccion[] | null
   >(null);
-
   const [reporteCompletado, setReporteCompletado] = useState(false);
-
   const navigate = useNavigate();
 
+  // --- CAMBIO 1: Obtenemos el token y logout UNA SOLA VEZ, desde el hook ---
   const { token, logout } = useAuth();
 
   useEffect(() => {
+    // Usamos el 'token' del hook
     if (!token) {
       console.error("No hay token, no se puede cargar el reporte.");
       return; 
@@ -74,11 +75,11 @@ const ResponderReportes: React.FC = () => {
         return;
       }
       try {
-        const token = localStorage.getItem("token");
+        // --- CAMBIO 2: ELIMINAMOS la línea 'const token = localStorage.getItem("token");' ---
         const response = await fetch(
           `${API_BASE_URL}/encuestas-abiertas/reporte/instancia/${instanciaId}/detalles`,
           {
-            headers: { Authorization: `Bearer ${token}` },
+            headers: { Authorization: `Bearer ${token}` }, // <-- Ahora usa el token del hook
           }
         );
 
@@ -97,18 +98,19 @@ const ResponderReportes: React.FC = () => {
       }
     };
     fetchReporte();
-  }, [instanciaId, token, logout]);
+  }, [instanciaId, token, logout]); // Las dependencias están correctas
 
   useEffect(() => {
+    // Usamos el 'token' del hook
     if (!token) {
       console.error("No hay token, no se pueden cargar los resultados.");
       return;
     }
-    const fetchResultados = async () => {
+    const fetchResultADOS = async () => {
       try {
-        const token = localStorage.getItem("token");
+        // --- CAMBIO 3: ELIMINAMOS la línea 'const token = localStorage.getItem("token");' ---
         const res = await fetch(`${API_BASE_URL}/profesor/mis-resultados`, {
-          headers: { Authorization: `Bearer ${token}` },
+          headers: { Authorization: `Bearer ${token}` }, // <-- Ahora usa el token del hook
         });
         if (!res.ok) {if (res.status === 401 || res.status === 403) {
             logout();
@@ -122,8 +124,8 @@ const ResponderReportes: React.FC = () => {
         console.error("Error cargando resultados encuesta:", err);
       }
     };
-    fetchResultados();
-  }, [token, logout]);
+    fetchResultADOS();
+  }, [token, logout]); // Las dependencias están correctas
   
   const handleResumenGenerado=(texto: string) => {
     resumenRef.current = texto;
@@ -163,6 +165,7 @@ const ResponderReportes: React.FC = () => {
   };
 
   const handleSubmit = async () => {
+    // Usamos el 'token' del hook
     if (!token) {
       alert("Tu sesión expiró. Por favor, inicia sesión de nuevo.");
       logout();
@@ -200,14 +203,14 @@ const ResponderReportes: React.FC = () => {
     const payload = { respuestas };
 
     try {
-      const token = localStorage.getItem("token");
+      // --- CAMBIO 4: ELIMINAMOS la línea 'const token = localStorage.getItem("token");' ---
       const response = await fetch(
         `${API_BASE_URL}/reportes-abiertas/instancia/${instanciaId}/responder`,
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
+            Authorization: `Bearer ${token}`, // <-- Ahora usa el token del hook
           },
           body: JSON.stringify(payload),
         }
@@ -238,7 +241,7 @@ const ResponderReportes: React.FC = () => {
     }
   };
 
-  // Renderizado 
+  // --- (Renderizado no cambia) ---
   if (reporteCompletado) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[70vh] space-y-6 text-center">
@@ -284,7 +287,6 @@ const ResponderReportes: React.FC = () => {
   }
 
   if (!reporte) {
-    // Si la carga falla (o está cargando), muestra esto
     return <div className="text-center p-10">Cargando reporte...</div>;
   }
 
@@ -364,13 +366,12 @@ const ResponderReportes: React.FC = () => {
         </div>
       ))}
 
-      {/* === 4. AQUÍ ESTABA EL ERROR DE SINTAXIS === */}
       <div className="flex justify-end mt-4">
         <button
           className={`py-2 px-4 rounded font-bold ${
             isEncuestaCompleta && !isSubmitting
               ? "bg-blue-500 hover:bg-blue-700 text-white"
-              : "bg-gray-300 text-gray-500 cursor-not-allowed" // 👈 FALTABA ESTE ':'
+              : "bg-gray-300 text-gray-500 cursor-not-allowed"
           }`}
           disabled={!isEncuestaCompleta || isSubmitting}
           onClick={handleSubmit}

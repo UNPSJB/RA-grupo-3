@@ -89,7 +89,6 @@ const MobileDropdown: React.FC<MobileDropdownProps> = ({ title, children }) => {
 
 interface NavigationMenuProps {}
 
-// Este es el menú para DEPARTAMENTO, pero apunta a las rutas /secretaria/...
 const NavigationMenuDepartamento: React.FC<NavigationMenuProps> = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { logout } = useAuth();
@@ -121,20 +120,25 @@ const NavigationMenuDepartamento: React.FC<NavigationMenuProps> = () => {
 
           {/* --- MENÚ DESKTOP (CAMBIADO) --- */}
           <div className="hidden md:flex md:items-center divide-x divide-gray-200">
-            {/* Este es el menú DEPARTAMENTO, pero apunta a las rutas /secretaria */}
             <Link 
-              to="/secretaria" // <--- RUTA DE SECRETARIA
+              to="/departamento" // <--- CAMBIO
               className="text-gray-700 hover:text-blue-600 px-6 py-2 text-base font-medium"
             >
               Dashboard
             </Link>
             <DesktopDropdown title="Plantillas">
-              <DropdownItem to="/secretaria/plantillas/borradores">Borradores</DropdownItem>
-              <DropdownItem to="/secretaria/plantillas/publicadas">Publicadas</DropdownItem>
-              <DropdownItem to="/secretaria/plantillas/crear">Crear</DropdownItem>
+              {/* --- CAMBIO: Rutas actualizadas --- */}
+              <DropdownItem to="/departamento/plantillas/borradores">Borradores</DropdownItem>
+              <DropdownItem to="/departamento/plantillas/publicadas">Publicadas</DropdownItem>
+              <DropdownItem to="/departamento/plantillas/crear">Crear</DropdownItem>
+            </DesktopDropdown>
+            <DesktopDropdown title="Encuestas">
+              <DropdownItem to="/departamento/modelos">Modelos</DropdownItem>
+              <DropdownItem to="/departamento/estadisticas">Estadisticas</DropdownItem>
+              <DropdownItem to="/departamento/otros">Otros</DropdownItem>
             </DesktopDropdown>
             <DesktopDropdown title="Cuenta">
-              <DropdownItem to="/secretaria/gestion">Gestión</DropdownItem>
+              <DropdownItem to="/departamento/gestion">Gestión</DropdownItem> {/* <--- CAMBIO */}
               <button
                 onClick={logout}
                 className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900"
@@ -154,18 +158,24 @@ const NavigationMenuDepartamento: React.FC<NavigationMenuProps> = () => {
         <div className="md:hidden" id="mobile-menu">
           <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
             <Link 
-              to="/secretaria" // <--- RUTA DE SECRETARIA
+              to="/departamento" // <--- CAMBIO
               className="text-gray-700 hover:text-blue-600 block px-3 py-2 rounded-md text-base font-medium"
             >
               Dashboard
             </Link>
             <MobileDropdown title="Plantillas">
-              <DropdownItem to="/secretaria/plantillas/borradores">Borradores</DropdownItem>
-              <DropdownItem to="/secretaria/plantillas/publicadas">Publicadas</DropdownItem>
-              <DropdownItem to="/secretaria/plantillas/crear">Crear</DropdownItem>
+              {/* --- CAMBIO: Rutas actualizadas --- */}
+              <DropdownItem to="/departamento/plantillas/borradores">Borradores</DropdownItem>
+              <DropdownItem to="/departamento/plantillas/publicadas">Publicadas</DropdownItem>
+              <DropdownItem to="/departamento/plantillas/crear">Crear</DropdownItem>
+            </MobileDropdown>
+            <MobileDropdown title="Encuestas">
+              <DropdownItem to="/departamento/modelos">Modelos</DropdownItem>
+              <DropdownItem to="/departamento/estadisticas">Estadisticas</DropdownItem>
+              <DropdownItem to="/departamento/otros">Otros</DropdownItem>
             </MobileDropdown>
             <MobileDropdown title="Mi Perfil">
-              <DropdownItem to="/secretaria/gestion">Gestión</DropdownItem>
+              <DropdownItem to="/departamento/gestion">Gestión</DropdownItem> {/* <--- CAMBIO */}
               <button
                 onClick={logout}
                 className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900"
