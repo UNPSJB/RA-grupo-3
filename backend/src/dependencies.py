@@ -4,7 +4,8 @@ from sqlalchemy.orm import Session
 from jose import JWTError, jwt
 from src.database import get_db
 
-# --- (CAMBIO) Importa los nuevos modelos de Admin ---
+
+# --- Importa los nuevos modelos Admin ---
 from src.persona.models import (
     Alumno, 
     Profesor, 
@@ -16,7 +17,6 @@ from src.persona.models import (
 from src.auth.services import SECRET_KEY, ALGORITHM
 from src.exceptions import NotAuthenticated, PermissionDenied
 
-# Define el esquema de OAuth2 que apunta a tu endpoint de login
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/token")
 
 async def get_current_user(
@@ -31,7 +31,6 @@ async def get_current_user(
         detail="no se pueden validar las credenciales"
     )
     try:
-        # Decodifica el token
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         username: str = payload.get("sub")
         if username is None:
@@ -39,12 +38,10 @@ async def get_current_user(
     except JWTError:
         raise credentials_exception
 
-    # Busca al usuario en la tabla 'persona'
     user = db.query(Persona).filter(Persona.username == username).first()
     if user is None:
         raise credentials_exception
     
-    # Devuelve el objeto Persona (que SQLAlchemy sabe si es Alumno, Profesor, etc.)
     return user 
 
 async def get_current_alumno(
@@ -70,18 +67,7 @@ async def get_current_profesor(
         raise PermissionDenied(detail="No tienes permisos de profesor")
     return current_user
 
-# --- (NUEVO) Guardia para Admin de Secretaría ---
-async def get_current_admin_secretaria(
-        current_user: Persona = Depends(get_current_user)
-)-> AdminSecretaria:
-    """
-    DEPENDENCIA REAL: verifica que sea un Admin de Secretaría.
-    """
-    if current_user.tipo != TipoPersona.ADMIN_SECRETARIA:
-        raise PermissionDenied(detail="No tienes permisos de Administrador de Secretaría")
-    return current_user
-
-# --- (NUEVO) Guardia para Admin de Departamento ---
+# --- Guardia para Admin de Departamento ---
 async def get_current_admin_departamento(
         current_user: Persona = Depends(get_current_user)
 )-> AdminDepartamento:
@@ -92,4 +78,13 @@ async def get_current_admin_departamento(
         raise PermissionDenied(detail="No tienes permisos de Administrador de Departamento")
     return current_user
 
-# --- (FIN) Ya no hay más funciones simuladas ---
+# --- Guardia para Admin de Secretaría (para el futuro) ---
+async def get_current_admin_secretaria(
+        current_user: Persona = Depends(get_current_user)
+)-> AdminSecretaria:
+    """
+    DEPENDENCIA REAL: verifica que sea un Admin de Secretaría.
+    """
+    if current_user.tipo != TipoPersona.ADMIN_SECRETARIA:
+        raise PermissionDenied(detail="No tienes permisos de Administrador de Secretaría")
+    return current_user

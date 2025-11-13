@@ -6,7 +6,7 @@ from src.persona.models import Persona
 from sqlalchemy.orm import Session
 
 # --- Configuración ---
-SECRET_KEY = "TU_SECRET_KEY_SUPER_SECRETA" # ¡PON ESTO EN UN .env!
+SECRET_KEY = "TU_SECRET_KEY_SUPER_SECRETA" 
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60
 
