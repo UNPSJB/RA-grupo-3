@@ -44,7 +44,7 @@ const ListaEncuestasAlumno: React.FC = () => {
           `${API_BASE_URL}/encuestas-abiertas/mis-instancias-activas`,
           {
             headers: { 
-              "Autorization": `Bearer ${token}`
+              "Authorization": `Bearer ${token}`
             }
           }
         );

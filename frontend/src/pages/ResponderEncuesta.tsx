@@ -82,7 +82,7 @@ const ResponderEncuesta: React.FC = () => {
           `${API_BASE_URL}/encuestas-abiertas/instancia/${instanciaId}/detalles`,
           {
             headers: {
-              "Autorization": `Bearer ${token}`
+              "Authorization": `Bearer ${token}`
             }
           }
         );

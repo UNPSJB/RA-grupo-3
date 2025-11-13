@@ -84,7 +84,7 @@ export function Tabla({ tipo }: TablaProps) {
           `${API_BASE_URL}/admin/instrumentos/${tipo.toLowerCase()}`,
           {
             headers: {
-              "Autorization": `Bearer ${token}`
+              "Authorization": `Bearer ${token}`
             }
           }
         );
