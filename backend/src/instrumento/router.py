@@ -5,9 +5,9 @@ from src.database import get_db
 from src.instrumento import services, schemas
 from src.enumerados import EstadoInstrumento 
 from typing import List
+from src.dependencies import get_current_admin_secretaria
 
-
-router = APIRouter(prefix="/admin/instrumentos", tags=["Admin Instrumentos"])
+router = APIRouter(prefix="/admin/instrumentos", tags=["Admin Instrumentos"], dependencies=[Depends(get_current_admin_secretaria)])
 
 @router.post("/", response_model=schemas.InstrumentoPlantilla)
 def crear_instrumento_plantilla(

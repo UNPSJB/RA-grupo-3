@@ -5,12 +5,13 @@ import { useNavigate } from "react-router-dom";
 // Define la URL de tu API
 const API_BASE_URL = import.meta.env.VITE_API_URL;
 
-// Define la forma de los datos del usuario que sacaremos del token
+// --- CAMBIO: Actualizar la interfaz de roles ---
 interface UserData {
   sub: string; // El username
-  role: "ALUMNO" | "DOCENTE" | "ADMIN"; // Ajusta esto a tus roles
+  role: "ALUMNO" | "DOCENTE" | "ADMIN_SECRETARIA" | "ADMIN_DEPARTAMENTO";
   exp: number;
 }
+// --- FIN DEL CAMBIO ---
 
 // Define lo que nuestro Contexto va a proveer
 interface AuthContextType {
@@ -33,7 +34,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [username, setUsername] = useState<string | null>(null);
   const navigate = useNavigate();
 
-  // Efecto para decodificar el rol cuando el token cambia (o al cargar la app)
+  // Efecto para decodificar el rol cuando el token cambia
   useEffect(() => {
     if (token) {
       try {
@@ -41,13 +42,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const decodedPayload = atob(payloadBase64);
         const userData: UserData = JSON.parse(decodedPayload);
         
-        // Verificar si el token ha expirado
         if (userData.exp * 1000 > Date.now()) {
           setRole(userData.role);
           setUsername(userData.sub);
           localStorage.setItem("token", token);
         } else {
-          // Token expirado
           logout();
         }
       } catch (error) {
@@ -59,9 +58,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setRole(null);
       setUsername(null);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
-  // Función de Login
+  // Función de Login (CON LA CORRECCIÓN DEL BUCLE)
   const login = async (username: string, password: string) => {
     setIsLoading(true);
     
@@ -72,9 +72,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     try {
       const response = await fetch(`${API_BASE_URL}/auth/token`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
         body: formData.toString(),
       });
 
@@ -86,19 +84,21 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const data = await response.json();
       const new_token = data.access_token;
       
-      // Decodificamos el token AQUÍ MISMO solo para la redirección
       let userRole: UserData["role"] = "ALUMNO"; // Default
+      let decodedUsername: string | null = null;
       try {
          const payloadBase64 = new_token.split(".")[1];
          const decodedPayload = atob(payloadBase64);
          const userData: UserData = JSON.parse(decodedPayload);
          userRole = userData.role;
-      } catch (e) {
-         console.error("Error decodificando token en login:", e);
-      }
+         decodedUsername = userData.sub;
+      } catch (e) { console.error("Error decodificando token en login:", e); }
 
-      // Seteamos el token (esto disparará el useEffect)
+      // --- CAMBIO CLAVE: Seteamos TODO antes de navegar ---
       setToken(new_token); 
+      setRole(userRole);
+      setUsername(decodedUsername);
+      // --- FIN DEL CAMBIO ---
 
       // Redirección basada en el rol
       switch (userRole) {
@@ -108,11 +108,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         case "DOCENTE":
           navigate("/profesores");
           break;
-        case "ADMIN":
+        case "ADMIN_SECRETARIA":
           navigate("/secretaria");
           break;
+        case "ADMIN_DEPARTAMENTO":
+          navigate("/departamento");
+          break;
         default:
-          navigate("/"); // Fallback
+          navigate("/");
       }
 
     } catch (error) {
@@ -129,7 +132,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setRole(null);
     setUsername(null);
     localStorage.removeItem("token");
-    navigate("/login"); // Redirige al Login
+    navigate("/login");
   };
 
   return (
@@ -139,7 +142,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   );
 };
 
-// 3. Creamos un "Hook" para usar el contexto fácilmente
+// 3. Hook para usar el contexto
 export const useAuth = (): AuthContextType => {
   const context = useContext(AuthContext);
   if (context === undefined) {

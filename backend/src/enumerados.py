@@ -21,6 +21,8 @@ class EstadoInstrumento(StrEnum):
 class TipoPersona(StrEnum):
     ALUMNO = "ALUMNO"
     DOCENTE = "DOCENTE"
+    ADMIN_SECRETARIA = "ADMIN_SECRETARIA"
+    ADMIN_DEPARTAMENTO = "ADMIN_DEPARTAMENTO"
 
 class TipoPregunta(StrEnum):
     REDACCION = "REDACCION"

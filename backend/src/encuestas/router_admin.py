@@ -5,9 +5,10 @@ from src.database import get_db
 from src.encuestas import models, schemas, services
 from src.enumerados import EstadoInstrumento
 from src.exceptions import NotFound,BadRequest
+from src.dependencies import get_current_admin_secretaria
 
     
-router_gestion = APIRouter(prefix="/admin/gestion-encuestas", tags=["Admin Encuestas - Instancias"])
+router_gestion = APIRouter(prefix="/admin/gestion-encuestas", tags=["Admin Encuestas - Instancias"], dependencies=[Depends(get_current_admin_secretaria)])
 
 @router_gestion.post(
     "/activar",

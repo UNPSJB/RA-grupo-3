@@ -16,6 +16,8 @@ from src.persona.models import TipoPersona # Asumiendo que está definido en per
 from src.models import ModeloBase
 # (Al inicio de seed_data.py, con tus otros imports de 'src')
 from src.auth.services import get_password_hash
+
+from src.persona.models import Persona, Profesor, Alumno, Inscripcion, AdminSecretaria
 # --- CONFIGURACIÓN ---
 # ID que usará tu dependencia get_current_alumno simulada
 ID_ALUMNO_PRUEBA = 2
@@ -87,6 +89,22 @@ def seed_initial_data(db: Session):
          print(f"   - Profesor '{profe_nombre}' (ID: {profe.id}) ya existe.")
 
 
+    admin_nombre = "Admin General"
+    # --- USA LA NUEVA CLASE ---
+    admin_user = db.query(AdminSecretaria).filter(AdminSecretaria.nombre == admin_nombre).first()
+    if not admin_user:
+        print(f"   - Creando admin '{admin_nombre}'...")
+        # --- USA LA NUEVA CLASE ---
+        admin_user = AdminSecretaria( 
+            nombre=admin_nombre,
+            username="admin1",
+            hashed_password=get_password_hash("admin123")
+            )
+        db.add(admin_user)
+        db.commit()
+        db.refresh(admin_user)
+    else:
+         print(f"   - Admin '{admin_nombre}' (ID: {admin_user.id}) ya existe.")
     # --- 4. Crear Alumno de Prueba (si no existe) ---
     alumno_nombre = "Alumno Prueba"
     alumno_prueba = db.query(Alumno).filter(Alumno.id == ID_ALUMNO_PRUEBA).first()
