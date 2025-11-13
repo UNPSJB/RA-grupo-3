@@ -26,6 +26,7 @@ import withLoading from "./components/withLoading.tsx";
 
 import LoginPage from "./pages/LoginPage.tsx"
 import ProtectedRoute from "./auth/ProtectedRoute.tsx";
+import RedirectHome from "./auth/RedirectHome.tsx";
 
 const MainLayout: React.FC = () => {
   const location = useLocation();
@@ -71,8 +72,7 @@ const App: React.FC = () => {
   return (
     <Routes>
       <Route path="/" element={<MainLayout />}>
-        <Route index element={<Home />} />
-        
+        <Route index element={<RedirectHome />} />        
         {/* --- NUEVA RUTA DE LOGIN --- */}
         {/* La ponemos fuera de las rutas protegidas */}
         <Route path="login" element={<LoginPageWithLoading />} /> 

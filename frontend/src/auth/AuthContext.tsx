@@ -61,8 +61,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const login = async (username: string, password: string) => {
     setIsLoading(true);
     
-    // El backend de FastAPI con OAuth2PasswordRequestForm espera
-    // los datos en formato 'application/x-www-form-urlencoded'
     const formData = new URLSearchParams();
     formData.append("username", username);
     formData.append("password", password);
@@ -82,11 +80,40 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
 
       const data = await response.json();
-      setToken(data.access_token);
-      navigate("/"); // Redirige al Home después del login
+      const new_token = data.access_token;
+      
+      // Decodificamos el token AQUÍ MISMO solo para la redirección
+      let userRole: UserData["role"] = "ALUMNO"; // Default
+      try {
+         const payloadBase64 = new_token.split(".")[1];
+         const decodedPayload = atob(payloadBase64);
+         const userData: UserData = JSON.parse(decodedPayload);
+         userRole = userData.role;
+      } catch (e) {
+         console.error("Error decodificando token en login:", e);
+      }
+
+      // Seteamos el token (esto disparará el useEffect)
+      setToken(new_token); 
+
+      // Redirección basada en el rol
+      switch (userRole) {
+        case "ALUMNO":
+          navigate("/alumno");
+          break;
+        case "DOCENTE":
+          navigate("/profesores");
+          break;
+        case "ADMIN":
+          navigate("/secretaria");
+          break;
+        default:
+          navigate("/"); // Fallback
+      }
+
     } catch (error) {
       console.error(error);
-      throw error; // Lanza el error para que el formulario de login lo muestre
+      throw error;
     } finally {
       setIsLoading(false);
     }
