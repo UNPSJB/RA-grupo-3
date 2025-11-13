@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
+import { useAuth } from "../auth/AuthContext";
 
 interface ReporteProfesor {
   instancia_id: number;
@@ -19,8 +20,16 @@ const ListaReportesProfesores: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const { token, logout }= useAuth();
+
   useEffect(() => {
     let isMounted = true;
+
+    if (!token) {
+      setLoading(false);
+      setError("Necesitas iniciar sesión para ver tus reportes pendientes.");
+      return;
+    }
 
     const fetchReportes = async () => {
       setLoading(true);
@@ -29,10 +38,20 @@ const ListaReportesProfesores: React.FC = () => {
 
       try {
         const response = await fetch(
-          `${API_BASE_URL}/encuestas-abiertas/mis-instancias-activas-profesor`
+          `${API_BASE_URL}/encuestas-abiertas/mis-instancias-activas-profesor`,
+          {
+            headers: {
+              "Autorization": `Bearer ${token}`
+            }
+          }
         );
 
         if (!response.ok) {
+          if (response.status === 401 || response.status === 403) {
+            setError("Tu sesión expiró. Por favor, inicia sesión de nuevo.");
+            logout();
+            return;
+          }
           let errorDetail = `Error ${response.status}: ${response.statusText}`;
           try {
             const errorData = await response.json();
@@ -67,7 +86,7 @@ const ListaReportesProfesores: React.FC = () => {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [token, logout]);
 
   return (
     <div className="p-6 max-w-4xl mx-auto bg-gray-50 min-h-screen">
