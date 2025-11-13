@@ -1,7 +1,54 @@
-from fastapi import Depends, HTTPException
+from fastapi import Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
+from jose import JWTError, jwt
 from src.database import get_db
-from src.persona.models import Alumno, Profesor
+from src.persona.models import Alumno, Profesor, Persona, TipoPersona
+from src.auth.services import SECRET_KEY, ALGORITHM # Importa desde tu auth.py
+from src.exceptions import NotAuthenticated, PermissionDenied
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/token")
+
+async def get_current_user(
+        token: str = Depends(oauth2_scheme),
+        db: Session = Depends(get_db)
+) -> Persona:
+    credentials_exception = NotAuthenticated(
+        detail="no se pueden validar las credenciales"
+    )
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        username: str = payload.get("sub")
+        if username is None:
+            raise credentials_exception
+    except JWTError:
+        raise credentials_exception
+
+    user = db.query(Persona).filter(Persona.username == username).first()
+    if user is None:
+        raise credentials_exception
+    return user 
+
+async def get_current_alumno(
+        current_user: Persona = Depends(get_current_user)
+) -> Alumno:
+    "DEPENDENCIA REAL: obtiene el usuario logueado y verifica que sea un Alumno"
+    if current_user.tipo != TipoPersona.ALUMNO:
+        raise PermissionDenied(detail="No tienes permisos de Alumno")
+    return current_user
+
+
+async def get_current_profesor(
+        current_user: Persona = Depends(get_current_user)
+)-> Profesor:
+    # DEPENDENCIA REAL: este obtiene un usuario y verifica que sea profesor
+    if current_user.tipo != TipoPersona.DOCENTE:
+        raise PermissionDenied(detail="No tienes permisos de profesor")
+    return current_user
+
+#  TODO CREAR EL GET CURRENT ADMIN PARA DEPARTAMENTO
+
+
 
 async def get_current_alumno(db: Session = Depends(get_db)) -> Alumno:
     """

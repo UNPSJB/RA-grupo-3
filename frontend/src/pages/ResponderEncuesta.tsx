@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
+import { useAuth } from "../auth/AuthContext.tsx"
+
 // --- Interfaces (sin cambios) ---
 interface Opcion {
   id: number;
@@ -32,6 +34,7 @@ const ResponderEncuesta: React.FC = () => {
   const { instanciaId } = useParams<{ instanciaId: string }>();
   const navigate = useNavigate();
   const location = useLocation();
+  const {token, logout} = useAuth();
 
   const { materiaNombre, profesorNombre } = (location.state as {
     materiaNombre?: string;
@@ -54,6 +57,13 @@ const ResponderEncuesta: React.FC = () => {
 
   useEffect(() => {
     let isMounted = true;
+    
+    if (!token) {
+      setLoading(false);
+      setMensaje("Necesitas iniciar sesión para responder la encuesta.");
+      return;
+    }
+
     const fetchPlantillaParaInstancia = async () => {
       setLoading(true);
       setMensaje(null);
@@ -69,10 +79,21 @@ const ResponderEncuesta: React.FC = () => {
 
       try {
         const response = await fetch(
-          `${API_BASE_URL}/encuestas-abiertas/instancia/${instanciaId}/detalles`
+          `${API_BASE_URL}/encuestas-abiertas/instancia/${instanciaId}/detalles`,
+          {
+            headers: {
+              "Autorization": `Bearer ${token}`
+            }
+          }
         );
 
         if (!response.ok) {
+
+          if (response.status === 401 || response.status === 403) {
+            logout();
+            return;
+          }
+
           let errorDetail = `Error ${response.status}: ${response.statusText}`;
           try {
             const errorData = await response.json();
@@ -113,7 +134,7 @@ const ResponderEncuesta: React.FC = () => {
     return () => {
       isMounted = false;
     };
-  }, [instanciaId]);
+  }, [instanciaId, token, logout]);
 
   const manejarCambio = (preguntaId: number, valor: string | number) => {
     setRespuestas((prev) => ({ ...prev, [preguntaId]: valor }));
@@ -126,6 +147,13 @@ const ResponderEncuesta: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!token) {
+      setMensaje("Tu sesión expiró. Por favor, inicia sesión de nuevo.");
+      logout();
+      return;
+    }
+
     if (!instanciaId || !plantilla) return;
 
     setErrorPreguntaId(null);
@@ -178,7 +206,10 @@ const ResponderEncuesta: React.FC = () => {
         `${API_BASE_URL}/encuestas-abiertas/instancia/${instanciaId}/responder`,
         {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { 
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+          },
           body: JSON.stringify(payload),
         }
       );
