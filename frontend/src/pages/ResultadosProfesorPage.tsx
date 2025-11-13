@@ -15,9 +15,12 @@ const ResultadosProfesorPage: React.FC = () => {
   );
   const navigate = useNavigate();
 
-  const { token, logout} = useAuth();
+  // Obtenemos el token y logout desde el Contexto (¡esto es lo correcto!)
+  const { token, logout } = useAuth();
 
+  // --- CAMBIO DENTRO DE useEffect ---
   useEffect(() => {
+    // 1. Si no hay token del contexto, no hacemos nada. (Esto está bien)
     if (!token) {
       setLoading(false);
       setError("Necesitas iniciar sesión para ver tus resultados.");
@@ -28,15 +31,19 @@ const ResultadosProfesorPage: React.FC = () => {
       setLoading(true);
       setError(null);
       try {
-        const token = localStorage.getItem("token"); // <-- Asegúrate de tener un token
+        // 2. ¡ELIMINAMOS ESTA LÍNEA! No la necesitamos.
+        // const token = localStorage.getItem("token"); 
+
         const response = await fetch(
           `${API_BASE_URL}/profesor/mis-resultados`,
           {
             headers: {
+              // 3. Usamos el 'token' del hook useAuth()
               Authorization: `Bearer ${token}`,
             },
           }
         );
+        
         if (!response.ok) {
           if (response.status === 401 || response.status === 403) {
             setError("Tu sesión expiró. Por favor, inicia sesión de nuevo.");
@@ -56,7 +63,8 @@ const ResultadosProfesorPage: React.FC = () => {
       }
     };
     fetchResultados();
-  }, [token, logout]);
+  }, [token, logout]); // 4. Las dependencias son correctas.
+  // --- FIN DEL CAMBIO ---
 
   const selectedResultado = useMemo(() => {
     if (!selectedCursadaId) return null;
@@ -101,20 +109,16 @@ const ResultadosProfesorPage: React.FC = () => {
         </button>
         <CursadaResultados resultado={selectedResultado} />
 
-        {/* === 🔽 AQUÍ ESTÁ EL BOTÓN CORREGIDO 🔽 === */}
-        {/* Solo muestra el botón SI existe un informe pendiente */}
         {selectedResultado.informe_curricular_instancia_id && (
           <div className="flex justify-end pt-4 border-t border-gray-200">
             <button
               onClick={() =>
                 navigate(
-                  // Navega directamente a la pantalla de responder
                   `/profesores/reportes/instancia/${selectedResultado.informe_curricular_instancia_id}/responder`
                 )
               }
               className="bg-green-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-green-700 transition duration-150 ease-in-out focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 shadow-md hover:shadow-lg"
             >
-              {/* Este es el texto que querías */}
               Crear Informe de Actividad Curricular
             </button>
           </div>
@@ -124,6 +128,7 @@ const ResultadosProfesorPage: React.FC = () => {
   }
 
   // --- VISTA DE LISTA DE RESULTADOS ---
+  // (Aquí está el mensaje que recuerdas)
   return (
     <div className="p-6 max-w-4xl mx-auto">
       {resultados.length === 0 && (

@@ -6,8 +6,6 @@ import EncuestasPage from "./pages/EncuestasPage.tsx";
 import CuentaPage from "./pages/CuentaPage.tsx";
 import ResponderEncuesta from "./pages/ResponderEncuesta.tsx";
 import CrearPlantilla from "./pages/CrearPlantilla.tsx";
-// Home ya no se usa, RedirectHome toma su lugar
-// import Home from "./pages/Home.tsx"; 
 import PanelAdmin from "./pages/panelAdmin.tsx";
 import ListaEncuestasAlumnos from "./pages/ListaEncuestasAlumnos.tsx";
 import VerEncuestas from "./pages/VerEncuestas.tsx";
@@ -32,6 +30,7 @@ const MainLayout: React.FC = () => {
   const showNavMenu = location.pathname.startsWith("/alumno");
   const showSecretariaNavMenu = location.pathname.startsWith("/secretaria");
   const showProfesorNavMenu = location.pathname.startsWith("/profesores");
+  // --- CAMBIO: El menú de Departamento se muestra en la ruta /departamento ---
   const showDepartamentoNavMenu = location.pathname.startsWith("/departamento");
 
   return (
@@ -41,6 +40,7 @@ const MainLayout: React.FC = () => {
         {showNavMenu && <NavigationMenu />}
         {showSecretariaNavMenu && <SecretariaAcademicaNavigationMenu />}
         {showProfesorNavMenu && <ProfesorNavigationMenu />}
+        {/* --- CAMBIO: Renderizar el menú de Departamento --- */}
         {showDepartamentoNavMenu && <DepartamentoNavigationMenu />}
       </header>
       <main className="app-main flex-grow  bg-[#f1f5f9] ">
@@ -75,26 +75,24 @@ const App: React.FC = () => {
         <Route path="login" element={<LoginPageWithLoading />} /> 
         <Route path="privacidad" element={<PoliticasPrivacidadWithLoading />} />
 
-        {/* --- Rutas de Secretaria (Protegidas) --- */}
-        {/* --- CAMBIO: Actualiza el rol permitido --- */}
+        {/* --- Rutas de Secretaria (Futuro) --- */}
         <Route element={<ProtectedRoute allowedRoles={["ADMIN_SECRETARIA"]} />}>
           <Route path="secretaria" element={<Outlet />}>
-            <Route path="modelos" element={<SecretariaModelosWithLoading />} />
-            <Route path="gestion" element={<CuentaPageWithLoading />} />
-            <Route index element={<PanelAdminWithLoading />} />
-            <Route path="plantillas" element={<Outlet />}>
-              <Route index element={<Navigate to="borradores" replace />} />
-              <Route path="borradores" element={<EncuestasPageWithLoading />} />
-              <Route path="publicadas" element={<EncuestasPageWithLoading />} />
-              <Route path="crear" element={<CrearPlantillaWithLoading />} />
-            </Route>
+            {/* --- CAMBIO: Ahora tiene el texto placeholder --- */}
+            <Route index element={
+              <div className="p-6 text-xl">Panel de Administración de Secretaría</div>
+            } /> 
+             <Route path="modelos" element={<div className="p-6">Página de Modelos (Secretaría)</div>} />
+             <Route path="estadisticas" element={<div className="p-6">Página de Estadísticas (Secretaría)</div>} />
+             <Route path="otros" element={<div className="p-6">Página de Otros (Secretaría)</div>} />
+             <Route path="gestion" element={<GestionCuentasWithLoading />} />
           </Route>
         </Route>
-        {/* --- FIN DEL CAMBIO --- */}
 
 
         {/* --- Rutas de Alumno (Protegidas) --- */}
         <Route element={<ProtectedRoute allowedRoles={["ALUMNO"]} />}>
+          {/* ... (sin cambios) ... */}
           <Route path="alumno" element={<Outlet />}>
             <Route index element={<ListaEncuestasAlumnosWithLoading />} />
             <Route path="gestion" element={<GestionCuentasWithLoading />} />
@@ -111,6 +109,7 @@ const App: React.FC = () => {
 
         {/* --- Rutas de Profesor (Protegidas) --- */}
         <Route element={<ProtectedRoute allowedRoles={["DOCENTE"]} />}>
+           {/* ... (sin cambios) ... */}
           <Route path="profesores" element={<Outlet />}>
             <Route index element={<ProfesoresHomeWithLoading />} />
             <Route path="reportes" element={<Outlet />}>
@@ -127,18 +126,19 @@ const App: React.FC = () => {
           </Route>
         </Route>
         
-        {/* --- AÑADE LA NUEVA RUTA DE DEPARTAMENTO (Protegida) --- */}
+        {/* --- Rutas de Departamento (AHORA con los componentes reales) --- */}
         <Route element={<ProtectedRoute allowedRoles={["ADMIN_DEPARTAMENTO"]} />}>
           <Route path="departamento" element={<Outlet />}>
-            <Route index element={
-              <div className="p-6 text-xl">Panel de Administración de Departamento</div>
-            } /> 
-             {/* Las rutas de 'NavigationMenuDepartamento' (ej. /departamento/modelos)
-                 puedes añadirlas aquí cuando tengas las páginas listas. */}
-             <Route path="modelos" element={<div className="p-6">Página de Modelos (Departamento)</div>} />
-             <Route path="estadisticas" element={<div className="p-6">Página de Estadísticas (Departamento)</div>} />
-             <Route path="otros" element={<div className="p-6">Página de Otros (Departamento)</div>} />
-             <Route path="gestion" element={<GestionCuentasWithLoading />} />
+            {/* --- CAMBIO: Rutas movidas desde /secretaria --- */}
+            <Route path="modelos" element={<SecretariaModelosWithLoading />} />
+            <Route path="gestion" element={<CuentaPageWithLoading />} />
+            <Route index element={<PanelAdminWithLoading />} />
+            <Route path="plantillas" element={<Outlet />}>
+              <Route index element={<Navigate to="borradores" replace />} />
+              <Route path="borradores" element={<EncuestasPageWithLoading />} />
+              <Route path="publicadas" element={<EncuestasPageWithLoading />} />
+              <Route path="crear" element={<CrearPlantillaWithLoading />} />
+            </Route>
           </Route>
         </Route>
         

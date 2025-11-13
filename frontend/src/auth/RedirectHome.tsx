@@ -14,20 +14,19 @@ const RedirectHome: React.FC = () => {
     return <Navigate to="/login" replace />;
   }
 
-  // --- CAMBIO: Actualizar el switch de redirección ---
+  // --- CAMBIO: Lógica de redirección (RENOMBRAR) ---
   switch (role) {
     case "ALUMNO":
       return <Navigate to="/alumno" replace />;
     case "DOCENTE":
       return <Navigate to="/profesores" replace />;
-    case "ADMIN_SECRETARIA": // <--- RENOMBRADO
-      return <Navigate to="/secretaria" replace />;
-    case "ADMIN_DEPARTAMENTO": // <--- AÑADIDO
+    case "ADMIN_DEPARTAMENTO": // <--- Ruta principal de admin_dpto
       return <Navigate to="/departamento" replace />;
+    case "ADMIN_SECRETARIA": // <--- Ruta futura para admin_secretaria
+      return <Navigate to="/secretaria" replace />;
     default:
       return <Navigate to="/login" replace />;
   }
-  // --- FIN DEL CAMBIO ---
 };
 
 export default RedirectHome;

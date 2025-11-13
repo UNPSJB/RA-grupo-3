@@ -5,7 +5,7 @@ import { useNavigate } from "react-router-dom";
 // Define la URL de tu API
 const API_BASE_URL = import.meta.env.VITE_API_URL;
 
-// --- CAMBIO: Actualizar la interfaz de roles ---
+// --- CAMBIO 1: Actualizar la interfaz de roles ---
 interface UserData {
   sub: string; // El username
   role: "ALUMNO" | "DOCENTE" | "ADMIN_SECRETARIA" | "ADMIN_DEPARTAMENTO";
@@ -58,10 +58,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setRole(null);
       setUsername(null);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
-  // Función de Login (CON LA CORRECCIÓN DEL BUCLE)
+  // Función de Login
   const login = async (username: string, password: string) => {
     setIsLoading(true);
     
@@ -100,7 +99,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setUsername(decodedUsername);
       // --- FIN DEL CAMBIO ---
 
-      // Redirección basada en el rol
+      // --- Lógica de redirección ---
       switch (userRole) {
         case "ALUMNO":
           navigate("/alumno");
@@ -108,11 +107,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         case "DOCENTE":
           navigate("/profesores");
           break;
-        case "ADMIN_SECRETARIA":
-          navigate("/secretaria");
+        case "ADMIN_DEPARTAMENTO": // <--- Ruta principal de admin_dpto
+          navigate("/departamento"); 
           break;
-        case "ADMIN_DEPARTAMENTO":
-          navigate("/departamento");
+        case "ADMIN_SECRETARIA": // <--- Ruta de admin_secretaria TODO
+          navigate("/secretaria"); 
           break;
         default:
           navigate("/");
@@ -142,7 +141,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   );
 };
 
-// 3. Hook para usar el contexto
+// --- Hook para usar el contexto ---
 export const useAuth = (): AuthContextType => {
   const context = useContext(AuthContext);
   if (context === undefined) {

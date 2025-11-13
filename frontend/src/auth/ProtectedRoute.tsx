@@ -3,11 +3,10 @@ import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "./AuthContext";
 import Spinner from "../components/Spinner";
 
-// --- CAMBIO: Actualizar los roles permitidos ---
+// --- Actualizar los roles permitidos ---
 interface ProtectedRouteProps {
   allowedRoles: Array<"ALUMNO" | "DOCENTE" | "ADMIN_SECRETARIA" | "ADMIN_DEPARTAMENTO">;
 }
-// --- FIN DEL CAMBIO ---
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ allowedRoles }) => {
   const { token, role, isLoading } = useAuth();
@@ -22,11 +21,11 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ allowedRoles }) => {
   }
 
   if (!role || !allowedRoles.includes(role)) {
-    // Falla la autorización y redirige a la raíz
+    // Falla la autorización y redirige a la raiz
     return <Navigate to="/" state={{ from: location }} replace />;
   }
 
-  // Éxito: tiene token y el rol es correcto
+  // caso exito ... tiene token y el rol es correcto
   return <Outlet />;
 };
 

@@ -188,7 +188,6 @@ const NavigationMenuProfesores: React.FC<NavigationMenuProps> = () => {
             >
               Dashboard
             </Link>
-
             <Link
               to="/profesores/resultados"
               className="text-gray-700 hover:text-blue-600 px-6 py-2 text-base font-medium"
@@ -241,6 +240,7 @@ const NavigationMenuProfesores: React.FC<NavigationMenuProps> = () => {
             >
               Resultados Encuestas
             </Link>
+            
 
             {/* Menú de Usuario (Móvil) */}
             <MobileDropdown title="Mi Perfil">
