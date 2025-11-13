@@ -1,6 +1,7 @@
 import React from "react";
 import Spinner from "./Spinner";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../auth/AuthContext";
 
 type TipoInstrumento =
   | "ENCUESTA"
@@ -43,6 +44,8 @@ export function Tabla({ tipo }: TablaProps) {
   const [tituloAsc, setTituloAsc] = React.useState(true);
   const [descripcionAsc, setDescripcionAsc] = React.useState(true);
 
+  const { token, logout } = useAuth();
+
   const sortByTitulo = () => {
     const sorted = [...data].sort((a, b) =>
       tituloAsc
@@ -64,17 +67,33 @@ export function Tabla({ tipo }: TablaProps) {
   };
 
   React.useEffect(() => {
-    console.log(`Tabla useEffect ejecutándose para tipo: ${tipo}`);
     let isMounted = true;
+
+    if (!token){
+      setLoading(false);
+      setError("Necesitas iniciar sesion como administrador.");
+      return;
+    }
+
     const loadPlantillas = async () => {
       setLoading(true);
       setError(null);
       setData([]);
       try {
         const response = await fetch(
-          `${API_BASE_URL}/admin/instrumentos/${tipo.toLowerCase()}`
+          `${API_BASE_URL}/admin/instrumentos/${tipo.toLowerCase()}`,
+          {
+            headers: {
+              "Autorization": `Bearer ${token}`
+            }
+          }
         );
         if (!response.ok) {
+          if (response.status === 401 || response.status === 403) {
+            setError("Tu sesión expiró o no tienes permisos de administrador.");
+            logout();
+            return;
+          }
           let errorDetail = response.statusText;
           try {
             const errorData = await response.json();
@@ -95,16 +114,32 @@ export function Tabla({ tipo }: TablaProps) {
     return () => {
       isMounted = false;
     };
-  }, [tipo]);
+  }, [tipo, token, logout]);
 
   const handlePublicar = async (plantillaId: number) => {
     setError(null);
+
+    if (!token){
+      setError("Tu sesion ha expirado.");
+      logout();
+      return;
+    }
     try {
       const response = await fetch(
         `${API_BASE_URL}/admin/instrumentos/${plantillaId}/publicar`,
-        { method: "PATCH" }
+        { method: "PATCH",
+          headers: {
+            "Authorization": `Bearer ${token}`
+          }
+        }
       );
-      if (!response.ok) throw new Error("Falló la publicación");
+      if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+            setError("Tu sesión expiró o no tienes permisos.");
+            logout();
+         }
+        throw new Error("Falló la publicación");
+        }
       setData((prevData) =>
         prevData.filter((plantilla) => plantilla.id !== plantillaId)
       );
@@ -122,14 +157,30 @@ export function Tabla({ tipo }: TablaProps) {
     ) {
       return;
     }
+
+    if (!token) {
+        setError("Tu sesión ha expirado.");
+        logout();
+        return;
+    }
+
     try {
       const response = await fetch(
         `${API_BASE_URL}/admin/instrumentos/${plantillaId}`,
         {
           method: "DELETE",
+          headers: { 
+            "Authorization": `Bearer ${token}`
+          }
         }
       );
-      if (!response.ok) throw new Error("Falló la eliminación");
+      if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+            setError("Tu sesión expiró o no tienes permisos.");
+            logout();
+         }
+        throw new Error("Falló la eliminación");
+      }
       setData((prevData) =>
         prevData.filter((plantilla) => plantilla.id !== plantillaId)
       );

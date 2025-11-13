@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-
-
 import { Link } from 'react-router-dom';
+import { useAuth } from '../auth/AuthContext';
 
 // --- Componente de Item Desplegable ---
 // Se usa dentro de los menús
@@ -122,6 +121,7 @@ interface NavigationMenuProps {}
 
 const NavigationMenu: React.FC<NavigationMenuProps> = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const { logout } = useAuth();
 
   return (
     // Contenedor principal del menú.
@@ -164,7 +164,13 @@ const NavigationMenu: React.FC<NavigationMenuProps> = () => {
             {/* Ejemplo de Menú de Usuario */}
             <DesktopDropdown title="Mi Perfil">
               <DropdownItem to="/alumno/gestion">Gestión</DropdownItem>
-              <DropdownItem to="/">Cerrar Sesión</DropdownItem>
+              <button
+                onClick={logout}
+                className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900"
+                role="menuitem"
+              >
+                Cerrar Sesión
+              </button>
             </DesktopDropdown>
 
           </div>
@@ -187,7 +193,13 @@ const NavigationMenu: React.FC<NavigationMenuProps> = () => {
             {/* Ejemplo de Menú de Usuario (Móvil) */}
             <MobileDropdown title="Mi Perfil">
               <DropdownItem to="/alumno/gestion">Gestión</DropdownItem>
-              <DropdownItem to="/">Cerrar Sesión</DropdownItem>
+              <button
+                onClick={logout}
+                className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900"
+                role="menuitem"
+              >
+                Cerrar Sesión
+              </button>
             </MobileDropdown>
 
           </div>

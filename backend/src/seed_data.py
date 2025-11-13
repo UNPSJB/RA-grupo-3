@@ -14,7 +14,8 @@ from src.enumerados import TipoCuatrimestre, TipoInstrumento
 from src.persona.models import TipoPersona # Asumiendo que está definido en persona.models
 # Importa ModeloBase para crear tablas si no existen (opcional)
 from src.models import ModeloBase
-
+# (Al inicio de seed_data.py, con tus otros imports de 'src')
+from src.auth.services import get_password_hash
 # --- CONFIGURACIÓN ---
 # ID que usará tu dependencia get_current_alumno simulada
 ID_ALUMNO_PRUEBA = 2
@@ -74,7 +75,11 @@ def seed_initial_data(db: Session):
     profe = db.query(Profesor).filter(Profesor.nombre == profe_nombre).first()
     if not profe:
         print(f"   - Creando profesor '{profe_nombre}'...")
-        profe = Profesor(nombre=profe_nombre)
+        profe = Profesor(
+            nombre=profe_nombre,
+            username="profesor1",
+            hashed_password=get_password_hash("profesor123")
+            )
         db.add(profe)
         db.commit()
         db.refresh(profe)
@@ -105,7 +110,12 @@ def seed_initial_data(db: Session):
         else:
             print(f"   - Creando alumno de prueba '{alumno_nombre}' con ID={ID_ALUMNO_PRUEBA}...")
             try:
-                alumno_prueba = Alumno(id=ID_ALUMNO_PRUEBA, nombre=alumno_nombre)
+                alumno_prueba = Alumno(
+                    id=ID_ALUMNO_PRUEBA,
+                    nombre=alumno_nombre,
+                    username="alumno1",
+                    hashed_password=get_password_hash("alumno123")
+                    )
                 db.add(alumno_prueba)
                 db.commit()
                 db.refresh(alumno_prueba)

@@ -19,7 +19,7 @@ class Persona(ModeloBase):
     
     #   Campos nuevos para la gestion de usuario y contraseña
     username: Mapped[str] = mapped_column(String(100), unique=True, index=True, nullable=False)
-    password: Mapped[str] = mapped_column(String, nullable=False)
+    hashed_password: Mapped[str] = mapped_column(String, nullable=False)
     
     __mapper_args__ = {
         "polymorphic_identity": "persona", 
