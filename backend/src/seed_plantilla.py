@@ -46,7 +46,7 @@ opciones_ciclo_superior = ["Muy Bueno / Muy satisfactorio (4)", "Bueno / Satisfa
 opciones_a1 = ["Una", "Más de una"]
 opciones_a2_a3 = ["Entre 0 y 50%", "Más 50%"]
 opciones_a4 = ["Escasos", "Suficientes"]
-
+opciones_porcentaje = ["0% - 25%", "26% - 50%", "51% - 75%", "76% - 100%"]
 
 # --- Funciones Helper (sin cambios) ---
 
@@ -297,39 +297,44 @@ def seed_plantillas_data(db: Session):
         db.commit()
         print("   - Plantilla 'Encuesta Alumnos - Ciclo Superior' completada.")
 
+# --- 3. PLANTILLA: INFORME DE ACTIVIDAD CURRICULAR (CORREGIDO) ---
 
-        # --- 3. PLANTILLA: INFORME DE ACTIVIDAD CURRICULAR (Sin cambios) ---
-        
         plantilla_informe_curricular = find_or_create_plantilla(
-            db=db,
-            titulo="Informe de Actividad Curricular (ANEXO I RCDFI 283/2015)",
-            descripcion="Informe de cátedra a ser completado por el docente responsable al finalizar el ciclo lectivo.",
-            tipo=TipoInstrumento.ACTIVIDAD_CURRICULAR,
-            anexo="Anexo I (RCDFI N° 283/2015)",
-            estado=EstadoInstrumento.PUBLICADA
-        )
+        db=db,
+        titulo="Informe de Actividad Curricular (ANEXO I RCDFI 283/2015)",
+        descripcion="Informe de cátedra a ser completado por el docente responsable al finalizar el ciclo lectivo.",
+        tipo=TipoInstrumento.ACTIVIDAD_CURRICULAR,
+        anexo="Anexo I (RCDFI N° 283/2015)",
+        estado=EstadoInstrumento.PUBLICADA
+    )
 
         seccion_1_inf = find_or_create_seccion(db, plantilla_informe_curricular, "1. Necesidades de Equipamiento y Bibliografía")
-        crear_pregunta_redaccion(db, seccion_1_inf, "1. Indique necesidades de equipamiento e insumos (Verifique si lo solicitado en años anteriores ya se encuentra disponible).")
-        crear_pregunta_redaccion(db, seccion_1_inf, "1. Indique necesidades de actualización de bibliografía (Verifique si lo solicitado en años anteriores ya se encuentra disponible).")
+        crear_pregunta_redaccion(db, seccion_1_inf, "Indique necesidades de equipamiento e insumos (Verifique si lo solicitado en años anteriores ya se encuentra disponible).")
+        crear_pregunta_redaccion(db, seccion_1_inf, "Indique necesidades de actualización de bibliografía (Verifique si lo solicitado en años anteriores ya se encuentra disponible).")
 
         seccion_2_inf = find_or_create_seccion(db, plantilla_informe_curricular, "2. Desarrollo de la Actividad Curricular")
-        crear_pregunta_redaccion(db, seccion_2_inf, "2. Porcentaje de horas de clases TEÓRICAS dictadas (respecto del total establecido en el plan de estudios) y justificación si es necesario.")
-        # ... (el resto de las preguntas de redacción del informe) ...
-        crear_pregunta_redaccion(db, seccion_2_inf, "2.A. ¿Se logró desarrollar la totalidad de los contenidos planificados? Consigne el porcentaje de contenidos planificados alcanzados. En caso de ser necesario mencione las estrategias que planificará para el próximo dictado a fin de ajustar el cronograma.")
-        crear_pregunta_redaccion(db, seccion_2_inf, "2.B. Consigne los valores que figuran en el reporte de la Encuesta a alumnos correspondientes a: B: 'Comunicación y desarrollo de la asignatura', C: 'Metodología', D: 'Evaluacion', E: 'Actuación de los miembros de la Cátedra (teoría y práctica)'.", origen_datos="resultados_encuesta")
-        crear_pregunta_redaccion(db, seccion_2_inf, "2.C. Resumen de la reflexión sobre la práctica docente y nuevas estrategias a implementar (cambio de cronograma, modificación del proceso de evaluación, etc.).")
+        crear_pregunta_mc(db, seccion_2_inf, "2. Porcentaje de horas de clases TEÓRICAS dictadas", opciones_porcentaje)
+        crear_pregunta_mc(db, seccion_2_inf, "2. Porcentaje de horas de clases PRÁCTICAS dictadas", opciones_porcentaje)
+
+        crear_pregunta_mc(db, seccion_2_inf, "2.A. Porcentaje de contenidos planificados alcanzados", opciones_porcentaje)
+        # --- PREGUNTA 2.B (Correcta) ---
+        crear_pregunta_redaccion(db, seccion_2_inf, "2.B. Consigne los valores que figuran en el reporte de la Encuesta a alumnos (B, C, D, E) y emita un juicio de valor u observaciones si lo considera oportuno.", origen_datos="resultados_encuesta")
+        
+        # --- PREGUNTA 2.C (Corregida, dividida en dos como en el DOC) ---
+        crear_pregunta_redaccion(db, seccion_2_inf, "2.C. ¿Cuáles fueron los principales aspectos positivos y los obstáculos que se manifestaron durante el desarrollo del espacio curricular? (Centrándose en Proceso Enseñanza, Proceso de aprendizaje y Estrategias a implementar).")
+        crear_pregunta_redaccion(db, seccion_2_inf, "2.C. (Continuación) Escriba un resumen de la reflexión sobre la práctica docente que se realizó en la reunión de equipo de cátedra. En caso de corresponder, consigne nuevas estrategias a implementar (cambio de cronograma, modificación del proceso de evaluación, etc.).")
+
 
         seccion_3_inf = find_or_create_seccion(db, plantilla_informe_curricular, "3. Actividades del Equipo de Cátedra")
-        crear_pregunta_redaccion(db, seccion_3_inf, "3. Actividades de Capacitación, Investigación, Extensión y Gestión - PROFESORES.")
-        # ... (el resto de las preguntas de redacción del informe) ...
-        crear_pregunta_redaccion(db, seccion_3_inf, "3. Observaciones y comentarios pertinentes sobre las actividades del equipo.")
+        # --- PREGUNTA 3 (Corregida, unificada) ---
+        crear_pregunta_redaccion(db, seccion_3_inf, "3. Consigne las actividades de Capacitación, Investigación, Extensión y Gestión desarrolladas por los integrantes de la cátedra (Profesores, JTP y Auxiliares). Explicite las observaciones y comentarios que considere pertinentes.")
         
         seccion_4_inf = find_or_create_seccion(db, plantilla_informe_curricular, "4. Desempeño de Auxiliares")
+        # --- PREGUNTA 4 (Correcta) ---
         crear_pregunta_redaccion(db, seccion_4_inf, "4. Valore el desempeño de los JTP/Auxiliares (E, MB, B, R, I) y justifique (Art. 14 Reglamento Académico).")
         
         db.commit()
-        print("   - Plantilla 'Informe de Actividad Curricular' completada.")
+        print("   - Plantilla 'Informe de Actividad Curricular' (CORREGIDA) completada.")
         
         print("\n¡Seeding de plantillas finalizado exitosamente!")
         

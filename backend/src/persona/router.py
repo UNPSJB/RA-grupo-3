@@ -8,8 +8,7 @@ from src.persona.models import Profesor
 from src.encuestas import services as profesor_services 
 from src.exceptions import BadRequest
 from src.encuestas import schemas as encuestas_schemas
-from src.instrumento import services as services_instrumento
-from src.instrumento import schemas as schemas_instrumento
+
 
 router = APIRouter(prefix="/alumnos", tags=["Alumnos"])
 
