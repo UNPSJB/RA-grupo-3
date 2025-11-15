@@ -15,6 +15,8 @@ from src.materia.router import router as materia_router
 from src.instrumento.router import router as instrumento_router
 from src.instrumento.router_public import router as instrumento_public_router
 from src.encuestas.router_profesor import router_profesores as encuesta_profesor_router
+from src.auth.router import router as auth_router
+from src.account.router import router as account_router
 from fastapi.middleware.cors import CORSMiddleware
 
 load_dotenv()
@@ -32,12 +34,11 @@ async def db_creation_lifespan(app: FastAPI):
 app = FastAPI(lifespan=db_creation_lifespan)  # Sin root_path
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"], 
+allow_origins=["http://localhost:5173", "http://127.0.0.1:5173", "http://localhost:5174"], 
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
 # Rutas
 
 app.include_router(router_gestion)
@@ -51,4 +52,5 @@ app.include_router(router_profesor)
 app.include_router(instrumento_router)
 app.include_router(instrumento_public_router)
 app.include_router(encuesta_profesor_router)
-    
+app.include_router(auth_router)
+app.include_router(account_router)

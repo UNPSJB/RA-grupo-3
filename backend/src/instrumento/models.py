@@ -14,6 +14,7 @@ if TYPE_CHECKING:
     from src.materia.models import Cursada
     from src.encuestas.models import EncuestaInstancia
     from src.persona.models import Profesor
+    from src.materia.models import Departamento
 
 class InstrumentoBase(ModeloBase): 
     __tablename__ = "instrumento_base"
@@ -138,4 +139,8 @@ class InformeSinteticoInstancia(InstrumentoInstancia):
     actividades_curriculares_instancia: Mapped[List["ActividadCurricularInstancia"]] = relationship(
         back_populates="informe_sintetico_instancia",       
     foreign_keys="[ActividadCurricularInstancia.informe_sintetico_instancia_id]"
+    )
+    departamento_id: Mapped[int | None] = mapped_column(ForeignKey("departamentos.id"), nullable=True)
+    departamento: Mapped["Departamento"] = relationship(
+        back_populates="informes_sinteticos"
     )

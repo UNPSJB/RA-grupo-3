@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 import ResumenEncuesta from "../components/estadisticas/ResumenEncuesta";
+import { useAuth } from "../auth/AuthContext";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
 
@@ -74,8 +75,12 @@ const ResponderReportes: React.FC = () => {
   const [errorPreguntaId, setErrorPreguntaId] = useState<number | null>(null);
 
   const [resumenParaCopiar, setResumenParaCopiar] = useState<string>("");
-
+  const { token, logout } = useAuth();
   useEffect(() => {
+    if (!token) {
+      console.error("No hay token, no se puede cargar el reporte.");
+      return;
+    }
     let isMounted = true;
     const fetchReporte = async () => {
       setLoading(true);
@@ -90,15 +95,18 @@ const ResponderReportes: React.FC = () => {
         return;
       }
       try {
-        const token = localStorage.getItem("token");
+        // --- CAMBIO 2: ELIMINAMOS la línea 'const token = localStorage.getItem("token");' ---
         const response = await fetch(
           `${API_BASE_URL}/encuestas-abiertas/reporte/instancia/${instanciaId}/detalles`,
           {
-            headers: { Authorization: `Bearer ${token}` },
+            headers: { Authorization: `Bearer ${token}` }, // <-- Ahora usa el token del hook
           }
         );
 
         if (!response.ok) {
+          if (response.status === 401 || response.status === 403) {
+            logout();
+          }
           const errData = await response.json();
           if (response.status === 404) {
             setMensaje("El reporte no se encontró o ya no está activo.");
@@ -133,16 +141,26 @@ const ResponderReportes: React.FC = () => {
     return () => {
       isMounted = false;
     };
-  }, [instanciaId]);
+  }, [instanciaId, token, logout]);
 
   useEffect(() => {
+    // Usamos el 'token' del hook
+    if (!token) {
+      console.error("No hay token, no se pueden cargar los resultados.");
+      return;
+    }
     const fetchResultados = async () => {
       try {
-        const token = localStorage.getItem("token");
+        // --- CAMBIO 3: ELIMINAMOS la línea 'const token = localStorage.getItem("token");' ---
         const res = await fetch(`${API_BASE_URL}/profesor/mis-resultados`, {
-          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+          headers: { Authorization: `Bearer ${token}` }, // <-- Ahora usa el token del hook
         });
-        if (!res.ok) throw new Error("Error al obtener resultados de encuesta");
+        if (!res.ok) {
+          if (res.status === 401 || res.status === 403) {
+            logout();
+          }
+          throw new Error("Error al obtener resultados de encuesta");
+        }
         const json = await res.json();
 
         const first = Array.isArray(json) && json.length > 0 ? json[0] : null;
@@ -152,7 +170,7 @@ const ResponderReportes: React.FC = () => {
       }
     };
     fetchResultados();
-  }, []);
+  }, [token, logout]);
 
   const handleChange = (preguntaId: number, value: string | number) => {
     setRespuestas((prev) => ({
@@ -174,6 +192,12 @@ const ResponderReportes: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!token) {
+      alert("Tu sesión expiró. Por favor, inicia sesión de nuevo.");
+      logout();
+      return;
+    }
+
     if (!instanciaId || !plantilla) return;
 
     setErrorPreguntaId(null);
@@ -237,20 +261,26 @@ const ResponderReportes: React.FC = () => {
     const payload = { respuestas: payloadRespuestas };
 
     try {
-      const token = localStorage.getItem("token");
+      // --- CAMBIO 4: ELIMINAMOS la línea 'const token = localStorage.getItem("token");' ---
       const response = await fetch(
         `${API_BASE_URL}/reportes-abiertas/instancia/${instanciaId}/responder`,
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
+            Authorization: `Bearer ${token}`, // <-- Ahora usa el token del hook
           },
           body: JSON.stringify(payload),
         }
       );
 
-      if (!response.ok) {
+      if (response.ok) {
+        setReporteCompletado(true);
+      } else {
+        if (response.status === 401 || response.status === 403) {
+          logout();
+          return;
+        }
         const errorData = await response.json();
         console.error("Error al enviar el reporte:", errorData);
         throw new Error(

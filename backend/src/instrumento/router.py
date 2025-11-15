@@ -1,14 +1,22 @@
-# src/instrumento/router_admin.py
+# src/instrumento/router.py
 from fastapi import APIRouter, Depends,  HTTPException, status
 from sqlalchemy.orm import Session
 from src.database import get_db
 from src.instrumento import services, schemas
 from src.enumerados import EstadoInstrumento 
 from typing import List
+# --- CAMBIO: Importar el guardia de Departamento ---
+from src.dependencies import get_current_admin_departamento
 
 
-router = APIRouter(prefix="/admin/instrumentos", tags=["Admin Instrumentos"])
+router = APIRouter(
+    prefix="/admin/instrumentos", 
+    tags=["Admin Instrumentos"],
+    # --- CAMBIO: Proteger con el guardia de Departamento ---
+    dependencies=[Depends(get_current_admin_departamento)]
+)
 
+# ... (Pega el resto de tus rutas @router.post, @router.get, etc. aquí) ...
 @router.post("/", response_model=schemas.InstrumentoPlantilla)
 def crear_instrumento_plantilla(
     plantilla_data: schemas.InstrumentoPlantillaCreate,

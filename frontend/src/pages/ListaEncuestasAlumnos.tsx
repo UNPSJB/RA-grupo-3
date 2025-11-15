@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
+import { useAuth } from "../auth/AuthContext";
 
 interface EncuestaActivaAlumno {
   instancia_id: number;
@@ -22,8 +23,16 @@ const ListaEncuestasAlumno: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const { token, logout } = useAuth();
+  
   useEffect(() => {
     let isMounted = true;
+
+    if (!token){
+      setLoading(false);
+      setError("Necesitas iniciar sesion para ver tus encuestas.")
+      return;
+    }
 
     const fetchEncuestasActivas = async () => {
       setLoading(true);
@@ -32,10 +41,20 @@ const ListaEncuestasAlumno: React.FC = () => {
 
       try {
         const response = await fetch(
-          `${API_BASE_URL}/encuestas-abiertas/mis-instancias-activas`
+          `${API_BASE_URL}/encuestas-abiertas/mis-instancias-activas`,
+          {
+            headers: { 
+              "Authorization": `Bearer ${token}` 
+            }
+          }
         );
 
         if (!response.ok) {
+          if (response.status === 401 || response.status === 403) {
+            setError("Tu sesión expiró. Por favor, inicia sesión de nuevo.");
+            logout(); // limpia la sesión y redirige al login
+            return; 
+          }
           let errorDetail = `Error ${response.status}: ${response.statusText}`;
           try {
             const errorData = await response.json();
@@ -70,14 +89,11 @@ const ListaEncuestasAlumno: React.FC = () => {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [token, logout]);
 
   return (
     <div className="p-6 max-w-4xl mx-auto bg-#f1f5f9 min-h-screen">
-      {/* <h2 className="text-3xl font-bold mb-8 text-gray-800 text-center border-b pb-4 border-gray-300">
-        Encuestas
-      </h2> */}
-
+      {/* ... (Tu JSX no cambia) ... */}
       {loading && (
         <div className="text-center py-10 text-gray-500 animate-pulse">
           <p>Cargando encuestas disponibles...</p>

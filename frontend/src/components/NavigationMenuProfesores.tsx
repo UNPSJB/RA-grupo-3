@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
+import { useAuth } from '../auth/AuthContext';
 
 interface DropdownItemProps {
   to: string;
@@ -125,7 +126,8 @@ interface NavigationMenuProps {}
 
 const NavigationMenuProfesores: React.FC<NavigationMenuProps> = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-
+  const { logout } = useAuth();
+  
   return (
     // Contenedor principal del menú.
     <nav className="bg-white shadow-md w-full border-t border-gray-200">
@@ -186,7 +188,6 @@ const NavigationMenuProfesores: React.FC<NavigationMenuProps> = () => {
             >
               Dashboard
             </Link>
-
             <Link
               to="/profesores/resultados"
               className="text-gray-700 hover:text-blue-600 px-6 py-2 text-base font-medium"
@@ -197,7 +198,13 @@ const NavigationMenuProfesores: React.FC<NavigationMenuProps> = () => {
             {/* Menú de Cuenta*/}
             <DesktopDropdown title="Cuenta">
               <DropdownItem to="/profesores/gestion">Gestión</DropdownItem>
-              <DropdownItem to="/">Cerrar Sesión</DropdownItem>
+              <button
+                onClick={logout}
+                className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900"
+                role="menuitem"
+              >
+                Cerrar Sesión
+              </button>
             </DesktopDropdown>
           </div>
         </div>
@@ -233,11 +240,18 @@ const NavigationMenuProfesores: React.FC<NavigationMenuProps> = () => {
             >
               Resultados Encuestas
             </Link>
+            
 
             {/* Menú de Usuario (Móvil) */}
             <MobileDropdown title="Mi Perfil">
               <DropdownItem to="/profesores/gestion">Gestión</DropdownItem>
-              <DropdownItem to="/">Cerrar Sesión</DropdownItem>
+              <button
+                onClick={logout}
+                className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900"
+                role="menuitem"
+              >
+                Cerrar Sesión
+              </button>
             </MobileDropdown>
           </div>
         </div>

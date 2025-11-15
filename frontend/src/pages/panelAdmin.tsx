@@ -1,22 +1,23 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 
-
-
 type Shortcut = {
   label: string;
   path: string;
   active: boolean;
 };
 
+// --- CAMBIO: Actualizar las rutas a /departamento ---
 const shortcuts: Shortcut[] = [
-  { label: "Listado de Plantillas", path: "/secretaria/plantillas/borradores", active: true },
-  { label: "Crear Plantilla", path: "/secretaria/plantillas/crear", active: true },
-  { label: "Estadísticas", path: "/secretaria/estadisticas", active: false },
-  { label: "Cuenta", path: "/cuenta", active: true },
+  { label: "Listado de Plantillas", path: "/departamento/plantillas/borradores", active: true },
+  { label: "Crear Plantilla", path: "/departamento/plantillas/crear", active: true },
+  { label: "Estadísticas", path: "/departamento/estadisticas", active: false },
+  { label: "Cuenta", path: "/cuenta", active: true }, // Esto parece un bug, quizás deba ser /departamento/gestion
   { label: "Resultados de Encuestas", path: "/resultados-profesor", active: false },
-  { label: "Gestion de Cuentas", path: "/secretaria/gestion", active: false },
+  { label: "Gestion de Cuentas", path: "/departamento/gestion", active: true },
 ];
+// --- FIN DEL CAMBIO ---
+
 const PanelAdmin: React.FC = () => {
   const navigate = useNavigate();
 

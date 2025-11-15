@@ -6,9 +6,9 @@ class TipoCuatrimestre(StrEnum):
         ANUAL = "anual"
 
 class EstadoInstancia(StrEnum):
-    PENDIENTE = "pendiente" # Creada, pero aún no en fecha_inicio
-    ACTIVA = "activa"     # Alumnos pueden responder
-    CERRADA = "cerrada"   # Ya pasó fecha_fin, se pueden ver resultados
+    PENDIENTE = "pendiente"
+    ACTIVA = "activa"
+    CERRADA = "cerrada"
 
 class EstadoInforme(StrEnum):
     PENDIENTE = "pendiente"
@@ -21,6 +21,8 @@ class EstadoInstrumento(StrEnum):
 class TipoPersona(StrEnum):
     ALUMNO = "ALUMNO"
     DOCENTE = "DOCENTE"
+    ADMIN_DEPARTAMENTO = "ADMIN_DEPARTAMENTO" # Rol principal de admin
+    ADMIN_SECRETARIA = "ADMIN_SECRETARIA"     # Rol futuro
 
 class TipoPregunta(StrEnum):
     REDACCION = "REDACCION"

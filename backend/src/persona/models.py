@@ -1,11 +1,12 @@
 from __future__ import annotations
 from src.materia.models import Cursada
-from sqlalchemy import Integer, String,Enum, ForeignKey,Boolean
+from sqlalchemy import Integer, String, Enum, ForeignKey, Boolean
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from src.models import ModeloBase
 from src.enumerados import TipoPersona
 from src.instrumento.models import ActividadCurricularInstancia 
 from typing import TYPE_CHECKING
+
 if TYPE_CHECKING:
     from src.materia.models import Cursada
     from src.instrumento.models import ActividadCurricularInstancia
@@ -15,10 +16,17 @@ class Persona(ModeloBase):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     nombre: Mapped[str] = mapped_column(String(100), nullable=False)
     tipo: Mapped[TipoPersona] = mapped_column(Enum(TipoPersona), nullable=False)
+    
+    #   Campos nuevos para la gestion de usuario y contraseña
+    username: Mapped[str] = mapped_column(String(100), unique=True, index=True, nullable=False)
+    hashed_password: Mapped[str] = mapped_column(String, nullable=False)
+    
     __mapper_args__ = {
         "polymorphic_identity": "persona", 
         "polymorphic_on": "tipo",
     }
+
+
 
 class Profesor(Persona):
     __tablename__ = "profesor"
@@ -67,3 +75,20 @@ class Alumno(Persona):
         back_populates="alumno",
         cascade="all, delete-orphan",
     )
+
+# --- AÑADIR ESTAS CLASES ---
+class AdminDepartamento(Persona):
+    __tablename__ = "admin_departamento"
+    
+    id: Mapped[int] = mapped_column(ForeignKey("persona.id"), primary_key=True)
+    __mapper_args__ = {
+        "polymorphic_identity": TipoPersona.ADMIN_DEPARTAMENTO,
+    }
+
+class AdminSecretaria(Persona):
+    __tablename__ = "admin_secretaria"
+    
+    id: Mapped[int] = mapped_column(ForeignKey("persona.id"), primary_key=True)
+    __mapper_args__ = {
+        "polymorphic_identity": TipoPersona.ADMIN_SECRETARIA,
+    }

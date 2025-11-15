@@ -1,20 +1,36 @@
 from __future__ import annotations
 from datetime import datetime
 from src.encuestas.models import EncuestaInstancia
-from sqlalchemy import Integer, String, DateTime,ForeignKey
+# --- CAMBIO: Añadir Table y Column ---
+from sqlalchemy import Integer, String, DateTime, ForeignKey, Table, Column
 from sqlalchemy import Enum as SQLEnum
 from sqlalchemy.sql import func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from src.models import ModeloBase
 from src.enumerados import TipoCuatrimestre
-from src.instrumento.models import ActividadCurricularInstancia
-from typing import TYPE_CHECKING
+# --- CAMBIO: Añadir InformeSinteticoInstancia ---
+from src.instrumento.models import ActividadCurricularInstancia, InformeSinteticoInstancia
+from typing import TYPE_CHECKING, List # <-- AÑADIR List
+
 if TYPE_CHECKING:
     from src.encuestas.models import EncuestaInstancia
-    from src.instrumento.models import ActividadCurricularInstancia
+    from src.instrumento.models import ActividadCurricularInstancia, InformeSinteticoInstancia
     from src.persona.models import Profesor, Inscripcion
+    # --- AÑADIR ESTAS ---
+    from src.materia.models import Materia, Departamento, Carrera, Sede
 
-    
+
+# --- CAMBIO CRÍTICO: Definir la tabla de asociación ANTES de las clases que la usan ---
+# Tabla de asociación Many-to-Many entre Carrera y Materia
+carrera_materia_association = Table(
+    "carrera_materia_association",
+    ModeloBase.metadata,
+    Column("carrera_id", Integer, ForeignKey("carreras.id"), primary_key=True),
+    Column("materia_id", Integer, ForeignKey("materia.id"), primary_key=True),
+)
+# --- FIN DEL CAMBIO ---
+
+
 class Materia(ModeloBase):
     __tablename__ = "materia"
 
@@ -33,6 +49,12 @@ class Materia(ModeloBase):
 
     cursadas: Mapped[list["Cursada"]] = relationship(
         back_populates="materia", cascade="all, delete-orphan"
+    )
+
+    # --- CAMBIO: Esta relación ahora encuentra la tabla de asociación ---
+    carreras: Mapped[List["Carrera"]] = relationship(
+        secondary=carrera_materia_association,
+        back_populates="materias"
     )
 
 
@@ -77,3 +99,50 @@ class Cursada(ModeloBase):
         back_populates="cursada"
     )
 
+
+# --- NUEVAS ENTIDADES ---
+
+class Sede(ModeloBase):
+    __tablename__ = "sedes"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    localidad: Mapped[str] = mapped_column(String(100), nullable=False, unique=True)
+    
+    # Relación inversa: Una Sede tiene muchos Departamentos
+    departamentos: Mapped[List["Departamento"]] = relationship(back_populates="sede")
+
+
+class Departamento(ModeloBase):
+    __tablename__ = "departamentos"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    nombre: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)
+
+    # Relación: Un Departamento pertenece a una Sede (Muchos a Uno)
+    sede_id: Mapped[int] = mapped_column(ForeignKey("sedes.id"), nullable=False)
+    sede: Mapped["Sede"] = relationship(back_populates="departamentos")
+
+    # Relación inversa: Un Departamento tiene muchas Carreras (Uno a Muchos)
+    carreras: Mapped[List["Carrera"]] = relationship(back_populates="departamento")
+    
+    # Relación inversa: Un Departamento genera muchos Informes Sintéticos (Uno a Muchos)
+    informes_sinteticos: Mapped[List["InformeSinteticoInstancia"]] = relationship(
+        back_populates="departamento"
+    )
+
+
+class Carrera(ModeloBase):
+    __tablename__ = "carreras"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    nombre: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)
+    
+    # Relación: Una Carrera pertenece a un Departamento (Muchos a Uno)
+    departamento_id: Mapped[int] = mapped_column(ForeignKey("departamentos.id"), nullable=False)
+    departamento: Mapped["Departamento"] = relationship(back_populates="carreras")
+
+    # Relación: Una Carrera tiene muchas Materias (Muchos a Muchos)
+    materias: Mapped[List["Materia"]] = relationship(
+        secondary=carrera_materia_association,
+        back_populates="carreras"
+    )
