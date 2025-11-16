@@ -1,16 +1,16 @@
 from __future__ import annotations
 from datetime import datetime
 from src.encuestas.models import EncuestaInstancia
-# --- CAMBIO: Añadir Table y Column ---
+
 from sqlalchemy import Integer, String, DateTime, ForeignKey, Table, Column
 from sqlalchemy import Enum as SQLEnum
 from sqlalchemy.sql import func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from src.models import ModeloBase
 from src.enumerados import TipoCuatrimestre
-# --- CAMBIO: Añadir InformeSinteticoInstancia ---
+
 from src.instrumento.models import ActividadCurricularInstancia, InformeSinteticoInstancia
-from typing import TYPE_CHECKING, List # <-- AÑADIR List
+from typing import TYPE_CHECKING, List
 
 if TYPE_CHECKING:
     from src.encuestas.models import EncuestaInstancia
@@ -20,7 +20,6 @@ if TYPE_CHECKING:
     from src.materia.models import Materia, Departamento, Carrera, Sede
 
 
-# --- CAMBIO CRÍTICO: Definir la tabla de asociación ANTES de las clases que la usan ---
 # Tabla de asociación Many-to-Many entre Carrera y Materia
 carrera_materia_association = Table(
     "carrera_materia_association",
