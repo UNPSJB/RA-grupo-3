@@ -3,11 +3,12 @@ from src.instrumento import models, schemas
 from src.enumerados import TipoInstrumento,EstadoInstrumento,EstadoInforme
 from src.encuestas.models import Encuesta
 from typing import List
-from sqlalchemy import select
+from sqlalchemy import select, func
 from fastapi import HTTPException
 from src.seccion.models import Seccion
 from src.instrumento.models import ActividadCurricularInstancia
-from src.pregunta.models import Pregunta, PreguntaMultipleChoice
+from src.pregunta.models import  PreguntaMultipleChoice
+
 
 def get_instrumento_completo(db: Session, instrumento_id: int) -> models.InstrumentoBase:
     instrumento = db.query(models.InstrumentoBase).options(
@@ -62,8 +63,10 @@ def listar_plantillas_por_estado(
 ) -> List[models.InstrumentoBase]:
     
 
+    estado_string = estado.value
+
     statement = select(models.InstrumentoBase).where(
-        models.InstrumentoBase.estado == estado
+        func.lower(models.InstrumentoBase.estado) == func.lower(estado_string)
     ).order_by(models.InstrumentoBase.id.desc())
     
     return db.scalars(statement).all()

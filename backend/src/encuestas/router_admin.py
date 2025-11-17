@@ -3,18 +3,17 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.encoders import jsonable_encoder
 from sqlalchemy.orm import Session
 from src.database import get_db
-from src.encuestas import models, schemas, services
-from src.enumerados import EstadoInstrumento
+from src.encuestas import  schemas, services
 from src.exceptions import NotFound,BadRequest
-# --- CAMBIO: Importar el guardia de Departamento ---
-from src.dependencies import get_current_admin_departamento
+# --- CAMBIO: Importar el guardia de Secretaria ---
+from src.dependencies import get_current_admin_secretaria
 
     
 router_gestion = APIRouter(
     prefix="/admin/gestion-encuestas", 
     tags=["Admin Encuestas - Instancias"],
-    # --- CAMBIO: Proteger con el guardia de Departamento ---
-    dependencies=[Depends(get_current_admin_departamento)]
+    # --- CAMBIO: Proteger con el guardia de Secretaria ---
+    dependencies=[Depends(get_current_admin_secretaria)]
 )
 
 # ... (Pega el resto de tus rutas @router_gestion.post, @router_gestion.patch aquí) ...

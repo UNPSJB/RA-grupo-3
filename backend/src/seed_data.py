@@ -165,6 +165,20 @@ def seed_initial_data(db: Session):
     # --- 7. Crear Usuarios de Prueba (MODIFICADO) ---
     print("   - Verificando Usuarios de Prueba...")
     
+        # Alumno
+    alumno_nombre = "Alumno Prueba Ingeniería"
+    alumno_prueba = db.query(Alumno).filter(Alumno.username == "alumno1").first()
+    if not alumno_prueba:
+        print(f"     + Creando alumno de prueba '{alumno_nombre}'...")
+        alumno_prueba = Alumno(
+            nombre=alumno_nombre,
+            username="alumno1",
+            hashed_password=get_password_hash("alumno123")
+        )
+        db.add(alumno_prueba)
+    else:
+        print(f"     - Alumno de prueba '{alumno_nombre}' (ID: {alumno_prueba.id}) ya existe.")
+
     # Profesor
     profe_nombre = "Profesor Prueba Ingeniería"
     profe = db.query(Profesor).filter(Profesor.username == "profesor1").first()
@@ -179,33 +193,34 @@ def seed_initial_data(db: Session):
     else:
          print(f"     - Profesor '{profe_nombre}' (ID: {profe.id}) ya existe.")
 
-    # Admin Departamento
+    # Departamento
     admin_nombre = "Admin Informática"
-    admin_user = db.query(AdminDepartamento).filter(AdminDepartamento.username == "admin1").first()
+    admin_user = db.query(AdminDepartamento).filter(AdminDepartamento.username == "departamento1").first()
     if not admin_user:
         print(f"     + Creando admin DEPARTAMENTO '{admin_nombre}'...")
         admin_user = AdminDepartamento( 
             nombre=admin_nombre,
-            username="admin1",
-            hashed_password=get_password_hash("admin123")
+            username="departamento1",
+            hashed_password=get_password_hash("departamento123")
             )
         db.add(admin_user)
     else:
          print(f"     - Admin DEPARTAMENTO '{admin_nombre}' (ID: {admin_user.id}) ya existe.")
          
-    # Alumno
-    alumno_nombre = "Alumno Prueba Ingeniería"
-    alumno_prueba = db.query(Alumno).filter(Alumno.username == "alumno1").first()
-    if not alumno_prueba:
-        print(f"     + Creando alumno de prueba '{alumno_nombre}'...")
-        alumno_prueba = Alumno(
-            nombre=alumno_nombre,
-            username="alumno1",
-            hashed_password=get_password_hash("alumno123")
-        )
-        db.add(alumno_prueba)
+
+    # Secretaria
+    secretaria_nombre = "Secretaria Informática"
+    secretaria_user = db.query(AdminSecretaria).filter(AdminSecretaria.username == "secretaria1").first()
+    if not secretaria_user:
+        print(f"     + Creando secretaria  '{secretaria_nombre}'...")
+        secretaria_user = AdminSecretaria( 
+            nombre=secretaria_nombre,
+            username="secretaria1",
+            hashed_password=get_password_hash("secretaria123")
+            )
+        db.add(secretaria_user)
     else:
-        print(f"     - Alumno de prueba '{alumno_nombre}' (ID: {alumno_prueba.id}) ya existe.")
+         print(f"     - secretaria '{secretaria_nombre}' (ID: {secretaria_user.id}) ya existe.")    
 
     db.commit()
     
@@ -213,6 +228,8 @@ def seed_initial_data(db: Session):
     db.refresh(profe)
     db.refresh(admin_user)
     db.refresh(alumno_prueba)
+    if secretaria_user:
+        db.refresh(secretaria_user)
 
     if not alumno_prueba:
         print("   - ERROR CRÍTICO: No se pudo obtener/crear el alumno de prueba.")

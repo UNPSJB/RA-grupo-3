@@ -51,12 +51,27 @@ opciones_porcentaje = ["0% - 25%", "26% - 50%", "51% - 75%", "76% - 100%"]
 # --- Funciones Helper (sin cambios) ---
 
 def find_or_create_plantilla(db: Session, titulo: str, descripcion: str, tipo: TipoInstrumento, anexo: str, estado: EstadoInstrumento) -> InstrumentoBase:
-    """Busca una plantilla por título. Si no existe, la crea."""
+    """Busca una plantilla por título. Si no existe, la crea.
+    SI EXISTE, VERIFICA Y ACTUALIZA SU ESTADO."""
+    
     stmt = select(InstrumentoBase).where(InstrumentoBase.titulo == titulo)
     plantilla = db.scalars(stmt).first()
     
     if plantilla:
         print(f"   - Plantilla encontrada: '{titulo}' (ID: {plantilla.id})")
+        
+        # --- INICIO DE LA CORRECCIÓN ---
+        # Comparamos los estados (ignorando may/min)
+        estado_correcto = estado.value # ej: "publicada"
+        
+        if plantilla.estado is None or plantilla.estado.lower() != estado_correcto.lower():
+            print(f"     -> ACTUALIZANDO estado de '{plantilla.estado}' a '{estado_correcto}'")
+            plantilla.estado = estado_correcto
+            db.add(plantilla)
+            db.commit()
+            db.refresh(plantilla)
+        # --- FIN DE LA CORRECCIÓN ---
+            
         return plantilla
     
     print(f"   + Creando plantilla: '{titulo}'")
@@ -66,14 +81,14 @@ def find_or_create_plantilla(db: Session, titulo: str, descripcion: str, tipo: T
             titulo=titulo,
             descripcion=descripcion,
             anexo=anexo,
-            estado=estado
+            estado=estado.value # Usamos .value para asignar el string
         )
     elif tipo == TipoInstrumento.ACTIVIDAD_CURRICULAR:
         plantilla = ActividadCurricular(
             titulo=titulo,
             descripcion=descripcion,
             anexo=anexo,
-            estado=estado
+            estado=estado.value # Usamos .value para asignar el string
         )
     else:
         raise ValueError(f"Tipo de instrumento no manejado: {tipo}")

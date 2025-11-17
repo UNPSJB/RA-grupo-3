@@ -21,8 +21,8 @@ class EstadoInstrumento(StrEnum):
 class TipoPersona(StrEnum):
     ALUMNO = "ALUMNO"
     DOCENTE = "DOCENTE"
-    ADMIN_DEPARTAMENTO = "ADMIN_DEPARTAMENTO" # Rol principal de admin
-    ADMIN_SECRETARIA = "ADMIN_SECRETARIA"     # Rol futuro
+    ADMIN_DEPARTAMENTO = "ADMIN_DEPARTAMENTO" 
+    ADMIN_SECRETARIA = "ADMIN_SECRETARIA"     
 
 class TipoPregunta(StrEnum):
     REDACCION = "REDACCION"
