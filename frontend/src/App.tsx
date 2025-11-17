@@ -23,6 +23,7 @@ import withLoading from "./components/withLoading.tsx";
 import LoginPage from "./pages/LoginPage.tsx"
 import ProtectedRoute from "./auth/ProtectedRoute.tsx";
 import RedirectHome from "./auth/RedirectHome.tsx";
+import DepartamentoEstadisticas from "./pages/DepartamentoEstadisticas.tsx";
 
 // ... (MainLayout y withLoading HOCs no cambian)
 const MainLayout: React.FC = () => {
@@ -65,7 +66,7 @@ const ProfesoresHomeWithLoading = withLoading(ProfesoresHome);
 const ResultadosProfesorPageWithLoading = withLoading(ResultadosProfesorPage);
 const ResponderReportesWithLoading = withLoading(ResponderReportes);
 const LoginPageWithLoading = withLoading(LoginPage); 
-
+const DepartamentoEstadisticasWithLoading = withLoading(DepartamentoEstadisticas);
 
 const App: React.FC = () => {
   return (
@@ -133,6 +134,7 @@ const App: React.FC = () => {
             <Route path="modelos" element={<SecretariaModelosWithLoading />} />
             <Route path="gestion" element={<CuentaPageWithLoading />} />
             <Route index element={<PanelAdminWithLoading />} />
+            <Route path="estadisticas" element={<DepartamentoEstadisticasWithLoading />} />
             <Route path="plantillas" element={<Outlet />}>
               <Route index element={<Navigate to="borradores" replace />} />
               <Route path="borradores" element={<EncuestasPageWithLoading />} />
