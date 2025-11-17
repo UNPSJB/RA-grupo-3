@@ -81,6 +81,8 @@ class AdminDepartamento(Persona):
     __tablename__ = "admin_departamento"
     
     id: Mapped[int] = mapped_column(ForeignKey("persona.id"), primary_key=True)
+    departamento_id: Mapped[int | None] = mapped_column(ForeignKey("departamentos.id"), nullable=True, unique=True)
+    departamento: Mapped["Departamento"] = relationship()
     __mapper_args__ = {
         "polymorphic_identity": TipoPersona.ADMIN_DEPARTAMENTO,
     }

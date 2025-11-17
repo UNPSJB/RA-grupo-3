@@ -33,3 +33,30 @@ export interface ResultadoCursada {
   resultados_por_seccion: ResultadoSeccion[];
   informe_curricular_instancia_id?: number | null;
 }
+
+export interface PlantillaBase {
+  id: number;
+  titulo: string;
+  descripcion: string;
+  tipo: string; 
+  estado: string; 
+  anexo?: string | null;
+}
+
+export interface InformeSinteticoList {
+  id: number;
+  fecha_inicio: string; // Las fechas llegan como strings ISO
+  fecha_fin?: string | null;
+  tipo: string;
+  plantilla: PlantillaBase;
+  departamento_id: number;
+  cantidad_reportes: number;
+}
+
+export interface InformeSinteticoResultado {
+  informe_id: number;
+  departamento_nombre: string;
+  fecha_generacion: string; // Las fechas llegan como strings ISO
+  cantidad_total_reportes: number;
+  resultados_por_seccion: ResultadoSeccion[];
+}

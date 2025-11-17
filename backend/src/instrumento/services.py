@@ -1,13 +1,33 @@
-from sqlalchemy.orm import Session, selectinload
+from sqlalchemy.orm import Session, selectinload, joinedload
 from src.instrumento import models, schemas
 from src.enumerados import TipoInstrumento,EstadoInstrumento,EstadoInforme
 from src.encuestas.models import Encuesta
 from typing import List
-from sqlalchemy import select
+from sqlalchemy import select, func
 from fastapi import HTTPException
 from src.seccion.models import Seccion
 from src.instrumento.models import ActividadCurricularInstancia
 from src.pregunta.models import Pregunta, PreguntaMultipleChoice
+from src.instrumento.models import (
+    ActividadCurricularInstancia, 
+    InformeSintetico, 
+    InformeSinteticoInstancia
+)
+from src.pregunta.models import Pregunta, PreguntaMultipleChoice
+from src.persona.models import AdminDepartamento
+from src.materia.models import Departamento, Carrera, Materia, Cursada
+from src.exceptions import BadRequest, NotFound
+
+import collections
+from src.encuestas.schemas import (
+    ResultadoSeccion, 
+    ResultadoPregunta, 
+    ResultadoOpcion, 
+    RespuestaTextoItem,
+    InformeSinteticoResultado # <-- nuevo schema
+)
+from src.respuesta.models import Respuesta, RespuestaSet, RespuestaMultipleChoice, RespuestaRedaccion
+from src.enumerados import TipoPregunta
 
 def get_instrumento_completo(db: Session, instrumento_id: int) -> models.InstrumentoBase:
     instrumento = db.query(models.InstrumentoBase).options(
@@ -153,3 +173,245 @@ def get_plantilla_para_instancia_reporte(
 
     # Devuelve la plantilla (InstrumentoBase) completa
     return instancia.actividad_curricular
+
+def _obtener_plantilla_sintetico_activa(db: Session) -> int:
+    stmt = select(InformeSintetico.id).where(
+        InformeSintetico.estado == EstadoInstrumento.PUBLICADA,
+        InformeSintetico.tipo == TipoInstrumento.INFORME_SINTETICO
+    ).limit(1)
+
+    plantilla_id = db.execute(stmt).scalar_one_or_none()
+
+    if not plantilla_id:
+        raise BadRequest(detail="No se encontro una plantilla de Informe Sintetico")
+    
+    return(plantilla_id)
+
+def crear_informe_sintetico_para_departamento(
+        db: Session,
+        admin_dpto: AdminDepartamento,
+) -> models.InformeSinteticoInstancia:
+    
+    if not admin_dpto.departamento_id:
+        raise BadRequest(detail="El usuario admin no esta vinculado a ningun departamento")
+    
+    try:
+        plantilla_sintetico_id = _obtener_plantilla_sintetico_activa(db)
+    except BadRequest as e:
+        raise e
+    
+    departamento = db.get(Departamento, admin_dpto.departamento_id)
+    if not departamento:
+        raise NotFound(detail=f"Departamento ID {admin_dpto.departamento_id} no encontrado.")
+    
+    print(f"Iniciando sintesis para el Dpto: {departamento.nombre}")
+
+    cursada_ids_query = (
+        select(Cursada.id)
+        .join(Materia, Cursada.materia_id == Materia.id)
+        .join(Materia.carreras)
+        .filter(Carrera.departamento_id == departamento.id)
+    )
+    cursada_ids = db.execute(cursada_ids_query).scalars().all()
+    if not cursada_ids:
+        raise NotFound(detail="No se encontraron cursadas para este departamento.")
+    
+    reportes_a_sintetizar = db.scalars(
+        select(ActividadCurricularInstancia)
+        .where(
+            ActividadCurricularInstancia.cursada_id.in_(cursada_ids),
+            ActividadCurricularInstancia.estado == EstadoInforme.COMPLETADO,
+            ActividadCurricularInstancia.informe_sintetico_instancia_id == None
+        )
+    ).all()
+
+    if not reportes_a_sintetizar:
+        raise NotFound(detail="No hay nuevos reportes de profesores completados para sintetizar.")
+
+    print(f"   + Se encontraron {len(reportes_a_sintetizar)} reportes de profesores para sintetizar.")
+
+    nuevo_informe_sintetico = InformeSinteticoInstancia(
+        informe_sintetico_id=plantilla_sintetico_id,
+        departamento_id=departamento.id,
+        tipo=TipoInstrumento.INFORME_SINTETICO
+    )
+
+    nuevo_informe_sintetico.actividades_curriculares_instancia = reportes_a_sintetizar
+    
+    db.add(nuevo_informe_sintetico)
+    
+    try:
+        db.commit()
+        db.refresh(nuevo_informe_sintetico)
+        print(f"   -> Creado Informe Sintético ID: {nuevo_informe_sintetico.id}")
+        return nuevo_informe_sintetico
+    except Exception as e:
+        db.rollback()
+        print(f"ERROR al guardar el Informe Sintético: {e}")
+        raise BadRequest(detail=f"Error al guardar el informe: {e}")
+    
+
+
+# ACA EMPIEZA TODOOOOOO
+
+def listar_informes_sinteticos_por_departamento(
+    db: Session, 
+    admin_depto: AdminDepartamento
+) -> List[schemas.InformeSinteticoInstanciaList]:
+    """
+    Lista todos los Informes Sintéticos generados para el departamento del admin.
+    """
+    if not admin_depto.departamento_id:
+        raise BadRequest(detail="El usuario administrador no está vinculado a ningún departamento.")
+
+    informes = db.scalars(
+        select(models.InformeSinteticoInstancia)
+        .where(models.InformeSinteticoInstancia.departamento_id == admin_depto.departamento_id)
+        .options(
+            joinedload(models.InformeSinteticoInstancia.informe_sintetico), # Carga la plantilla
+            joinedload(models.InformeSinteticoInstancia.actividades_curriculares_instancia) # Carga los reportes
+        )
+        .order_by(models.InformeSinteticoInstancia.fecha_inicio.desc())
+    ).unique().all()
+    
+    # Mapeamos al schema de lista
+    lista_resultados = []
+    for informe in informes:
+        schema_list_item = schemas.InformeSinteticoInstanciaList(
+            id=informe.id,
+            fecha_inicio=informe.fecha_inicio,
+            fecha_fin=informe.fecha_fin,
+            tipo=informe.tipo,
+            plantilla=informe.informe_sintetico, # La plantilla base
+            departamento_id=informe.departamento_id,
+            cantidad_reportes=len(informe.actividades_curriculares_instancia)
+        )
+        lista_resultados.append(schema_list_item)
+        
+    return lista_resultados
+
+
+def obtener_estadisticas_informe_sintetico(
+    db: Session, 
+    informe_sintetico_id: int, 
+    admin_depto: AdminDepartamento
+) -> InformeSinteticoResultado:
+    """
+    Obtiene y agrega los resultados de todas las respuestas de profesores
+    (ACI) contenidas en un Informe Sintético específico.
+    """
+    
+    # 1. Validar permisos y obtener el informe
+    informe = db.get(models.InformeSinteticoInstancia, informe_sintetico_id)
+    if not informe:
+        raise NotFound(detail=f"Informe Sintético con ID {informe_sintetico_id} no encontrado.")
+    if informe.departamento_id != admin_depto.departamento_id:
+        raise BadRequest(detail="No tiene permisos para ver este informe.")
+    
+    # 2. Cargar el informe con todas sus relaciones anidadas
+    informe_completo = db.scalar(
+        select(models.InformeSinteticoInstancia)
+        .where(models.InformeSinteticoInstancia.id == informe_sintetico_id)
+        .options(
+            joinedload(models.InformeSinteticoInstancia.departamento),
+            joinedload(models.InformeSinteticoInstancia.informe_sintetico) # Plantilla base
+                .selectinload(models.InformeSintetico.secciones)
+                .selectinload(Seccion.preguntas.of_type(PreguntaMultipleChoice))
+                .selectinload(PreguntaMultipleChoice.opciones),
+            joinedload(models.InformeSinteticoInstancia.actividades_curriculares_instancia) # Reportes ACI
+                .selectinload(ActividadCurricularInstancia.respuesta_sets) # Sets de respuestas
+                .selectinload(RespuestaSet.respuestas) # Respuestas individuales
+                .selectinload(RespuestaMultipleChoice.opcion)
+        )
+    )
+
+    if not informe_completo:
+        raise NotFound(detail="Informe no pudo ser cargado.")
+
+    plantilla = informe_completo.informe_sintetico
+    reportes_aci = informe_completo.actividades_curriculares_instancia
+    
+    if not plantilla or not plantilla.secciones:
+        raise NotFound(detail="La plantilla del informe sintético no tiene secciones o preguntas.")
+
+    # 3. Agregar todas las respuestas
+    # (Similar a 'obtener_resultados_agregados_profesor' pero iterando sobre 'reportes_aci')
+    
+    resultados_por_pregunta_dict: Dict[int, Dict[str, Any]] = collections.defaultdict(
+        lambda: {"opciones": collections.defaultdict(int), "textos": []}
+    )
+    
+    cantidad_total_reportes = len(reportes_aci)
+    
+    for aci in reportes_aci:
+        for r_set in aci.respuesta_sets:
+            for respuesta in r_set.respuestas:
+                pid = respuesta.pregunta_id
+                if isinstance(respuesta, RespuestaMultipleChoice) and respuesta.opcion:
+                    resultados_por_pregunta_dict[pid]["opciones"][respuesta.opcion_id] += 1
+                elif isinstance(respuesta, RespuestaRedaccion) and respuesta.texto:
+                    resultados_por_pregunta_dict[pid]["textos"].append(RespuestaTextoItem(texto=respuesta.texto))
+
+    # 4. Construir el Schema de Respuesta (Resultados por Sección)
+    resultados_secciones_schema: List[ResultadoSeccion] = [] 
+
+    for seccion in plantilla.secciones:
+        if not seccion.preguntas: continue
+        
+        preguntas_de_esta_seccion: List[ResultadoPregunta] = []
+
+        for pregunta in seccion.preguntas:
+            resultados_opciones_schema: List[ResultadoOpcion] = []
+            respuestas_texto_schema: List[RespuestaTextoItem] = []
+            
+            pregunta_resultados = resultados_por_pregunta_dict.get(pregunta.id)
+            
+            if isinstance(pregunta, PreguntaMultipleChoice):
+                if not pregunta.opciones: continue
+                for opcion in pregunta.opciones:
+                    cantidad = pregunta_resultados["opciones"].get(opcion.id, 0) if pregunta_resultados else 0
+                    resultados_opciones_schema.append(
+                        ResultadoOpcion(
+                            opcion_id=opcion.id,
+                            opcion_texto=opcion.texto,
+                            cantidad=cantidad
+                        )
+                    )
+                
+                preguntas_de_esta_seccion.append(
+                    ResultadoPregunta(
+                        pregunta_id=pregunta.id,
+                        pregunta_texto=pregunta.texto,
+                        pregunta_tipo=pregunta.tipo,
+                        resultados_opciones=resultados_opciones_schema,
+                        respuestas_texto=None
+                    )
+                )
+            elif pregunta.tipo == TipoPregunta.REDACCION:
+                respuestas_texto_schema = pregunta_resultados["textos"] if pregunta_resultados else []
+                preguntas_de_esta_seccion.append(
+                    ResultadoPregunta(
+                        pregunta_id=pregunta.id,
+                        pregunta_texto=pregunta.texto,
+                        pregunta_tipo=pregunta.tipo,
+                        resultados_opciones=None,
+                        respuestas_texto=respuestas_texto_schema
+                    )
+                )
+        
+        if preguntas_de_esta_seccion:
+            resultados_secciones_schema.append(
+                ResultadoSeccion(
+                    seccion_nombre=seccion.nombre,
+                    resultados_por_pregunta=preguntas_de_esta_seccion
+                )
+            )
+
+    # 5. Devolver el schema final
+    return InformeSinteticoResultado(
+        informe_id=informe_completo.id,
+        departamento_nombre=informe_completo.departamento.nombre if informe_completo.departamento else "N/A",
+        fecha_generacion=informe_completo.fecha_inicio,
+        cantidad_total_reportes=cantidad_total_reportes,
+        resultados_por_seccion=resultados_secciones_schema
+    )

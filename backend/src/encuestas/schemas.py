@@ -105,3 +105,14 @@ class ResultadoCursada(BaseModel):
     informe_curricular_instancia_id: Optional[int] = None 
 
     model_config = {"from_attributes": True}
+
+class InformeSinteticoResultado(BaseModel):
+    """Schema para los resultados agregados de un Informe Sintético."""
+    informe_id: int
+    departamento_nombre: str
+    fecha_generacion: datetime
+    cantidad_total_reportes: int
+    # Reutilizamos los schemas de resultados de encuestas
+    resultados_por_seccion: List[ResultadoSeccion]  
+    
+    model_config = {"from_attributes": True}

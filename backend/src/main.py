@@ -18,6 +18,7 @@ from src.encuestas.router_profesor import router_profesores as encuesta_profesor
 from src.auth.router import router as auth_router
 from src.account.router import router as account_router
 from fastapi.middleware.cors import CORSMiddleware
+from src.instrumento.router_departamento import router as instrumento_departamento_router
 
 load_dotenv()
 
@@ -51,6 +52,7 @@ app.include_router(materia_router)
 app.include_router(router_profesor)
 app.include_router(instrumento_router)
 app.include_router(instrumento_public_router)
+app.include_router(instrumento_departamento_router) #nuevo router para estadisticas dpto
 app.include_router(encuesta_profesor_router)
 app.include_router(auth_router)
 app.include_router(account_router)

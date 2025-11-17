@@ -187,11 +187,12 @@ def seed_initial_data(db: Session):
         admin_user = AdminDepartamento( 
             nombre=admin_nombre,
             username="admin1",
-            hashed_password=get_password_hash("admin123")
+            hashed_password=get_password_hash("admin123"),
+            departamento_id=depto_info.id
             )
         db.add(admin_user)
     else:
-         print(f"     - Admin DEPARTAMENTO '{admin_nombre}' (ID: {admin_user.id}) ya existe.")
+         print(f"     - Admin DEPARTAMENTO '{admin_nombre}' del dpto '{depto_info.nombre}' (ID: {admin_user.id}) ya existe.")
          
     # Alumno
     alumno_nombre = "Alumno Prueba Ingeniería"
