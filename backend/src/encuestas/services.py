@@ -6,8 +6,8 @@ import collections
 from sqlalchemy.orm import Session, selectinload, joinedload
 from src.encuestas import models, schemas
 from src.exceptions import NotFound,BadRequest
-from src.persona.models import Inscripcion 
-from src.materia.models import Cursada,Cuatrimestre
+from src.persona.models import Inscripcion, Profesor
+from src.materia.models import Cursada, Cuatrimestre, Materia, Carrera
 from datetime import datetime
 from src.pregunta.models import Pregunta, PreguntaMultipleChoice
 from src.enumerados import EstadoInstancia, TipoPregunta,EstadoInstrumento, EstadoInforme, TipoInstrumento
@@ -488,3 +488,284 @@ def cerrar_instancia_encuesta(db: Session, instancia_id: int) -> models.Encuesta
         raise BadRequest(detail=f"Error al guardar el cambio de estado: {e}")
 
     return instancia
+
+
+def listar_profesores_por_departamento(db: Session, departamento_id: int) -> List[Profesor]:
+    """
+    Obtiene una lista única de profesores que han dado cursadas en
+    materias de carreras pertenecientes al departamento dado.
+    """
+    if not departamento_id:
+        raise BadRequest(detail="El administrador no tiene un departamento asignado.")
+
+    stmt = (
+        select(Profesor)
+        .join(Cursada, Profesor.id == Cursada.profesor_id)
+        .join(Materia, Cursada.materia_id == Materia.id)
+        .join(Materia.carreras)
+        .filter(Carrera.departamento_id == departamento_id)
+        .distinct()
+        .order_by(Profesor.nombre)
+    )
+    
+    profesores = db.scalars(stmt).all()
+    
+    # Si no hay profesores, devolvemos lista vacía en lugar de error 404 para que el select simplemente esté vacío
+    return profesores
+
+def listar_materias_por_departamento(db: Session, departamento_id: int) -> List[Materia]:
+    """
+    Obtiene una lista única de materias pertenecientes a carreras
+    del departamento dado.
+    """
+    if not departamento_id:
+        raise BadRequest(detail="El administrador no tiene un departamento asignado.")
+        
+    stmt = (
+        select(Materia)
+        .join(Materia.carreras)
+        .filter(Carrera.departamento_id == departamento_id)
+        .distinct()
+        .order_by(Materia.nombre)
+    )
+    
+    materias = db.scalars(stmt).all()
+    
+    return materias
+
+def _validar_profesor_en_dpto(db: Session, profesor_id: int, departamento_id: int):
+    """
+    Verifica si un profesor ha dado al menos una cursada en una materia
+    que pertenece al departamento.
+    """
+    profesor = db.get(Profesor, profesor_id)
+    if not profesor:
+        raise NotFound(detail=f"Profesor con ID {profesor_id} no encontrado.")
+
+    # (Usamos la misma lógica de JOIN que listar_profesores_por_departamento)
+    es_valido = db.scalar(
+        select(func.count(Profesor.id))
+        .join(Cursada, Profesor.id == Cursada.profesor_id)
+        .join(Materia, Cursada.materia_id == Materia.id)
+        .join(Materia.carreras)
+        .filter(Carrera.departamento_id == departamento_id)
+        .filter(Profesor.id == profesor_id)
+    )
+    
+    if not es_valido or es_valido == 0:
+        raise BadRequest(detail="El profesor seleccionado no pertenece a este departamento.")
+    
+    return True
+
+def _validar_materia_en_dpto(db: Session, materia_id: int, departamento_id: int):
+    """
+    Verifica si una materia pertenece a al menos una carrera
+    del departamento.
+    """
+    materia = db.get(Materia, materia_id)
+    if not materia:
+        raise NotFound(detail=f"Materia con ID {materia_id} no encontrada.")
+
+    es_valida = db.scalar(
+        select(func.count(Materia.id))
+        .join(Materia.carreras)
+        .filter(Carrera.departamento_id == departamento_id)
+        .filter(Materia.id == materia_id)
+    )
+    
+    if not es_valida or es_valida == 0:
+        raise BadRequest(detail="La materia seleccionada no pertenece a este departamento.")
+    
+    return True
+
+
+def obtener_resultados_agregados_para_profesor(
+    db: Session,
+    profesor_id: int,
+    departamento_id: int
+) -> List[schemas.ResultadoCursada]:
+    """
+    Busca todas las estadísticas de un profesor, validando
+    que pertenezca al departamento.
+    
+    Esta función es CASI IDÉNTICA a 'obtener_resultados_agregados_profesor'
+    (la que usa el rol DOCENTE), solo cambia el filtro inicial.
+    """
+    
+    # 1. Validación de seguridad
+    _validar_profesor_en_dpto(db, profesor_id, departamento_id)
+    
+    # 2. Reutilizamos la lógica de 'obtener_resultados_agregados_profesor'
+    #    Simplemente le pasamos el 'profesor_id' que recibimos.
+    
+    # (El código de la función 'obtener_resultados_agregados_profesor'
+    #  ya está diseñado para recibir un 'profesor_id', así que podemos llamarla)
+    
+    resultados = obtener_resultados_agregados_profesor(db, profesor_id=profesor_id, cuatrimestre_id=None)
+    
+    if not resultados:
+        raise NotFound(detail="No se encontraron resultados de encuestas cerradas para este profesor.")
+        
+    return resultados
+
+
+def obtener_resultados_agregados_para_materia(
+    db: Session,
+    materia_id: int,
+    departamento_id: int
+) -> List[schemas.ResultadoCursada]:
+    """
+    Busca todas las estadísticas de una materia, validando
+    que pertenezca al departamento.
+    
+    Es una variación de 'obtener_resultados_agregados_profesor'.
+    """
+    
+    # 1. Validación de seguridad
+    _validar_materia_en_dpto(db, materia_id, departamento_id)
+
+    # 2. Lógica de consulta (similar a 'obtener_resultados_agregados_profesor')
+    
+    # La principal diferencia es esta consulta inicial:
+    stmt_cursadas = (
+        select(Cursada)
+        .options(
+            joinedload(Cursada.materia), 
+            joinedload(Cursada.cuatrimestre),
+            joinedload(Cursada.profesor), # <-- Importante para mostrar quién la dio
+            selectinload(Cursada.encuesta_instancia)
+            .selectinload(models.EncuestaInstancia.plantilla) 
+            .selectinload(models.Encuesta.secciones)
+            .selectinload(Seccion.preguntas.of_type(PreguntaMultipleChoice))
+            .selectinload(PreguntaMultipleChoice.opciones),
+            
+            selectinload(Cursada.actividad_curricular_instancia) 
+        )
+        .where(Cursada.materia_id == materia_id) # <-- FILTRO PRINCIPAL
+    )
+    
+    cursadas_materia = db.execute(stmt_cursadas).scalars().unique().all()
+    
+    if not cursadas_materia:
+        raise NotFound(detail="No se encontraron cursadas para esta materia.")
+
+    resultados_finales: List[schemas.ResultadoCursada] = []
+
+    # 3. Agregación (Este código es idéntico al de la función original)
+    for cursada in cursadas_materia:
+        instancia = cursada.encuesta_instancia
+
+        if not instancia or instancia.estado != EstadoInstancia.CERRADA:
+            continue
+
+        plantilla = instancia.plantilla
+        if not plantilla or not plantilla.secciones:
+            continue 
+
+        # (Aquí va toda la lógica de agregación de 'obtener_resultados_agregados_profesor'
+        #  desde la línea ~321 hasta la ~450 de 'backend/src/encuestas/services.py'
+        #  Básicamente, copiar el bucle 'for cursada in ...')
+        
+        # --- INICIO DE CÓDIGO REUTILIZADO ---
+        stmt_respuestas = (
+            select(Respuesta)
+            .join(RespuestaSet)
+            .where(RespuestaSet.instrumento_instancia_id == instancia.id) 
+            .options(
+                selectinload(RespuestaMultipleChoice.opcion), 
+                selectinload(Respuesta.pregunta) 
+            )
+        )
+        todas_las_respuestas = db.execute(stmt_respuestas).scalars().all()
+        cantidad_sets = db.query(func.count(RespuestaSet.id)).filter(RespuestaSet.instrumento_instancia_id == instancia.id).scalar() or 0
+        
+        if cantidad_sets == 0 and not todas_las_respuestas: 
+             continue
+
+        resultados_por_pregunta_dict: Dict[int, Dict[str, Any]] = collections.defaultdict(lambda: {"opciones": collections.defaultdict(int), "textos": []})
+        for respuesta in todas_las_respuestas:
+            pid = respuesta.pregunta_id
+            if isinstance(respuesta, RespuestaMultipleChoice):
+                if respuesta.opcion_id is not None and respuesta.opcion:
+                    resultados_por_pregunta_dict[pid]["opciones"][respuesta.opcion_id] += 1
+            elif isinstance(respuesta, RespuestaRedaccion):
+                 if respuesta.texto is not None: 
+                     resultados_por_pregunta_dict[pid]["textos"].append(schemas.RespuestaTextoItem(texto=respuesta.texto))
+
+        resultados_secciones_schema: List[schemas.ResultadoSeccion] = [] 
+        for seccion in plantilla.secciones:
+            if not seccion.preguntas: continue
+            preguntas_de_esta_seccion: List[schemas.ResultadoPregunta] = []
+            for pregunta in seccion.preguntas:
+                resultados_opciones_schema: List[schemas.ResultadoOpcion] = []
+                respuestas_texto_schema: List[schemas.RespuestaTextoItem] = []
+                pregunta_resultados = resultados_por_pregunta_dict.get(pregunta.id)
+                if isinstance(pregunta, PreguntaMultipleChoice):
+                    if not pregunta.opciones: continue 
+                    for opcion in pregunta.opciones:
+                         cantidad = pregunta_resultados["opciones"].get(opcion.id, 0) if pregunta_resultados else 0
+                         resultados_opciones_schema.append(
+                             schemas.ResultadoOpcion(
+                                 opcion_id=opcion.id,
+                                 opcion_texto=opcion.texto,
+                                 cantidad=cantidad
+                             )
+                         )
+                    preguntas_de_esta_seccion.append(
+                        schemas.ResultadoPregunta(
+                            pregunta_id=pregunta.id,
+                            pregunta_texto=pregunta.texto,
+                            pregunta_tipo=pregunta.tipo,
+                            resultados_opciones=resultados_opciones_schema,
+                            respuestas_texto=None 
+                        )
+                    )
+                elif pregunta.tipo == TipoPregunta.REDACCION:
+                    respuestas_texto_schema = pregunta_resultados["textos"] if pregunta_resultados else []
+                    preguntas_de_esta_seccion.append(
+                        schemas.ResultadoPregunta(
+                            pregunta_id=pregunta.id,
+                            pregunta_texto=pregunta.texto,
+                            pregunta_tipo=pregunta.tipo,
+                            resultados_opciones=None, 
+                            respuestas_texto=respuestas_texto_schema
+                        )
+                    )
+            if preguntas_de_esta_seccion:
+                resultados_secciones_schema.append(
+                    schemas.ResultadoSeccion(
+                        seccion_nombre=seccion.nombre,
+                        resultados_por_pregunta=preguntas_de_esta_seccion
+                    )
+                )
+
+        cuatri_info = "N/A"
+        if cursada.cuatrimestre:
+             periodo_val = cursada.cuatrimestre.periodo.value if cursada.cuatrimestre.periodo else '?'
+             cuatri_info = f"{cursada.cuatrimestre.anio} - {periodo_val}"
+        
+        informe_id = None
+        if (cursada.actividad_curricular_instancia and 
+            cursada.actividad_curricular_instancia.estado == EstadoInforme.PENDIENTE):
+            informe_id = cursada.actividad_curricular_instancia.id
+        
+        # ¡Importante! Añadimos el nombre del profesor a la materia
+        # (La plantilla 'ResultadoCursada' ya lo soporta)
+        materia_nombre_con_profesor = f"{cursada.materia.nombre} (Prof: {cursada.profesor.nombre if cursada.profesor else 'N/A'})"
+        
+        resultados_finales.append(
+            schemas.ResultadoCursada(
+                cursada_id=cursada.id,
+                materia_nombre=materia_nombre_con_profesor, # <-- Usamos el nombre modificado
+                cuatrimestre_info=cuatri_info,
+                cantidad_respuestas=cantidad_sets,
+                resultados_por_seccion=resultados_secciones_schema,
+                informe_curricular_instancia_id=informe_id 
+            )
+        )
+        # --- FIN DE CÓDIGO REUTILIZADO ---
+
+    if not resultados_finales:
+        raise NotFound(detail="No se encontraron resultados de encuestas cerradas para esta materia.")
+        
+    return resultados_finales

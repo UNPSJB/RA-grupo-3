@@ -25,14 +25,15 @@ import ProtectedRoute from "./auth/ProtectedRoute.tsx";
 import RedirectHome from "./auth/RedirectHome.tsx";
 import DepartamentoEstadisticas from "./pages/DepartamentoEstadisticas.tsx";
 
-// ... (MainLayout y withLoading HOCs no cambian)
+import DepartamentoEstadisticasCursadas from "./pages/DepartamentoEstadisticasCursadas.tsx";
+
 const MainLayout: React.FC = () => {
-  const location = useLocation();
-  const showNavMenu = location.pathname.startsWith("/alumno");
-  const showSecretariaNavMenu = location.pathname.startsWith("/secretaria");
-  const showProfesorNavMenu = location.pathname.startsWith("/profesores");
-  // --- CAMBIO: El menú de Departamento se muestra en la ruta /departamento ---
-  const showDepartamentoNavMenu = location.pathname.startsWith("/departamento");
+const location = useLocation();
+const showNavMenu = location.pathname.startsWith("/alumno");
+const showSecretariaNavMenu = location.pathname.startsWith("/secretaria");
+const showProfesorNavMenu = location.pathname.startsWith("/profesores");
+const showDepartamentoNavMenu = location.pathname.startsWith("/departamento");
+
 
   return (
     <div className="app min-h-screen flex flex-col">
@@ -67,6 +68,7 @@ const ResultadosProfesorPageWithLoading = withLoading(ResultadosProfesorPage);
 const ResponderReportesWithLoading = withLoading(ResponderReportes);
 const LoginPageWithLoading = withLoading(LoginPage); 
 const DepartamentoEstadisticasWithLoading = withLoading(DepartamentoEstadisticas);
+const DepartamentoEstadisticasCursadasWithLoading = withLoading(DepartamentoEstadisticasCursadas);
 
 const App: React.FC = () => {
   return (
@@ -135,6 +137,7 @@ const App: React.FC = () => {
             <Route path="gestion" element={<CuentaPageWithLoading />} />
             <Route index element={<PanelAdminWithLoading />} />
             <Route path="estadisticas" element={<DepartamentoEstadisticasWithLoading />} />
+            <Route path="estadisticas-cursadas" element={<DepartamentoEstadisticasCursadasWithLoading />} />
             <Route path="plantillas" element={<Outlet />}>
               <Route index element={<Navigate to="borradores" replace />} />
               <Route path="borradores" element={<EncuestasPageWithLoading />} />

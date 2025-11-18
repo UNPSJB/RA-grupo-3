@@ -17,7 +17,8 @@ from src.pregunta.models import Pregunta, PreguntaMultipleChoice
 from src.persona.models import AdminDepartamento
 from src.materia.models import Departamento, Carrera, Materia, Cursada
 from src.exceptions import BadRequest, NotFound
-
+from src.persona.models import Profesor # <-- Añadir Profesor
+from src.materia.models import Materia, Carrera
 import collections
 from src.encuestas.schemas import (
     ResultadoSeccion, 
@@ -415,3 +416,51 @@ def obtener_estadisticas_informe_sintetico(
         cantidad_total_reportes=cantidad_total_reportes,
         resultados_por_seccion=resultados_secciones_schema
     )
+
+def listar_profesores_por_departamento(db: Session, departamento_id: int) -> List[Profesor]:
+    """
+    Obtiene una lista única de profesores que han dado cursadas en
+    materias de carreras pertenecientes al departamento dado.
+    """
+    if not departamento_id:
+        raise BadRequest(detail="El administrador no tiene un departamento asignado.")
+
+    stmt = (
+        select(Profesor)
+        .join(Cursada, Profesor.id == Cursada.profesor_id)
+        .join(Materia, Cursada.materia_id == Materia.id)
+        .join(Materia.carreras)
+        .filter(Carrera.departamento_id == departamento_id)
+        .distinct()
+        .order_by(Profesor.nombre)
+    )
+    
+    profesores = db.scalars(stmt).all()
+    
+    if not profesores:
+        raise NotFound(detail="No se encontraron profesores para este departamento.")
+        
+    return profesores
+
+def listar_materias_por_departamento(db: Session, departamento_id: int) -> List[Materia]:
+    """
+    Obtiene una lista única de materias pertenecientes a carreras
+    del departamento dado.
+    """
+    if not departamento_id:
+        raise BadRequest(detail="El administrador no tiene un departamento asignado.")
+        
+    stmt = (
+        select(Materia)
+        .join(Materia.carreras)
+        .filter(Carrera.departamento_id == departamento_id)
+        .distinct()
+        .order_by(Materia.nombre)
+    )
+    
+    materias = db.scalars(stmt).all()
+    
+    if not materias:
+        raise NotFound(detail="No se encontraron materias para este departamento.")
+        
+    return materias
