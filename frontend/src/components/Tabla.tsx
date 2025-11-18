@@ -3,7 +3,6 @@ import Spinner from "./Spinner";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 
-// --- Definimos los tipos aquí mismo ---
 type TipoInstrumento =
   | "ENCUESTA"
   | "ACTIVIDAD_CURRICULAR"
@@ -22,7 +21,6 @@ interface TablaProps {
   tipo: TipoTabla;
 }
 
-// --- Función para formatear el texto del tipo ---
 function formatearTipo(tipo: TipoInstrumento) {
   switch (tipo) {
     case "ENCUESTA":
@@ -39,10 +37,9 @@ function formatearTipo(tipo: TipoInstrumento) {
 export function Tabla({ tipo }: TablaProps) {
   const navigate = useNavigate();
   const [data, setData] = React.useState<Plantilla[]>([]);
-  const [loading, setLoading] = React.useState(true); // Inicia en true
+  const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
 
-  // States de ordenamiento (opcional, pero bueno tenerlos)
   const [sortConfig, setSortConfig] = React.useState<{
     key: keyof Plantilla;
     asc: boolean;
@@ -50,7 +47,6 @@ export function Tabla({ tipo }: TablaProps) {
 
   const { token, logout } = useAuth();
 
-  // --- Lógica de Sorteo (Opcional) ---
   const sortedData = React.useMemo(() => {
     let sortableData = [...data];
     if (sortConfig !== null) {
@@ -74,7 +70,6 @@ export function Tabla({ tipo }: TablaProps) {
     }
     setSortConfig({ key, asc });
   };
-  // --- Fin Lógica de Sorteo ---
 
   React.useEffect(() => {
     let isMounted = true;
@@ -88,7 +83,6 @@ export function Tabla({ tipo }: TablaProps) {
     const loadPlantillas = async () => {
       setLoading(true);
       setError(null);
-      // No seteamos data a [], esperamos la nueva data
       try {
         const response = await fetch(
           `${API_BASE_URL}/admin/instrumentos/${tipo.toLowerCase()}`,
@@ -111,7 +105,7 @@ export function Tabla({ tipo }: TablaProps) {
         const payload: Plantilla[] = await response.json();
 
         if (isMounted) {
-          setData(payload); // <-- Aquí se cargan los datos
+          setData(payload);
         }
       } catch (err) {
         if (isMounted) {
@@ -129,20 +123,103 @@ export function Tabla({ tipo }: TablaProps) {
     return () => {
       isMounted = false;
     };
-  }, [tipo, token, logout]); // Se ejecuta cada vez que 'tipo' (borrador/publicada) cambia
+  }, [tipo, token, logout]);
 
-  // ... (Funciones handlePublicar y handleBorrar) ...
   const handlePublicar = async (plantillaId: number) => {
-    // ... (lógica para publicar)
+    if (!token) {
+      setError("Tu sesión ha expirado. Por favor, inicia sesión de nuevo.");
+      logout();
+      return;
+    }
+
+    setError(null);
+
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/admin/instrumentos/${plantillaId}/publicar`,
+        {
+          method: "PATCH",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+          setError("Tu sesión expiró o no tienes permisos.");
+          logout();
+        } else {
+          const errData = await response.json();
+          throw new Error(errData.detail || "Falló la publicación");
+        }
+        return;
+      }
+
+      setData((prevData) =>
+        prevData.filter((plantilla) => plantilla.id !== plantillaId)
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error desconocido");
+    }
   };
-  const handleBorrar = async (plantillaId: number) => {};
+
+  const handleBorrar = async (plantillaId: number) => {
+    if (
+      !window.confirm(
+        "¿Estás seguro de que deseas borrar esta plantilla? Esta acción no se puede deshacer."
+      )
+    ) {
+      return;
+    }
+
+    if (!token) {
+      setError("Tu sesión ha expirado. Por favor, inicia sesión de nuevo.");
+      logout();
+      return;
+    }
+
+    setError(null);
+
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/admin/instrumentos/${plantillaId}`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (response.status === 204) {
+        setData((prevData) =>
+          prevData.filter((plantilla) => plantilla.id !== plantillaId)
+        );
+      } else if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+          setError("Tu sesión expiró o no tienes permisos.");
+          logout();
+        } else {
+          try {
+            const errData = await response.json();
+            throw new Error(errData.detail || "Falló la eliminación");
+          } catch (e) {
+            throw new Error(`Error ${response.status}: Falló la eliminación`);
+          }
+        }
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error desconocido");
+    }
+  };
 
   if (loading) {
     return <Spinner />;
   }
 
   if (error) {
-    return <p className="text-red-500 text-center">{error}</p>;
+    return <p className="text-red-500 text-center p-4">{error}</p>;
   }
 
   return (
@@ -202,6 +279,7 @@ export function Tabla({ tipo }: TablaProps) {
                   {formatearTipo(plantilla.tipo)}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                  {/* --- Lógica condicional para los botones --- */}
                   {tipo === "borradores" && (
                     <button
                       onClick={() => handlePublicar(plantilla.id)}
@@ -210,6 +288,7 @@ export function Tabla({ tipo }: TablaProps) {
                       Publicar
                     </button>
                   )}
+
                   <button
                     onClick={() => handleBorrar(plantilla.id)}
                     className="text-red-600 hover:text-red-900"

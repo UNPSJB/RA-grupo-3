@@ -105,3 +105,13 @@ class ResultadoCursada(BaseModel):
     informe_curricular_instancia_id: Optional[int] = None 
 
     model_config = {"from_attributes": True}
+
+#Para el informe sintetico
+class GenerarSinteticoRequest(BaseModel):
+    departamento_id: int
+class GenerarSinteticoResponse(BaseModel):
+    instancia_id: int
+    departamento_id: int
+    cantidad_informes: int
+    
+    model_config = {"from_attributes": True}

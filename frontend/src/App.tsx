@@ -23,6 +23,7 @@ import withLoading from "./components/withLoading.tsx";
 import LoginPage from "./pages/LoginPage.tsx";
 import ProtectedRoute from "./auth/ProtectedRoute.tsx";
 import RedirectHome from "./auth/RedirectHome.tsx";
+import DepartamentoInformesPage from "./pages/DepartamentoInformesPage.tsx";
 
 // ... (MainLayout y withLoading HOCs no cambian)
 const MainLayout: React.FC = () => {
@@ -65,6 +66,9 @@ const ProfesoresHomeWithLoading = withLoading(ProfesoresHome);
 const ResultadosProfesorPageWithLoading = withLoading(ResultadosProfesorPage);
 const ResponderReportesWithLoading = withLoading(ResponderReportes);
 const LoginPageWithLoading = withLoading(LoginPage);
+const DepartamentoInformesPageWithLoading = withLoading(
+  DepartamentoInformesPage
+);
 
 const App: React.FC = () => {
   return (
@@ -132,14 +136,7 @@ const App: React.FC = () => {
         >
           <Route path="departamento" element={<Outlet />}>
             {/* Aquí irán los componentes de "Informes Sintéticos" */}
-            <Route
-              index
-              element={
-                <div className="p-6 text-xl">
-                  Panel de Departamento (Ver Informes Sintéticos)
-                </div>
-              }
-            />
+            <Route index element={<DepartamentoInformesPageWithLoading />} />
             <Route path="gestion" element={<GestionCuentasWithLoading />} />
           </Route>
         </Route>

@@ -13,10 +13,12 @@ class EstadoInstancia(StrEnum):
 class EstadoInforme(StrEnum):
     PENDIENTE = "pendiente"
     COMPLETADO = "completado"
+    RESUMIDO = "resumido" 
 
 class EstadoInstrumento(StrEnum):
         BORRADOR = "borrador"
         PUBLICADA = "publicada"
+        
 
 class TipoPersona(StrEnum):
     ALUMNO = "ALUMNO"

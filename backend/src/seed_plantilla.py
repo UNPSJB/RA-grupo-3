@@ -25,7 +25,7 @@ try:
     from src.respuesta import models as respuesta_models
 
     # Ahora podemos importar las clases específicas que necesitamos de esos módulos
-    from src.instrumento.models import InstrumentoBase, ActividadCurricular
+    from src.instrumento.models import InstrumentoBase, ActividadCurricular, InformeSintetico
     from src.encuestas.models import Encuesta 
     from src.seccion.models import Seccion
     from src.pregunta.models import Pregunta, PreguntaRedaccion, PreguntaMultipleChoice, Opcion
@@ -89,6 +89,13 @@ def find_or_create_plantilla(db: Session, titulo: str, descripcion: str, tipo: T
             descripcion=descripcion,
             anexo=anexo,
             estado=estado.value # Usamos .value para asignar el string
+        )
+    elif tipo == TipoInstrumento.INFORME_SINTETICO:
+        plantilla = InformeSintetico(
+            titulo=titulo,
+            descripcion=descripcion,
+            anexo=anexo,
+            estado=estado.value
         )
     else:
         raise ValueError(f"Tipo de instrumento no manejado: {tipo}")
@@ -350,6 +357,70 @@ def seed_plantillas_data(db: Session):
         
         db.commit()
         print("   - Plantilla 'Informe de Actividad Curricular' (CORREGIDA) completada.")
+        
+# --- 4. PLANTILLA: INFORME SINTÉTICO ---
+        
+        plantilla_informe_sintetico = find_or_create_plantilla(
+        db=db,
+        titulo="Informe Sintético Departamental (ANEXO II RCDFI 283/2015)",
+        descripcion="Informe sintético a ser completado por el Director de Departamento, resumiendo los Informes de Actividad Curricular.",
+        tipo=TipoInstrumento.INFORME_SINTETICO,
+        anexo="Anexo II (RCDFI N° 283/2015)",
+        estado=EstadoInstrumento.PUBLICADA
+        )
+
+        # --- Sección 0: Información general ---
+        # Corresponde a la tabla 0 del Anexo II [cite: 97, 98]
+        seccion_0_sint = find_or_create_seccion(db, plantilla_informe_sintetico, "0. Información general")
+        crear_pregunta_redaccion(db, seccion_0_sint, 
+            "Completar tabla de Información General (Código, Actividad Curricular, Inscriptos, Comisiones Teóricas, Comisiones Prácticas).")
+
+        # --- Sección 1: Necesidades de equipamiento y bibliografía ---
+        # Corresponde a la tabla 1 del Anexo II [cite: 100, 103]
+        seccion_1_sint = find_or_create_seccion(db, plantilla_informe_sintetico, "1. Necesidades de equipamiento y bibliografía")
+        crear_pregunta_redaccion(db, seccion_1_sint, 
+            "Completar tabla de Necesidades (Equipamiento e Insumos, Bibliografía) para cada actividad curricular.")
+
+        # --- Sección 2: Desarrollo de la Actividad Curricular ---
+        # Agrupa 2, 2.A, 2.B y 2.C del Anexo II
+        seccion_2_sint = find_or_create_seccion(db, plantilla_informe_sintetico, "2. Desarrollo de la Actividad Curricular")
+        
+        # Pregunta para la tabla 2 [cite: 111, 112]
+        crear_pregunta_redaccion(db, seccion_2_sint, 
+            "2. Completar tabla de Porcentaje de horas de clases dictadas y justificación.")
+        
+        # Pregunta para la tabla 2.A [cite: 113, 115]
+        crear_pregunta_redaccion(db, seccion_2_sint, 
+            "2.A. Completar tabla de Porcentaje de contenidos planificados y estrategias propuestas.")
+        
+        # Pregunta para la tabla 2.B [cite: 116, 122]
+        crear_pregunta_redaccion(db, seccion_2_sint, 
+            "2.B. Completar tabla de valores de Encuesta a Alumnos (B, C, D, E) y Juicio de Valor del responsable.",
+            origen_datos="resumen_encuestas_departamento") # 'origen_datos' es opcional pero recomendado
+        
+        # Pregunta para la tabla 2.C [cite: 123, 125]
+        crear_pregunta_redaccion(db, seccion_2_sint, 
+            "2.C. Completar tabla de Aspectos Positivos, Obstáculos y Estrategias (Proceso Enseñanza/Aprendizaje).")
+
+        # --- Sección 3: Actividades del Equipo de Cátedra ---
+        # Corresponde a la tabla 3 del Anexo II [cite: 133, 135]
+        seccion_3_sint = find_or_create_seccion(db, plantilla_informe_sintetico, "3. Actividades del Equipo de Cátedra")
+        crear_pregunta_redaccion(db, seccion_3_sint, 
+            "Completar tabla de Actividades (Capacitación, Investigación, Extensión, Gestión) de los integrantes de cátedra.")
+
+        # --- Sección 4: Desempeño de Auxiliares ---
+        # Corresponde a la tabla 4 del Anexo II [cite: 136, 138]
+        seccion_4_sint = find_or_create_seccion(db, plantilla_informe_sintetico, "4. Desempeño de Auxiliares")
+        crear_pregunta_redaccion(db, seccion_4_sint, 
+            "Completar tabla de Valoración del desempeño de auxiliares (E, MB, B, R, I) y justificación.")
+
+        # --- Sección 5: Observaciones ---
+        # Corresponde al punto 5 del Anexo II [cite: 139]
+        seccion_5_sint = find_or_create_seccion(db, plantilla_informe_sintetico, "5. Observaciones (Comisión Asesora)")
+        crear_pregunta_redaccion(db, seccion_5_sint, 
+            "Observaciones o comentarios que desee expresar la Comisión Asesora en relación al conjunto de actividades desarrolladas por los docentes de los diferentes espacios curriculares.")
+        db.commit()
+        print("   - Plantilla 'Informe Sintético Departamental' (ANEXO II) completada.")    
         
         print("\n¡Seeding de plantillas finalizado exitosamente!")
         
