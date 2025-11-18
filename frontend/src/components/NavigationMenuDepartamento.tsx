@@ -126,17 +126,9 @@ const NavigationMenuDepartamento: React.FC<NavigationMenuProps> = () => {
             >
               Dashboard
             </Link>
-            <DesktopDropdown title="Plantillas">
-              {/* --- CAMBIO: Rutas actualizadas --- */}
-              <DropdownItem to="/departamento/plantillas/borradores">Borradores</DropdownItem>
-              <DropdownItem to="/departamento/plantillas/publicadas">Publicadas</DropdownItem>
-              <DropdownItem to="/departamento/plantillas/crear">Crear</DropdownItem>
-            </DesktopDropdown>
             <DesktopDropdown title="Encuestas">
-              <DropdownItem to="/departamento/modelos">Modelos</DropdownItem>
               <DropdownItem to="/departamento/estadisticas">Estadísticas (Informes)</DropdownItem>
               <DropdownItem to="/departamento/estadisticas-cursadas">Estadísticas (Cursadas)</DropdownItem>
-              <DropdownItem to="/departamento/otros">Otros</DropdownItem>
             </DesktopDropdown>
             <DesktopDropdown title="Cuenta">
               <DropdownItem to="/departamento/gestion">Gestión</DropdownItem> {/* <--- CAMBIO */}
@@ -170,11 +162,9 @@ const NavigationMenuDepartamento: React.FC<NavigationMenuProps> = () => {
               <DropdownItem to="/departamento/plantillas/publicadas">Publicadas</DropdownItem>
               <DropdownItem to="/departamento/plantillas/crear">Crear</DropdownItem>
             </MobileDropdown>
-            <MobileDropdown title="Encuestas">
-              <DropdownItem to="/departamento/modelos">Modelos</DropdownItem>
+            <MobileDropdown title="Estadisticas">
               <DropdownItem to="/departamento/estadisticas">Estadísticas (Informes)</DropdownItem>
               <DropdownItem to="/departamento/estadisticas-cursadas">Estadísticas (Cursadas)</DropdownItem>
-              <DropdownItem to="/departamento/otros">Otros</DropdownItem>
             </MobileDropdown>
             <MobileDropdown title="Mi Perfil">
               <DropdownItem to="/departamento/gestion">Gestión</DropdownItem> {/* <--- CAMBIO */}

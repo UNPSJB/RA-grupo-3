@@ -229,11 +229,14 @@ def obtener_plantilla_para_instancia_activa(db: Session, instancia_id: int) -> m
 def obtener_resultados_agregados_profesor(
     db: Session,
     profesor_id: int,
-    cuatrimestre_id: Optional[int] = None
+    cuatrimestre_id: Optional[int] = None,
+    anio: Optional[int] = None,
+    materia_id: Optional [int] = None
 ) -> List[schemas.ResultadoCursada]:
 
     stmt_cursadas = (
         select(Cursada)
+        .join(Cursada.cuatrimestre)
         .options(
             joinedload(Cursada.materia), 
             joinedload(Cursada.cuatrimestre), 
@@ -247,12 +250,19 @@ def obtener_resultados_agregados_profesor(
             selectinload(Cursada.actividad_curricular_instancia) 
         )
         .where(Cursada.profesor_id == profesor_id)
+        .order_by(Cuatrimestre.anio.desc(), Cuatrimestre.periodo.desc())
     )
     if cuatrimestre_id:
         cuatri = db.get(Cuatrimestre, cuatrimestre_id)
         if not cuatri:
              raise NotFound(detail=f"Cuatrimestre con ID {cuatrimestre_id} no encontrado.")
         stmt_cursadas = stmt_cursadas.where(Cursada.cuatrimestre_id == cuatrimestre_id)
+
+    if anio:
+        stmt_cursadas = stmt_cursadas.where(Cuatrimestre.anio == anio)
+
+    if materia_id:
+        stmt_cursadas = stmt_cursadas.where(Cursada.materia_id == materia_id)
 
     cursadas_profesor = db.execute(stmt_cursadas).scalars().unique().all()
 
@@ -735,3 +745,16 @@ def obtener_resultados_agregados_para_materia(
         raise NotFound(detail="No se encontraron resultados de encuestas cerradas para esta materia.")
         
     return resultados_finales
+
+def listar_materias_de_profesor(db: Session, profesor_id: int) -> List[Materia]:
+    """
+    Retorna la lista de materias únicas que ha dictado un profesor.
+    """
+    stmt = (
+        select(Materia)
+        .join(Cursada, Cursada.materia_id == Materia.id)
+        .where(Cursada.profesor_id == profesor_id)
+        .distinct()
+        .order_by(Materia.nombre)
+    )
+    return db.scalars(stmt).all()

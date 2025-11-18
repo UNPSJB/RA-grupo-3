@@ -144,4 +144,4 @@ class Carrera(ModeloBase):
     materias: Mapped[List["Materia"]] = relationship(
         secondary=carrera_materia_association,
         back_populates="carreras"
-    )
+    )                               

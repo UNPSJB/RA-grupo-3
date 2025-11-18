@@ -8,6 +8,7 @@ from src.persona.models import Profesor
 from src.encuestas import services as profesor_services 
 from src.exceptions import BadRequest
 from src.encuestas import schemas as encuestas_schemas
+from src.materia import schemas as materia_schemas
 
 
 router = APIRouter(prefix="/alumnos", tags=["Alumnos"])
@@ -29,6 +30,8 @@ router_profesor = APIRouter(prefix="/profesor", tags=["Profesor"])
 )
 def get_mis_encuestas_cerradas(
     cuatrimestre_id: Optional[int] = None,
+    anio: Optional[int] = None,
+    materia_id: Optional[int] = None,
     db: Session = Depends(get_db),
     profesor_actual: Profesor = Depends(get_current_profesor)
 ):
@@ -36,7 +39,9 @@ def get_mis_encuestas_cerradas(
         instancias_cerradas = profesor_services.obtener_resultados_agregados_profesor(
             db,
             profesor_id=profesor_actual.id,
-            cuatrimestre_id=cuatrimestre_id
+            cuatrimestre_id=cuatrimestre_id,
+            anio=anio,
+            materia_id=materia_id
         )
         return instancias_cerradas
     except Exception as e:
@@ -44,3 +49,18 @@ def get_mis_encuestas_cerradas(
         import traceback
         traceback.print_exc()
         raise BadRequest(detail="Ocurrió un error al obtener los resultados.")
+    
+@router_profesor.get(
+    "/mis-materias",
+    response_model=List[materia_schemas.Materia]
+)
+def get_mis_materias(
+    db: Session = Depends(get_db),
+    profesor_actual: Profesor = Depends(get_current_profesor)
+):
+    """Obtiene todas las materias que ha dictado el profesor."""
+    try:
+        return profesor_services.listar_materias_de_profesor(db, profesor_actual.id)
+    except Exception as e:
+        print(f"Error al listar materias del profesor: {e}")
+        raise BadRequest(detail="Error al obtener las materias.")
