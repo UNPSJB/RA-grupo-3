@@ -18,7 +18,7 @@ class SedeSimple(BaseModel):
         from_attributes = True
 
 router = APIRouter(prefix="/alumnos", tags=["Alumnos"])
-
+#testing github para probar cosas
 @router.post("/", response_model=schemas.Alumno)
 def crear_nuevo_alumno(
     alumno_data: schemas.AlumnoCreate, 
