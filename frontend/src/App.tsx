@@ -23,6 +23,8 @@ import withLoading from "./components/withLoading.tsx";
 import LoginPage from "./pages/LoginPage.tsx"
 import ProtectedRoute from "./auth/ProtectedRoute.tsx";
 import RedirectHome from "./auth/RedirectHome.tsx";
+import ResponderInforme from "./pages/ResponderInforme.tsx";
+
 
 // ... (MainLayout y withLoading HOCs no cambian)
 const MainLayout: React.FC = () => {
@@ -65,6 +67,7 @@ const ProfesoresHomeWithLoading = withLoading(ProfesoresHome);
 const ResultadosProfesorPageWithLoading = withLoading(ResultadosProfesorPage);
 const ResponderReportesWithLoading = withLoading(ResponderReportes);
 const LoginPageWithLoading = withLoading(LoginPage); 
+const ResponderInformeWithLoading = withLoading(ResponderInforme);
 
 
 const App: React.FC = () => {
@@ -126,21 +129,36 @@ const App: React.FC = () => {
           </Route>
         </Route>
         
-        {/* --- Rutas de Departamento (AHORA con los componentes reales) --- */}
+        {/* --- Rutas de Departamento --- */}
         <Route element={<ProtectedRoute allowedRoles={["ADMIN_DEPARTAMENTO"]} />}>
           <Route path="departamento" element={<Outlet />}>
-            {/* --- CAMBIO: Rutas movidas desde /secretaria --- */}
+
             <Route path="modelos" element={<SecretariaModelosWithLoading />} />
             <Route path="gestion" element={<CuentaPageWithLoading />} />
+
+            {/* Página principal del departamento */}
             <Route index element={<PanelAdminWithLoading />} />
+
+            {/* Plantillas */}
             <Route path="plantillas" element={<Outlet />}>
               <Route index element={<Navigate to="borradores" replace />} />
               <Route path="borradores" element={<EncuestasPageWithLoading />} />
               <Route path="publicadas" element={<EncuestasPageWithLoading />} />
               <Route path="crear" element={<CrearPlantillaWithLoading />} />
             </Route>
+
+            {/* Informes Sintéticos */}
+            <Route path="informes-sinteticos" element={<Outlet />}>
+              <Route
+                path="instancia/:instanciaId/responder"
+                element={<ResponderInformeWithLoading />}
+              />
+              <Route index element={<Navigate to="instancia/1/responder" replace />} />
+            </Route>
+
           </Route>
         </Route>
+
         
       </Route>
     </Routes>

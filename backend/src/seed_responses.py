@@ -78,7 +78,7 @@ def seed_responses(db: Session):
         if not alumno_existente:
             print(f"   + Creando alumno: 'Alumno Simulado {i:02d}' con ID={alumno_id_simulado}")
             # Forzamos el ID para consistencia
-            nuevo_alumno = Alumno(id=alumno_id_simulado, nombre=f"Alumno Simulado {i:02d}")
+            nuevo_alumno = Alumno(id=alumno_id_simulado, nombre=f"Alumno Simulado {i:02}", tipo="ALUMNO", username=f"alumno_sim_{i:02}", hashed_password="dummy")
             alumnos_a_añadir.append(nuevo_alumno)
             alumnos_creados.append(nuevo_alumno)
         else:

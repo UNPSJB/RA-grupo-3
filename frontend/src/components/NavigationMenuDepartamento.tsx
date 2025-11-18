@@ -135,6 +135,7 @@ const NavigationMenuDepartamento: React.FC<NavigationMenuProps> = () => {
             <DesktopDropdown title="Encuestas">
               <DropdownItem to="/departamento/modelos">Modelos</DropdownItem>
               <DropdownItem to="/departamento/estadisticas">Estadisticas</DropdownItem>
+              <DropdownItem to="/departamento/informes-sinteticos">Informes Sintéticos</DropdownItem>
               <DropdownItem to="/departamento/otros">Otros</DropdownItem>
             </DesktopDropdown>
             <DesktopDropdown title="Cuenta">
@@ -172,6 +173,7 @@ const NavigationMenuDepartamento: React.FC<NavigationMenuProps> = () => {
             <MobileDropdown title="Encuestas">
               <DropdownItem to="/departamento/modelos">Modelos</DropdownItem>
               <DropdownItem to="/departamento/estadisticas">Estadisticas</DropdownItem>
+              <DropdownItem to="/departamento/informes-sinteticos">Informes Sintéticos</DropdownItem>
               <DropdownItem to="/departamento/otros">Otros</DropdownItem>
             </MobileDropdown>
             <MobileDropdown title="Mi Perfil">
