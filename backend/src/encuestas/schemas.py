@@ -122,5 +122,14 @@ class InformeSinteticoResultado(BaseModel):
     cantidad_total_reportes: int
     # Reutilizamos los schemas de resultados de encuestas
     resultados_por_seccion: List[ResultadoSeccion]  
+    model_config = {"from_attributes": True}
+
+#Para el informe sintetico
+class GenerarSinteticoRequest(BaseModel):
+    departamento_id: int
+class GenerarSinteticoResponse(BaseModel):
+    instancia_id: int
+    departamento_id: int
+    cantidad_informes: int
     
     model_config = {"from_attributes": True}

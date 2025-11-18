@@ -7,14 +7,25 @@ type Shortcut = {
   active: boolean;
 };
 
-// --- CAMBIO: Actualizar las rutas a /departamento ---
+// --- CAMBIO: Actualizar las rutas a /secretaria ---
 const shortcuts: Shortcut[] = [
-  { label: "Listado de Plantillas", path: "/departamento/plantillas/borradores", active: true },
-  { label: "Crear Plantilla", path: "/departamento/plantillas/crear", active: true },
-  { label: "Estadísticas", path: "/departamento/estadisticas", active: true },
-  { label: "Cuenta", path: "/cuenta", active: true }, // Esto parece un bug, quizás deba ser /departamento/gestion
-  { label: "Resultados de Encuestas", path: "/resultados-profesor", active: false },
-  { label: "Gestion de Cuentas", path: "/departamento/gestion", active: true },
+  {
+    label: "Listado de Plantillas",
+    path: "/secretaria/plantillas/borradores",
+    active: true,
+  },
+  {
+    label: "Crear Plantilla",
+    path: "/secretaria/plantillas/crear",
+    active: true,
+  },
+  { label: "Activar Encuestas", path: "/secretaria/modelos", active: true },
+  { label: "Gestion de Cuentas", path: "/secretaria/gestion", active: true },
+  {
+    label: "Estadísticas (Próx.)",
+    path: "/secretaria/estadisticas",
+    active: false,
+  },
 ];
 // --- FIN DEL CAMBIO ---
 
@@ -42,14 +53,20 @@ const PanelAdmin: React.FC = () => {
               shadow-lg
               transition-all duration-300
               ease-in-out
-              ${active ? 'hover:-translate-y-1 hover:bg-gray-100 hover:shadow-2xl cursor-pointer' : 'opacity-50 cursor-not-allowed'}
+              ${
+                active
+                  ? "hover:-translate-y-1 hover:bg-gray-100 hover:shadow-2xl cursor-pointer"
+                  : "opacity-50 cursor-not-allowed"
+              }
               focus:outline-none
               focus:ring-2
               focus:ring-gray-400
               focus:ring-opacity-50
             `}
           >
-            <span className="text-lg font-semibold text-gray-800 text-center">{label}</span>
+            <span className="text-lg font-semibold text-gray-800 text-center">
+              {label}
+            </span>
           </button>
         ))}
       </div>

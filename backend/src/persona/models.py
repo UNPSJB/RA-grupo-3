@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from src.materia.models import Cursada
     from src.instrumento.models import ActividadCurricularInstancia
+    from src.materia.models import Departamento
 class Persona(ModeloBase):
     __tablename__ = "persona"
     

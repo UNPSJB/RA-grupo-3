@@ -17,6 +17,7 @@ from src.instrumento.router_public import router as instrumento_public_router
 from src.encuestas.router_profesor import router_profesores as encuesta_profesor_router
 from src.auth.router import router as auth_router
 from src.account.router import router as account_router
+from src.departamento.router import router as depto_router
 from fastapi.middleware.cors import CORSMiddleware
 from src.instrumento.router_departamento import router as instrumento_departamento_router
 from src.system.router import router as system_router
@@ -60,3 +61,4 @@ app.include_router(encuesta_profesor_router)
 app.include_router(auth_router)
 app.include_router(account_router)
 app.include_router(system_router)
+app.include_router(depto_router)

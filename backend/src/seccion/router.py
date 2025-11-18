@@ -3,14 +3,14 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from src.database import get_db
 from src.seccion import schemas, services
-# --- CAMBIO: Importar el guardia de Departamento ---
-from src.dependencies import get_current_admin_departamento
+# --- CAMBIO: Importar el guardia de secretaria ---
+from src.dependencies import get_current_admin_secretaria
 
 router = APIRouter(
     prefix="/secciones", 
     tags=["secciones"],
-    # --- CAMBIO: Proteger con el guardia de Departamento ---
-    dependencies=[Depends(get_current_admin_departamento)]
+    # --- CAMBIO: Proteger con el guardia de secretaria ---
+    dependencies=[Depends(get_current_admin_secretaria)]
 )
 
 # ... (Pega el resto de tus rutas @router.post, @router.get aquí) ...

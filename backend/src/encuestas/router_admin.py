@@ -3,18 +3,20 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.encoders import jsonable_encoder
 from sqlalchemy.orm import Session
 from src.database import get_db
-from src.encuestas import models, schemas, services
-from src.enumerados import EstadoInstrumento
+from src.encuestas import  schemas, services
 from src.exceptions import NotFound,BadRequest
-# --- CAMBIO: Importar el guardia de Departamento ---
-from src.dependencies import get_current_admin_departamento
+from src.instrumento import services as instrumento_services
+from src.encuestas.schemas import GenerarSinteticoResponse, GenerarSinteticoRequest
+
+# --- CAMBIO: Importar el guardia de Secretaria ---
+from src.dependencies import get_current_admin_secretaria
 
     
 router_gestion = APIRouter(
     prefix="/admin/gestion-encuestas", 
     tags=["Admin Encuestas - Instancias"],
-    # --- CAMBIO: Proteger con el guardia de Departamento ---
-    dependencies=[Depends(get_current_admin_departamento)]
+    # --- CAMBIO: Proteger con el guardia de Secretaria ---
+    dependencies=[Depends(get_current_admin_secretaria)]
 )
 
 # ... (Pega el resto de tus rutas @router_gestion.post, @router_gestion.patch aquí) ...
@@ -62,3 +64,37 @@ def cerrar_encuesta_instancia(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Ocurrió un error interno al cerrar la encuesta."
         )
+    
+    
+@router_gestion.post(
+    "/generar-sintetico",
+    response_model=GenerarSinteticoResponse,
+    status_code=status.HTTP_201_CREATED
+)
+def generar_informe_sintetico_departamental(
+    request_data: GenerarSinteticoRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    Cierra el ciclo para un departamento:
+    1. Busca todos los Informes Curriculares 'COMPLETADOS'.
+    2. Crea una nueva Instancia de Informe Sintético.
+    3. Vincula los informes completados a la nueva instancia.
+    4. Cambia el estado de los informes a 'RESUMIDO'.
+    """
+    try:
+        nueva_instancia = instrumento_services.generar_informe_sintetico_para_departamento(
+            db=db,
+            departamento_id=request_data.departamento_id
+        )
+        
+        return GenerarSinteticoResponse(
+            instancia_id=nueva_instancia.id,
+            departamento_id=nueva_instancia.departamento_id,
+            cantidad_informes=len(nueva_instancia.actividades_curriculares_instancia)
+        )
+
+    except (BadRequest, NotFound) as e:
+        raise HTTPException(status_code=e.STATUS_CODE, detail=e.DETAIL)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error interno: {e}")

@@ -13,16 +13,18 @@ class EstadoInstancia(StrEnum):
 class EstadoInforme(StrEnum):
     PENDIENTE = "pendiente"
     COMPLETADO = "completado"
+    RESUMIDO = "resumido" 
 
 class EstadoInstrumento(StrEnum):
         BORRADOR = "borrador"
         PUBLICADA = "publicada"
+        
 
 class TipoPersona(StrEnum):
     ALUMNO = "ALUMNO"
     DOCENTE = "DOCENTE"
-    ADMIN_DEPARTAMENTO = "ADMIN_DEPARTAMENTO" # Rol principal de admin
-    ADMIN_SECRETARIA = "ADMIN_SECRETARIA"     # Rol futuro
+    ADMIN_DEPARTAMENTO = "ADMIN_DEPARTAMENTO" 
+    ADMIN_SECRETARIA = "ADMIN_SECRETARIA"     
 
 class TipoPregunta(StrEnum):
     REDACCION = "REDACCION"

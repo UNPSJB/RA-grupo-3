@@ -8,30 +8,25 @@ const EncuestasPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // --- CAMBIO: La lógica de 'tipo' se basa en la nueva ruta ---
-  const tipo = location.pathname.includes("/departamento/plantillas/publicadas")
+  const tipo = location.pathname.includes("/secretaria/plantillas/publicadas")
     ? "publicadas"
     : "borradores";
-  // --- FIN DEL CAMBIO ---
-  console.log(
-    `EncuestasPage - Pathname: ${location.pathname}, Tipo derivado: ${tipo}`
-  );
 
   const viewButtons = [
     {
       id: "drafts",
       label: "Borradores",
       icon: <TrashIcon />,
-      // --- CAMBIO: Actualizar ruta de navegación ---
-      onClick: () => navigate("/departamento/plantillas/borradores"),
+
+      onClick: () => navigate("/secretaria/plantillas/borradores"),
       isActive: tipo === "borradores",
     },
     {
       id: "published",
       label: "Publicadas",
       icon: <CheckIcon />,
-      // --- CAMBIO: Actualizar ruta de navegación ---
-      onClick: () => navigate("/departamento/plantillas/publicadas"),
+
+      onClick: () => navigate("/secretaria/plantillas/publicadas"),
       isActive: tipo === "publicadas",
     },
   ];

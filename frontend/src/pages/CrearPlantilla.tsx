@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from "react";
+import { useAuth } from "../auth/AuthContext";
 
-// Tipos de datos
 type Opcion = {
   id: number;
   texto: string;
@@ -27,6 +27,8 @@ const CrearPlantilla: React.FC = () => {
   const [activeAccordion, setActiveAccordion] = useState<number | null>(null);
   const [cargando, setCargando] = useState<boolean>(false);
   const [mensaje, setMensaje] = useState<string>("");
+
+  const { token, logout } = useAuth();
 
   const isFormValid = useMemo(() => {
     if (!titulo.trim() || !descripcion.trim() || !tipo) {
@@ -61,7 +63,6 @@ const CrearPlantilla: React.FC = () => {
     return true;
   }, [titulo, descripcion, tipo, secciones]);
 
-  // --- MANEJO DE SECCIONES ---
   const agregarSeccion = () => {
     const nuevaSeccion: Seccion = {
       id: Date.now(),
@@ -69,10 +70,13 @@ const CrearPlantilla: React.FC = () => {
       preguntas: [],
     };
     setSecciones([...secciones, nuevaSeccion]);
-    setActiveAccordion(nuevaSeccion.id); // Abrir la nueva sección
+    setActiveAccordion(nuevaSeccion.id);
   };
 
-  const handleSeccionTituloChange = (seccionId: number, nuevoTitulo: string) => {
+  const handleSeccionTituloChange = (
+    seccionId: number,
+    nuevoTitulo: string
+  ) => {
     setSecciones(
       secciones.map((s) =>
         s.id === seccionId ? { ...s, titulo: nuevoTitulo } : s
@@ -84,7 +88,6 @@ const CrearPlantilla: React.FC = () => {
     setSecciones(secciones.filter((s) => s.id !== seccionId));
   };
 
-  // --- MANEJO DE PREGUNTAS ---
   const agregarPregunta = (seccionId: number) => {
     const nuevaPregunta: Pregunta = {
       id: Date.now(),
@@ -169,7 +172,11 @@ const CrearPlantilla: React.FC = () => {
     );
   };
 
-  const removerOpcion = (seccionId: number, preguntaId: number, opcionId: number) => {
+  const removerOpcion = (
+    seccionId: number,
+    preguntaId: number,
+    opcionId: number
+  ) => {
     setSecciones(
       secciones.map((s) =>
         s.id === seccionId
@@ -195,6 +202,15 @@ const CrearPlantilla: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!token) {
+      setMensaje(
+        "Error: Tu sesión ha expirado. Por favor, inicia sesión de nuevo."
+      );
+      logout();
+      return;
+    }
+
     setCargando(true);
     setMensaje("");
 
@@ -215,17 +231,24 @@ const CrearPlantilla: React.FC = () => {
         })),
       };
 
+      const API_BASE_URL =
+        import.meta.env.VITE_API_URL ?? "http://localhost:8000";
+
       const apiCall = fetch(
-        "http://localhost:8000/admin/instrumentos/",
+        `${API_BASE_URL}/admin/instrumentos/`, // <-- Usamos la variable VITE
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify(payload),
         }
       ).then(async (response) => {
         if (!response.ok) {
+          if (response.status === 401 || response.status === 403) {
+            logout();
+          }
           let errorData = null;
           try {
             errorData = await response.json();
@@ -242,6 +265,11 @@ const CrearPlantilla: React.FC = () => {
       await Promise.all([apiCall, delay]);
 
       setMensaje("¡Plantilla creada exitosamente!");
+
+      setTitulo("");
+      setDescripcion("");
+      setTipo("");
+      setSecciones([]);
     } catch (error) {
       console.error("Error al crear plantilla:", error);
       setMensaje(
@@ -254,7 +282,6 @@ const CrearPlantilla: React.FC = () => {
       window.scrollTo(0, 0);
     }
   };
-
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-5xl">
@@ -274,8 +301,10 @@ const CrearPlantilla: React.FC = () => {
         </div>
       )}
 
-      {/* --- TÍTULO Y DESCRIPCIÓN DE LA PLANTILLA --- */}
-      <form onSubmit={handleSubmit} className="bg-white p-6 rounded-lg shadow-md mb-6">
+      <form
+        onSubmit={handleSubmit}
+        className="bg-white p-6 rounded-lg shadow-md mb-6"
+      >
         <div className="mb-4">
           <label
             htmlFor="titulo"
@@ -311,28 +340,28 @@ const CrearPlantilla: React.FC = () => {
           />
         </div>
         <div>
-            <label
-              htmlFor="tipo"
-              className="block text-sm font-medium text-gray-700 mb-1"
-            >
-              Tipo de Plantilla:
-            </label>
-            <select
-              id="tipo"
-              value={tipo}
-              onChange={(e) => setTipo(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
-              required
-            >
-              <option value="" disabled>
-                {" "}
-                -- Seleccione un tipo --{" "}
-              </option>
-              <option value="ENCUESTA">Encuesta de Alumno</option>
-              <option value="ACTIVIDAD_CURRICULAR">Actividad Curricular</option>
-              <option value="INFORME_SINTETICO">Informe Sintético</option>
-            </select>
-          </div>
+          <label
+            htmlFor="tipo"
+            className="block text-sm font-medium text-gray-700 mb-1"
+          >
+            Tipo de Plantilla:
+          </label>
+          <select
+            id="tipo"
+            value={tipo}
+            onChange={(e) => setTipo(e.target.value)}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+            required
+          >
+            <option value="" disabled>
+              {" "}
+              -- Seleccione un tipo --{" "}
+            </option>
+            <option value="ENCUESTA">Encuesta de Alumno</option>
+            <option value="ACTIVIDAD_CURRICULAR">Actividad Curricular</option>
+            <option value="INFORME_SINTETICO">Informe Sintético</option>
+          </select>
+        </div>
       </form>
 
       {/* --- BOTÓN PARA AGREGAR SECCIONES --- */}
@@ -358,11 +387,17 @@ const CrearPlantilla: React.FC = () => {
                 <input
                   type="text"
                   value={seccion.titulo}
-                  onChange={(e) => handleSeccionTituloChange(seccion.id, e.target.value)}
+                  onChange={(e) =>
+                    handleSeccionTituloChange(seccion.id, e.target.value)
+                  }
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 flex-grow"
                   onClick={(e) => e.stopPropagation()} // Evita que el acordeón se cierre al hacer clic
                 />
-                <span className={`ml-4 transform transition-transform ${activeAccordion === seccion.id ? 'rotate-180' : ''}`}>
+                <span
+                  className={`ml-4 transform transition-transform ${
+                    activeAccordion === seccion.id ? "rotate-180" : ""
+                  }`}
+                >
                   ▼
                 </span>
               </button>
@@ -393,7 +428,9 @@ const CrearPlantilla: React.FC = () => {
                       value={pregunta.tipo}
                       onChange={(e) =>
                         handlePreguntaChange(seccion.id, pregunta.id, {
-                          tipo: e.target.value as "REDACCION" | "MULTIPLE_CHOICE",
+                          tipo: e.target.value as
+                            | "REDACCION"
+                            | "MULTIPLE_CHOICE",
                         })
                       }
                       className="mt-2 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
@@ -406,7 +443,10 @@ const CrearPlantilla: React.FC = () => {
                     {pregunta.tipo === "MULTIPLE_CHOICE" && (
                       <div className="mt-2 pl-4">
                         {pregunta.opciones.map((opcion) => (
-                          <div key={opcion.id} className="flex items-center mt-1">
+                          <div
+                            key={opcion.id}
+                            className="flex items-center mt-1"
+                          >
                             <input
                               type="text"
                               value={opcion.texto}
@@ -422,7 +462,13 @@ const CrearPlantilla: React.FC = () => {
                               placeholder="Texto de la opción"
                             />
                             <button
-                              onClick={() => removerOpcion(seccion.id, pregunta.id, opcion.id)}
+                              onClick={() =>
+                                removerOpcion(
+                                  seccion.id,
+                                  pregunta.id,
+                                  opcion.id
+                                )
+                              }
                               className="ml-2 text-red-500 hover:text-red-700"
                             >
                               &#x2715;
@@ -459,11 +505,11 @@ const CrearPlantilla: React.FC = () => {
             cargando || !isFormValid
               ? "bg-gray-400 cursor-not-allowed"
               : "bg-blue-600 hover:bg-blue-700 cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-          }`}>
+          }`}
+        >
           {cargando ? "Creando Plantilla..." : "Crear Plantilla"}
         </button>
       </div>
-
     </div>
   );
 };

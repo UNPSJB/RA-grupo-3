@@ -6,14 +6,14 @@ from src.instrumento import services, schemas
 from src.enumerados import EstadoInstrumento 
 from typing import List
 # --- CAMBIO: Importar el guardia de Departamento ---
-from src.dependencies import get_current_admin_departamento
+from src.dependencies import get_current_admin_secretaria
 
 
 router = APIRouter(
     prefix="/admin/instrumentos", 
     tags=["Admin Instrumentos"],
-    # --- CAMBIO: Proteger con el guardia de Departamento ---
-    dependencies=[Depends(get_current_admin_departamento)]
+    # --- CAMBIO: Proteger con el guardia de Secretaria
+    dependencies=[Depends(get_current_admin_secretaria)]
 )
 
 # ... (Pega el resto de tus rutas @router.post, @router.get, etc. aquí) ...
