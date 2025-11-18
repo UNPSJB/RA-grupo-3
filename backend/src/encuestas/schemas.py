@@ -103,7 +103,7 @@ class ResultadoCursada(BaseModel):
     resultados_por_seccion: List[ResultadoSeccion]  
     
     informe_curricular_instancia_id: Optional[int] = None 
-
+    fecha_cierre: Optional[datetime] = None
     model_config = {"from_attributes": True}
 
 class InformeSinteticoResultado(BaseModel):

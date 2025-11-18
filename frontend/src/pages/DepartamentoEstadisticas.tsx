@@ -3,26 +3,40 @@ import { useAuth } from "../auth/AuthContext";
 import type { 
   InformeSinteticoList, 
   InformeSinteticoResultado 
-} from "../types/estadisticas"; // Importamos los nuevos tipos
+} from "../types/estadisticas";
 
-// Importamos los componentes de gráficos
+// Componentes gráficos y UI
 import PieChartGeneral from "../components/estadisticas/PieChartGeneral";
 import RadarChartGeneral from "../components/estadisticas/RadarChartGeneral";
 import SectionBreakdownTable from "../components/estadisticas/SectionBreakdownTable";
 import Spinner from "../components/Spinner";
+import { Button } from "../components/Button"; // Reutilizamos tu componente Button
+import { jsPDF } from "jspdf"; // Para exportar
+import autoTable from "jspdf-autotable"; // Para tablas en PDF
+
+// Iconos (puedes usar los que ya tienes o importar heroicons)
+const ChartIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+    <path d="M2 10a8 8 0 018-8v8h8a8 8 0 11-16 0z" />
+    <path d="M12 2.252A8.014 8.014 0 0117.748 8H12V2.252z" />
+  </svg>
+);
+
+const DocumentIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+    <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clipRule="evenodd" />
+  </svg>
+);
 
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
 
-// Componente para mostrar los detalles (lo creamos aquí mismo)
+// --- COMPONENTE DE DETALLE MEJORADO ---
 const EstadisticasDetalle: React.FC<{ 
   informe: InformeSinteticoResultado,
   onVolver: () => void 
 }> = ({ informe, onVolver }) => {
   
-  // Lógica para los gráficos (adaptada de CursadaResultados)
-  // NOTA: Esta lógica asume que las plantillas de informe son similares
-  // a las de Ciclo Superior (preguntas G.1 y secciones B-G)
-
+  // --- Lógica de Gráficos (Igual que antes) ---
   const allMcPreguntas = useMemo(
     () =>
       informe.resultados_por_seccion.flatMap((s) =>
@@ -33,11 +47,10 @@ const EstadisticasDetalle: React.FC<{
     [informe.resultados_por_seccion]
   );
   
-  // 1. Datos para el PieChart (Opinión Global)
   const opinionGlobalData = useMemo(() => {
     const preguntaOpinion = allMcPreguntas.find((p) =>
       p.pregunta_texto.includes("cómo evalúas tu experiencia") || 
-      p.pregunta_texto.includes("2.B") // Fallback por si la G.1 no está
+      p.pregunta_texto.includes("2.B")
     );
     if (!preguntaOpinion || !preguntaOpinion.resultados_opciones) return [];
     
@@ -52,14 +65,8 @@ const EstadisticasDetalle: React.FC<{
       }));
   }, [allMcPreguntas]);
 
-  // 2. Datos para el RadarChart (Promedio por Sección)
   const radarChartData = useMemo(() => {
-    const dataMap = new Map<
-      string,
-      { totalPuntuacion: number; totalRespuestas: number }
-    >();
-    
-    // Filtramos secciones que NO sean la A (Información General)
+    const dataMap = new Map<string, { totalPuntuacion: number; totalRespuestas: number }>();
     const seccionesRelevantes = informe.resultados_por_seccion.filter(
       (s) => !s.seccion_nombre.startsWith("A:") && !s.seccion_nombre.startsWith("1.")
     );
@@ -72,12 +79,9 @@ const EstadisticasDetalle: React.FC<{
       const seccionAcumulador = dataMap.get(seccionKey)!;
 
       seccion.resultados_por_pregunta.forEach((pregunta) => {
-        if (
-          pregunta.pregunta_tipo === "MULTIPLE_CHOICE" &&
-          pregunta.resultados_opciones
-        ) {
+        if (pregunta.pregunta_tipo === "MULTIPLE_CHOICE" && pregunta.resultados_opciones) {
           pregunta.resultados_opciones.forEach((opcion) => {
-            const match = opcion.opcion_texto.match(/\((\d)\)/); // Busca (4), (3), etc.
+            const match = opcion.opcion_texto.match(/\((\d)\)/);
             if (match && opcion.cantidad > 0) {
               const puntuacion = parseInt(match[1]);
               seccionAcumulador.totalPuntuacion += puntuacion * opcion.cantidad;
@@ -90,93 +94,138 @@ const EstadisticasDetalle: React.FC<{
 
     return Array.from(dataMap.entries()).map(([key, data]) => ({
       subject: key,
-      score:
-        data.totalRespuestas > 0
-          ? parseFloat((data.totalPuntuacion / data.totalRespuestas).toFixed(2))
-          : 0,
+      score: data.totalRespuestas > 0 ? parseFloat((data.totalPuntuacion / data.totalRespuestas).toFixed(2)) : 0,
       fullMark: 4, 
     }));
   }, [informe.resultados_por_seccion]);
 
-  // 3. Mapa de series para la tabla (simplificado)
-  const seriesMap = useMemo(() => {
-     // ... (puedes copiar la lógica de CursadaResultados si es necesario, 
-     // pero por ahora una paleta simple funciona)
-     return {};
-  }, []);
+  const seriesMap = useMemo(() => ({}), []);
+
+  // --- Exportar a PDF Simple ---
+  const handleExportPDF = () => {
+    const doc = new jsPDF();
+    doc.text(`Informe Sintético #${informe.informe_id}`, 14, 20);
+    doc.setFontSize(12);
+    doc.text(`Departamento: ${informe.departamento_nombre}`, 14, 30);
+    doc.text(`Fecha: ${new Date(informe.fecha_generacion).toLocaleDateString()}`, 14, 36);
+    
+    const tableData = informe.resultados_por_seccion.map(sec => [sec.seccion_nombre]);
+    
+    autoTable(doc, {
+      startY: 45,
+      head: [['Secciones Incluidas']],
+      body: tableData,
+    });
+    
+    doc.save(`Informe_Sintetico_${informe.informe_id}.pdf`);
+  };
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow border border-gray-200 space-y-10">
-      <button
-        onClick={onVolver}
-        className="text-sm font-medium text-blue-600 hover:text-blue-800"
-      >
-        &larr; Volver al listado de informes
-      </button>
+    <div className="space-y-6">
+      {/* Navegación y Acciones */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <button
+          onClick={onVolver}
+          className="text-sm font-medium text-gray-500 hover:text-gray-800 flex items-center gap-1 transition-colors"
+        >
+          &larr; Volver al listado
+        </button>
+        
+        <button 
+          onClick={handleExportPDF}
+          className="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 shadow-sm transition-all flex items-center gap-2"
+        >
+          <DocumentIcon />
+          Descargar PDF
+        </button>
+      </div>
 
-      <header className="space-y-1 border-b pb-4">
-        <h3 className="text-xl font-semibold text-indigo-700">
-          Informe Sintético (ID: {informe.informe_id})
-        </h3>
-        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
-          <p className="text-sm text-gray-600">
-            Dpto: {informe.departamento_nombre}
-          </p>
-          <p className="text-sm font-medium text-gray-800 bg-gray-100 px-3 py-1 rounded-full self-start">
-            {informe.cantidad_total_reportes} Reportes de Profesor Agregados
-          </p>
+      {/* Encabezado Principal */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900">Informe Sintético #{informe.informe_id}</h2>
+            <p className="text-gray-500 mt-1">{informe.departamento_nombre}</p>
+          </div>
+          <div className="flex items-center gap-2 bg-indigo-50 text-indigo-700 px-4 py-2 rounded-full font-semibold text-sm">
+            <span>{informe.cantidad_total_reportes} Reportes Agregados</span>
+          </div>
         </div>
-        <p className="text-xs text-gray-500 pt-1">
-            Generado: {new Date(informe.fecha_generacion).toLocaleString()}
-        </p>
-      </header>
 
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 items-start">
+        {/* Tarjetas de KPI (Resumen rápido) */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6 border-t border-gray-100 pt-6">
+           <div className="p-4 bg-gray-50 rounded-lg">
+              <p className="text-xs text-gray-500 uppercase font-bold tracking-wider">Fecha Generación</p>
+              <p className="text-lg font-semibold text-gray-800 mt-1">
+                {new Date(informe.fecha_generacion).toLocaleDateString()}
+              </p>
+           </div>
+           <div className="p-4 bg-gray-50 rounded-lg">
+              <p className="text-xs text-gray-500 uppercase font-bold tracking-wider">Total Respuestas</p>
+              <p className="text-lg font-semibold text-gray-800 mt-1">
+                {/* Suma aproximada basada en el gráfico global */}
+                 {opinionGlobalData.reduce((acc, curr) => acc + curr.value, 0)}
+              </p>
+           </div>
+           <div className="p-4 bg-gray-50 rounded-lg">
+              <p className="text-xs text-gray-500 uppercase font-bold tracking-wider">Satisfacción Global</p>
+              <div className="flex items-center gap-2 mt-1">
+                 {/* Lógica visual simple para satisfacción */}
+                 <div className="h-2 w-full bg-gray-200 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-green-500" 
+                      style={{ width: `${opinionGlobalData.find(x => x.name.includes("(4)"))?.value || 0}%` }}
+                    />
+                 </div>
+              </div>
+           </div>
+        </div>
+      </div>
+
+      {/* Gráficos */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 items-start">
         <PieChartGeneral
-          title="Opinión Global (Pregunta G.1 o similar)"
+          title="Opinión Global (Satisfacción)"
           data={opinionGlobalData}
           valueSuffix=" resp."
         />
         <RadarChartGeneral
-          title="Promedio por Sección (B-G)"
+          title="Promedio por Sección (Escala 1-4)"
           data={radarChartData}
         />
       </div>
 
-      <SectionBreakdownTable
-        secciones={informe.resultados_por_seccion}
-        seriesMap={seriesMap}
-      />
+      {/* Tabla de desglose */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <SectionBreakdownTable
+          secciones={informe.resultados_por_seccion}
+          seriesMap={seriesMap}
+        />
+      </div>
     </div>
   );
 };
 
 
-// Componente Principal
+// --- COMPONENTE PRINCIPAL ---
 const DepartamentoEstadisticas: React.FC = () => {
   const { token, logout } = useAuth();
   
-  // Estados de la lista
   const [informesList, setInformesList] = useState<InformeSinteticoList[]>([]);
   const [loadingList, setLoadingList] = useState(true);
   const [errorList, setErrorList] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
 
-  // Estados de la vista detallada
   const [selectedInformeId, setSelectedInformeId] = useState<number | null>(null);
   const [informeDetalle, setInformeDetalle] = useState<InformeSinteticoResultado | null>(null);
   const [loadingDetalle, setLoadingDetalle] = useState(false);
   const [errorDetalle, setErrorDetalle] = useState<string | null>(null);
 
-  // Cargar la lista de informes generados
+  // Cargar lista
   const fetchInformesList = async () => {
     setLoadingList(true);
     setErrorList(null);
-    if (!token) {
-      setErrorList("Sesión expirada.");
-      logout();
-      return;
-    }
+    if (!token) { setErrorList("Sesión expirada."); logout(); return; }
     try {
       const response = await fetch(`${API_BASE_URL}/departamento/informes-sinteticos`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -191,32 +240,23 @@ const DepartamentoEstadisticas: React.FC = () => {
     }
   };
 
-  // Cargar la lista al montar el componente
-  useEffect(() => {
-    fetchInformesList();
-  }, [token, logout]);
+  useEffect(() => { fetchInformesList(); }, [token, logout]);
 
-  // Cargar los detalles de un informe cuando se selecciona
+  // Cargar detalle
   useEffect(() => {
     if (!selectedInformeId || !token) {
-      setInformeDetalle(null); // Limpia el detalle si no hay ID
+      setInformeDetalle(null);
       return;
     }
-
     const fetchDetalle = async () => {
       setLoadingDetalle(true);
       setErrorDetalle(null);
       try {
         const response = await fetch(
           `${API_BASE_URL}/departamento/informes-sinteticos/${selectedInformeId}/estadisticas`, 
-          {
-            headers: { Authorization: `Bearer ${token}` }
-          }
+          { headers: { Authorization: `Bearer ${token}` } }
         );
-        if (!response.ok) {
-           const errData = await response.json();
-           throw new Error(errData.detail || "No se pudo cargar el detalle del informe.");
-        }
+        if (!response.ok) throw new Error("No se pudo cargar el detalle.");
         const data: InformeSinteticoResultado = await response.json();
         setInformeDetalle(data);
       } catch (err) {
@@ -225,34 +265,23 @@ const DepartamentoEstadisticas: React.FC = () => {
         setLoadingDetalle(false);
       }
     };
-    
     fetchDetalle();
-
   }, [selectedInformeId, token, logout]);
 
-  // Handler para el botón "Generar"
+  // Generar nuevo informe
   const handleGenerarInforme = async () => {
     setIsGenerating(true);
-    setErrorList(null); // Limpia errores viejos
-    if (!token) {
-      setErrorList("Sesión expirada.");
-      logout();
-      return;
-    }
+    setErrorList(null);
     try {
       const response = await fetch(`${API_BASE_URL}/departamento/informes-sinteticos/generar`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
       });
-      
       if (!response.ok) {
         const errData = await response.json();
         throw new Error(errData.detail || "Error al generar el informe.");
       }
-      
-      // Si tuvo éxito, recargamos la lista
       fetchInformesList(); 
-
     } catch (err) {
       setErrorList(err instanceof Error ? err.message : "Error desconocido");
     } finally {
@@ -260,105 +289,104 @@ const DepartamentoEstadisticas: React.FC = () => {
     }
   };
   
-  // --- RENDERIZADO ---
+  // --- RENDER CONDICIONAL ---
   
-  // Vista de Carga o Error de Detalle
-  if (loadingDetalle) {
-    return (
-      <div className="p-6 max-w-5xl mx-auto">
-        <Spinner />
+  if (selectedInformeId) {
+    if (loadingDetalle) return <Spinner />;
+    if (errorDetalle) return (
+      <div className="p-8 text-center bg-white rounded-lg shadow mx-auto max-w-2xl mt-10">
+         <p className="text-red-600 mb-4">{errorDetalle}</p>
+         <Button onClick={() => setSelectedInformeId(null)}>Volver</Button>
       </div>
     );
-  }
-  if (errorDetalle) {
-    return (
-       <div className="p-6 max-w-5xl mx-auto text-center">
-         <p className="text-red-600">{errorDetalle}</p>
-         <button
-            onClick={() => setSelectedInformeId(null)}
-            className="mt-4 text-sm font-medium text-blue-600 hover:text-blue-800"
-          >
-            &larr; Volver al listado
-          </button>
-       </div>
-    );
-  }
-  
-  // Vista de Detalle (si hay un informe cargado)
-  if (informeDetalle) {
-    return (
-      <div className="p-6 max-w-5xl mx-auto space-y-6">
-        <EstadisticasDetalle 
-          informe={informeDetalle} 
-          onVolver={() => setSelectedInformeId(null)} 
-        />
+    if (informeDetalle) return (
+      <div className="max-w-6xl mx-auto p-6">
+         <EstadisticasDetalle informe={informeDetalle} onVolver={() => setSelectedInformeId(null)} />
       </div>
     );
   }
 
-  // Vista de Lista (Default)
+  // Vista de Lista (Dashboard Principal)
   return (
-    <div className="p-6 max-w-4xl mx-auto">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold text-gray-800">
-          Informes Sintéticos
-        </h1>
+    <div className="max-w-6xl mx-auto p-6 space-y-6">
+      {/* Header del Dashboard */}
+      <div className="flex flex-col md:flex-row justify-between items-end md:items-center gap-4 border-b border-gray-200 pb-6">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Informes Sintéticos</h1>
+          <p className="text-gray-500 mt-1">Gestión y visualización de reportes de departamento.</p>
+        </div>
         <button
           onClick={handleGenerarInforme}
           disabled={isGenerating || loadingList}
-          className="bg-green-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-green-700 transition disabled:bg-gray-400"
+          className="bg-indigo-600 text-white px-5 py-2.5 rounded-lg font-semibold hover:bg-indigo-700 transition shadow-md disabled:bg-indigo-300 flex items-center gap-2"
         >
-          {isGenerating ? "Generando..." : "Generar Nuevo Informe"}
+          {isGenerating ? (
+            <span className="flex items-center gap-2">Generando...</span>
+          ) : (
+            <><span>+</span> Generar Informe Actual</>
+          )}
         </button>
       </div>
       
-      {loadingList && <Spinner />}
+      {loadingList && <div className="py-10"><Spinner /></div>}
       
       {errorList && (
-         <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-md shadow-md text-center" role="alert">
-           <p className="font-bold">¡Error!</p>
-           <p>{errorList}</p>
+         <div className="bg-red-50 border-l-4 border-red-500 text-red-700 p-4 rounded-md">
+           <p className="font-bold">Error</p> <p>{errorList}</p>
          </div>
       )}
 
       {!loadingList && !errorList && informesList.length === 0 && (
-        <div className="text-center py-10 text-gray-600 bg-white p-8 rounded-lg shadow-md border border-gray-200">
-          <p className="text-xl font-semibold mt-4">No hay informes</p>
-          <p className="text-base mt-2 text-gray-500">
-            Aún no se ha generado ningún informe sintético.
-          </p>
-          <p className="text-base mt-1 text-gray-500">
-            Presiona "Generar Nuevo Informe" para agrupar los reportes de profesores.
-          </p>
+        <div className="text-center py-16 bg-white rounded-xl border border-dashed border-gray-300">
+          <div className="mx-auto h-12 w-12 text-gray-300 mb-3">
+             <ChartIcon />
+          </div>
+          <h3 className="text-lg font-medium text-gray-900">No hay informes generados</h3>
+          <p className="mt-1 text-sm text-gray-500">Comienza generando el primer informe sintético para este departamento.</p>
         </div>
       )}
 
+      {/* TABLA DE INFORMES (Mejora Visual) */}
       {!loadingList && informesList.length > 0 && (
-        <div className="space-y-3">
-          {informesList.map((informe) => (
-            <div
-              key={informe.id}
-              className="bg-white p-4 rounded shadow border flex flex-col sm:flex-row justify-between items-start sm:items-center"
-            >
-              <div className="mb-3 sm:mb-0">
-                <h3 className="text-lg font-semibold text-gray-800">
-                  Informe Sintético (ID: {informe.id})
-                </h3>
-                <p className="text-sm text-gray-600">
-                  Generado: {new Date(informe.fecha_inicio).toLocaleDateString()}
-                </p>
-                <p className="text-xs text-gray-500 mt-1">
-                  Reportes agrupados: {informe.cantidad_reportes}
-                </p>
-              </div>
-              <button
-                className="bg-blue-500 text-white px-4 py-2 rounded text-sm font-medium hover:bg-blue-600 w-full sm:w-auto"
-                onClick={() => setSelectedInformeId(informe.id)}
-              >
-                Ver Estadísticas
-              </button>
-            </div>
-          ))}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha de Generación</th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reportes Agregados</th>
+                <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {informesList.map((informe) => (
+                <tr key={informe.id} className="hover:bg-gray-50 transition-colors">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                    #{informe.id}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {new Date(informe.fecha_inicio).toLocaleDateString()} 
+                    <span className="text-xs text-gray-400 ml-1">
+                      ({new Date(informe.fecha_inicio).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})})
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                      {informe.cantidad_reportes} reportes
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <button
+                      onClick={() => setSelectedInformeId(informe.id)}
+                      className="text-indigo-600 hover:text-indigo-900 font-semibold hover:underline"
+                    >
+                      Ver Estadísticas &rarr;
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
     </div>

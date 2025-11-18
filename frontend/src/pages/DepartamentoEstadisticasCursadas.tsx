@@ -1,100 +1,192 @@
-// frontend/src/pages/DepartamentoEstadisticasCursadas.tsx
-
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useAuth } from "../auth/AuthContext";
 import type { ResultadoCursada } from "../types/estadisticas";
 import Spinner from "../components/Spinner";
 import CursadaResultados from "../components/estadisticas/CursadaResultados";
+import { Button } from "../components/Button";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
 
-// Interfaces para los selectores
-interface Profesor {
+interface ItemSelector {
   id: number;
   nombre: string;
 }
-interface Materia {
-  id: number;
-  nombre: string;
-}
+
+// Iconos SVG
+const ChevronDownIcon = ({ className }: { className?: string }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className={className}>
+    <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clipRule="evenodd" />
+  </svg>
+);
+
+// --- SUB-COMPONENTE: ACORDEÓN INDIVIDUAL ---
+const CursadaAccordionItem: React.FC<{
+  resultado: ResultadoCursada;
+  isSelected: boolean;
+  onToggleSelection: (id: number) => void;
+  isOpen: boolean;
+  onToggleOpen: () => void;
+}> = ({ resultado, isSelected, onToggleSelection, isOpen, onToggleOpen }) => {
+  
+  return (
+    <div className={`bg-white rounded-xl border transition-all duration-200 ${isOpen ? 'border-blue-300 shadow-md ring-1 ring-blue-100' : 'border-gray-200 hover:border-blue-200'}`}>
+      {/* HEADER CLICKEABLE */}
+      <div 
+        className="p-4 flex items-center gap-4 cursor-pointer select-none"
+        onClick={onToggleOpen}
+      >
+        {/* Checkbox para Comparar */}
+        <div onClick={(e) => e.stopPropagation()} className="flex items-center h-full">
+          <input 
+            type="checkbox" 
+            checked={isSelected}
+            onChange={() => onToggleSelection(resultado.cursada_id)}
+            className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer"
+          />
+        </div>
+
+        <div className="flex-grow">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
+             <div>
+               <h3 className="text-lg font-bold text-gray-800">
+                 {resultado.materia_nombre}
+               </h3>
+               <div className="flex items-center gap-2 text-sm text-gray-500 mt-1">
+                  <span>{resultado.cuatrimestre_info}</span>
+                  {resultado.fecha_cierre && (
+                    <>
+                      <span>•</span>
+                      <span>Cierre: {new Date(resultado.fecha_cierre).toLocaleDateString()}</span>
+                    </>
+                  )}
+               </div>
+             </div>
+             
+             <span className="text-xs font-medium bg-blue-50 text-blue-700 px-3 py-1 rounded-full w-fit border border-blue-100">
+               {resultado.cantidad_respuestas} respuestas
+             </span>
+          </div>
+        </div>
+
+        <div className="flex items-center">
+           <ChevronDownIcon className={`w-6 h-6 text-gray-400 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`} />
+        </div>
+      </div>
+
+      {/* BODY DESPLEGABLE */}
+      {isOpen && (
+        <div className="border-t border-gray-100 p-4 sm:p-6 bg-gray-50/30 animate-fadeIn">
+           <CursadaResultados resultado={resultado} />
+        </div>
+      )}
+    </div>
+  );
+};
+
+
+// --- SUB-COMPONENTE: VISTA DE COMPARACIÓN ---
+const ComparacionView: React.FC<{
+  r1: ResultadoCursada;
+  r2: ResultadoCursada;
+  onClose: () => void;
+}> = ({ r1, r2, onClose }) => {
+  return (
+    <div className="space-y-6 animate-fadeIn">
+      <div className="flex items-center justify-between bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+        <h2 className="text-xl font-bold text-gray-800">Comparando Encuestas</h2>
+        <Button onClick={onClose} variant="secondary">Cerrar Comparación</Button>
+      </div>
+
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        {/* Columna Izquierda */}
+        <div className="space-y-2">
+          <div className="bg-blue-50 text-blue-800 px-4 py-2 rounded-t-lg font-semibold border-b-2 border-blue-200 text-center">
+            {r1.materia_nombre} ({r1.cuatrimestre_info})
+          </div>
+          <div className="bg-white rounded-b-lg shadow p-2">
+             <CursadaResultados resultado={r1} />
+          </div>
+        </div>
+        
+        {/* Columna Derecha */}
+        <div className="space-y-2">
+          <div className="bg-purple-50 text-purple-800 px-4 py-2 rounded-t-lg font-semibold border-b-2 border-purple-200 text-center">
+             {r2.materia_nombre} ({r2.cuatrimestre_info})
+          </div>
+          <div className="bg-white rounded-b-lg shadow p-2">
+             <CursadaResultados resultado={r2} />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 
 const DepartamentoEstadisticasCursadas: React.FC = () => {
   const { token, logout } = useAuth();
 
-  // Estados para los selectores
-  const [profesoresList, setProfesoresList] = useState<Profesor[]>([]);
-  const [materiasList, setMateriasList] = useState<Materia[]>([]);
+  // Listas para Selectores
+  const [profesoresList, setProfesoresList] = useState<ItemSelector[]>([]);
+  const [materiasList, setMateriasList] = useState<ItemSelector[]>([]);
 
-  // Estados para los datos
+  // Selección de Filtros
   const [selectedProfesor, setSelectedProfesor] = useState<string>("");
   const [selectedMateria, setSelectedMateria] = useState<string>("");
-  const [resultados, setResultados] = useState<ResultadoCursada[]>([]);
-  
-  // Estados de UI
+  const [startDate, setStartDate] = useState<string>("");
+  const [endDate, setEndDate] = useState<string>("");
+
+  // Datos
+  const [resultadosRaw, setResultadosRaw] = useState<ResultadoCursada[]>([]); // Datos originales
+  const [filteredResults, setFilteredResults] = useState<ResultadoCursada[]>([]); // Datos filtrados por fecha
+
+  // Estado UI
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  // Estado Acordeones y Comparación
+  const [openItems, setOpenItems] = useState<number[]>([]); // IDs abiertos
+  const [selectedIds, setSelectedIds] = useState<number[]>([]); // IDs seleccionados para comparar
+  const [showComparison, setShowComparison] = useState(false);
 
-  // Cargar los selectores al inicio
+  // Cargar selectores al inicio
   useEffect(() => {
     if (!token) return;
-    
     const fetchSelectores = async () => {
-      setLoading(true);
       try {
         const [profRes, matRes] = await Promise.all([
-          fetch(`${API_BASE_URL}/departamento/profesores`, {
-            headers: { Authorization: `Bearer ${token}` },
-          }),
-          fetch(`${API_BASE_URL}/departamento/materias`, {
-            headers: { Authorization: `Bearer ${token}` },
-          }),
+          fetch(`${API_BASE_URL}/departamento/profesores`, { headers: { Authorization: `Bearer ${token}` } }),
+          fetch(`${API_BASE_URL}/departamento/materias`, { headers: { Authorization: `Bearer ${token}` } }),
         ]);
-
-        if (profRes.ok) {
-          const data: Profesor[] = await profRes.json();
-          setProfesoresList(data);
-        }
-        if (matRes.ok) {
-          const data: Materia[] = await matRes.json();
-          setMateriasList(data);
-        }
-      } catch (err) {
-        setError("Error al cargar listas de profesores o materias.");
-      } finally {
-        setLoading(false);
-      }
+        if (profRes.ok) setProfesoresList(await profRes.json());
+        if (matRes.ok) setMateriasList(await matRes.json());
+      } catch (e) { console.error(e); }
     };
     fetchSelectores();
-  }, [token, logout]);
+  }, [token]);
 
-  // Handler para buscar estadísticas
+  // Fetch principal de estadísticas
   const fetchEstadisticas = async (tipo: 'profesor' | 'materia', id: string) => {
     if (!id || !token) return;
-
     setLoading(true);
     setError(null);
-    setResultados([]); // Limpiar resultados anteriores
-    
-    let url = "";
-    if (tipo === 'profesor') {
-      url = `${API_BASE_URL}/departamento/estadisticas/profesor/${id}`;
-    } else {
-      url = `${API_BASE_URL}/departamento/estadisticas/materia/${id}`;
-    }
+    setResultadosRaw([]);
+    setOpenItems([]);
+    setSelectedIds([]);
+    setShowComparison(false);
+
+    const url = tipo === 'profesor'
+      ? `${API_BASE_URL}/departamento/estadisticas/profesor/${id}`
+      : `${API_BASE_URL}/departamento/estadisticas/materia/${id}`;
 
     try {
-      const response = await fetch(url, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      
+      const response = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
       if (!response.ok) {
         const errData = await response.json();
         throw new Error(errData.detail || "No se pudieron cargar los resultados");
       }
-      
       const data: ResultadoCursada[] = await response.json();
-      setResultados(data);
-
+      setResultadosRaw(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error desconocido");
     } finally {
@@ -102,107 +194,201 @@ const DepartamentoEstadisticasCursadas: React.FC = () => {
     }
   };
 
-  // Handlers para los <select>
-  const handleProfesorChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const profId = e.target.value;
-    setSelectedProfesor(profId);
-    setSelectedMateria(""); // Limpiar la otra selección
-    if (profId) {
-      fetchEstadisticas('profesor', profId);
-    } else {
-      setResultados([]); // Limpiar si selecciona "ninguno"
+  // Efecto para filtrar localmente por fechas cuando cambian los inputs o los datos
+  useEffect(() => {
+    let filtrados = resultadosRaw;
+
+    if (startDate) {
+      const start = new Date(startDate).getTime();
+      filtrados = filtrados.filter(r => {
+        if (!r.fecha_cierre) return false; 
+        return new Date(r.fecha_cierre).getTime() >= start;
+      });
     }
+
+    if (endDate) {
+      // Ajustar endDate al final del día
+      const end = new Date(endDate);
+      end.setHours(23, 59, 59, 999);
+      const endTime = end.getTime();
+      
+      filtrados = filtrados.filter(r => {
+        if (!r.fecha_cierre) return false;
+        return new Date(r.fecha_cierre).getTime() <= endTime;
+      });
+    }
+
+    setFilteredResults(filtrados);
+  }, [resultadosRaw, startDate, endDate]);
+
+
+  // Handlers UI
+  const handleProfesorChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const val = e.target.value;
+    setSelectedProfesor(val);
+    setSelectedMateria("");
+    if (val) fetchEstadisticas('profesor', val);
+    else setResultadosRaw([]);
   };
 
   const handleMateriaChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const matId = e.target.value;
-    setSelectedMateria(matId);
-    setSelectedProfesor(""); // Limpiar la otra selección
-    if (matId) {
-      fetchEstadisticas('materia', matId);
-    } else {
-      setResultados([]); // Limpiar si selecciona "ninguno"
-    }
+    const val = e.target.value;
+    setSelectedMateria(val);
+    setSelectedProfesor("");
+    if (val) fetchEstadisticas('materia', val);
+    else setResultadosRaw([]);
   };
 
+  const toggleSelection = (id: number) => {
+    setSelectedIds(prev => 
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    );
+  };
+
+  const toggleAccordion = (id: number) => {
+    setOpenItems(prev => 
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    );
+  };
+
+  // Obtener objetos completos para la comparación
+  const itemsToCompare = useMemo(() => {
+    if (selectedIds.length !== 2) return null;
+    const r1 = filteredResults.find(r => r.cursada_id === selectedIds[0]);
+    const r2 = filteredResults.find(r => r.cursada_id === selectedIds[1]);
+    if (r1 && r2) return { r1, r2 };
+    return null;
+  }, [selectedIds, filteredResults]);
+
+
+  // --- RENDER ---
+
+  if (showComparison && itemsToCompare) {
+    return (
+      <div className="p-6 max-w-[95%] mx-auto">
+         <ComparacionView 
+           r1={itemsToCompare.r1} 
+           r2={itemsToCompare.r2} 
+           onClose={() => setShowComparison(false)} 
+         />
+      </div>
+    );
+  }
 
   return (
-    <div className="p-6 max-w-5xl mx-auto space-y-6">
-      <h1 className="text-3xl font-bold text-gray-800">
-        Estadísticas de Cursadas
-      </h1>
-      
-      {/* Contenedor de Selectores */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-4 bg-white rounded-lg shadow border">
-        <div>
-          <label htmlFor="profesor-select" className="block text-sm font-medium text-gray-700 mb-1">
-            Buscar por Profesor
-          </label>
-          <select
-            id="profesor-select"
-            value={selectedProfesor}
-            onChange={handleProfesorChange}
-            className="w-full p-2 border border-gray-300 rounded-md"
-            disabled={loading}
-          >
-            <option value="">-- Seleccione un profesor --</option>
-            {profesoresList.map((prof) => (
-              <option key={prof.id} value={prof.id}>
-                {prof.nombre}
-              </option>
-            ))}
-          </select>
-        </div>
-        
-        <div>
-          <label htmlFor="materia-select" className="block text-sm font-medium text-gray-700 mb-1">
-            Buscar por Materia
-          </label>
-          <select
-            id="materia-select"
-            value={selectedMateria}
-            onChange={handleMateriaChange}
-            className="w-full p-2 border border-gray-300 rounded-md"
-            disabled={loading}
-          >
-            <option value="">-- Seleccione una materia --</option>
-            {materiasList.map((mat) => (
-              <option key={mat.id} value={mat.id}>
-                {mat.nombre}
-              </option>
-            ))}
-          </select>
-        </div>
+    <div className="p-6 max-w-6xl mx-auto space-y-6 pb-20">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+         <h1 className="text-3xl font-bold text-gray-800">Estadísticas de Cursadas</h1>
+         
+         {/* Botón Comparar Flotante/Visible si hay selección */}
+         <div className={`transition-opacity duration-300 ${selectedIds.length === 2 ? 'opacity-100' : 'opacity-50'}`}>
+            <Button 
+              disabled={selectedIds.length !== 2}
+              onClick={() => setShowComparison(true)}
+              variant="primary"
+            >
+              Comparar Seleccionados ({selectedIds.length}/2)
+            </Button>
+         </div>
       </div>
 
-      {/* Área de Resultados */}
+      {/* PANEL DE FILTROS */}
+      <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-200 space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Filtrar por Profesor</label>
+            <select
+              value={selectedProfesor}
+              onChange={handleProfesorChange}
+              className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
+              disabled={loading}
+            >
+              <option value="">-- Seleccione --</option>
+              {profesoresList.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Filtrar por Materia</label>
+            <select
+              value={selectedMateria}
+              onChange={handleMateriaChange}
+              className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
+              disabled={loading}
+            >
+               <option value="">-- Seleccione --</option>
+               {materiasList.map(m => <option key={m.id} value={m.id}>{m.nombre}</option>)}
+            </select>
+          </div>
+        </div>
+
+        {/* Filtro de Fechas (Solo visible si hay resultados cargados) */}
+        {(resultadosRaw.length > 0) && (
+           <div className="pt-4 border-t border-gray-100 grid grid-cols-1 sm:grid-cols-2 gap-6">
+              <div>
+                 <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Fecha Desde</label>
+                 <input 
+                   type="date" 
+                   value={startDate}
+                   onChange={(e) => setStartDate(e.target.value)}
+                   className="w-full p-2 border border-gray-300 rounded-md text-sm"
+                 />
+              </div>
+              <div>
+                 <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Fecha Hasta</label>
+                 <input 
+                   type="date" 
+                   value={endDate}
+                   onChange={(e) => setEndDate(e.target.value)}
+                   className="w-full p-2 border border-gray-300 rounded-md text-sm"
+                 />
+              </div>
+           </div>
+        )}
+      </div>
+
+      {/* RESULTADOS */}
       <div>
-        {loading && <Spinner />}
+        {loading && <div className="flex justify-center py-10"><Spinner /></div>}
         
         {error && (
-          <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-md text-center">
-            <p className="font-bold">¡Error!</p>
+          <div className="bg-red-50 text-red-700 p-4 rounded-md border border-red-200 text-center">
+            <p className="font-bold">Error</p>
             <p>{error}</p>
           </div>
         )}
 
-        {!loading && !error && resultados.length === 0 && (selectedProfesor || selectedMateria) && (
-           <div className="text-center py-10 text-gray-600 bg-white p-8 rounded-lg shadow-md">
-             <p className="text-lg font-semibold">No se encontraron resultados</p>
-             <p className="text-base mt-2 text-gray-500">
-               No hay encuestas cerradas para la selección actual.
+        {!loading && !error && filteredResults.length === 0 && (selectedProfesor || selectedMateria) && (
+           <div className="text-center py-12 bg-white rounded-xl border border-dashed border-gray-300">
+             <p className="text-lg font-semibold text-gray-700">No se encontraron resultados</p>
+             <p className="text-sm text-gray-500 mt-1">
+               {resultadosRaw.length > 0 ? "Intenta ampliar el rango de fechas." : "No hay encuestas cerradas para esta selección."}
              </p>
            </div>
         )}
 
-        {!loading && !error && resultados.length > 0 && (
-          <div className="space-y-6">
-            <h2 className="text-2xl font-semibold text-gray-700">
-              Mostrando {resultados.length} resultado(s)
-            </h2>
-            {/* ¡Aquí reutilizamos el componente! */}
-            {resultados.map((resultado) => (
-              <CursadaResultados key={resultado.cursada_id} resultado={resultado} />
+        {!loading && !error && filteredResults.length > 0 && (
+          <div className="space-y-4">
+            <div className="flex justify-between items-center px-2">
+               <h2 className="text-lg font-semibold text-gray-700">
+                 Mostrando {filteredResults.length} reporte(s)
+               </h2>
+               <button 
+                 onClick={() => { setStartDate(""); setEndDate(""); }}
+                 className="text-sm text-blue-600 hover:underline"
+               >
+                 Limpiar fechas
+               </button>
+            </div>
+            
+            {filteredResults.map((resultado) => (
+              <CursadaAccordionItem 
+                key={resultado.cursada_id} 
+                resultado={resultado}
+                isSelected={selectedIds.includes(resultado.cursada_id)}
+                onToggleSelection={toggleSelection}
+                isOpen={openItems.includes(resultado.cursada_id)}
+                onToggleOpen={() => toggleAccordion(resultado.cursada_id)}
+              />
             ))}
           </div>
         )}

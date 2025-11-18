@@ -32,6 +32,7 @@ export interface ResultadoCursada {
 
   resultados_por_seccion: ResultadoSeccion[];
   informe_curricular_instancia_id?: number | null;
+  fecha_cierre?: string | null;
 }
 
 export interface PlantillaBase {

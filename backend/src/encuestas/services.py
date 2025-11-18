@@ -1,4 +1,3 @@
-# backend/src/encuestas/services.py
 from typing import List, Dict, Optional, Any
 from src.seccion.models import Seccion
 from sqlalchemy import select, update, func, Any
@@ -73,7 +72,6 @@ def eliminar_plantilla(db: Session, plantilla_id: int) -> models.Encuesta:
     db.commit()
     return db_plantilla
 
-#EncuestaInstancia
 
 def activar_encuesta_para_cursada(db: Session, data: schemas.EncuestaInstanciaCreate) -> models.EncuestaInstancia:
     cursada = db.get(Cursada, data.cursada_id)
@@ -148,22 +146,17 @@ def obtener_instancias_activas_alumno(db: Session, alumno_id: int) -> List[Dict[
 def obtener_instancias_activas_profesor(db: Session, profesor_id: int) -> List[Dict[str, Any]]:
  
     
-    # Consulta las Instancias de Actividad Curricular (no EncuestaInstancia)
     stmt = (
         select(instrumento_models.ActividadCurricularInstancia)
         .join(Cursada, instrumento_models.ActividadCurricularInstancia.cursada_id == Cursada.id)
         .where(
             instrumento_models.ActividadCurricularInstancia.profesor_id == profesor_id,
-            # Un reporte "activo" para un profesor es uno que está "PENDIENTE"
             instrumento_models.ActividadCurricularInstancia.estado == EstadoInforme.PENDIENTE 
         )
         .options(
-            # Carga la plantilla (el Instrumento "ActividadCurricular")
             joinedload(instrumento_models.ActividadCurricularInstancia.actividad_curricular),
-            # Carga Cursada -> Materia
             joinedload(instrumento_models.ActividadCurricularInstancia.cursada)
             .joinedload(Cursada.materia),
-            # Carga Cursada -> Profesor (para el nombre)
             joinedload(instrumento_models.ActividadCurricularInstancia.cursada)
             .joinedload(Cursada.profesor)
         )
@@ -175,13 +168,11 @@ def obtener_instancias_activas_profesor(db: Session, profesor_id: int) -> List[D
     response_list = []
     for instancia in results:
         
-        # La "plantilla" en este caso es el instrumento base 'actividad_curricular'
         if not instancia.actividad_curricular:
             continue
             
         plantilla_data = schemas.PlantillaInfo.model_validate(instancia.actividad_curricular).model_dump()
         
-        # 'ha_respondido' es FALSO si el estado es PENDIENTE
         ha_respondido = instancia.estado != EstadoInforme.PENDIENTE
 
         response_list.append({
@@ -234,10 +225,6 @@ def obtener_plantilla_para_instancia_activa(db: Session, instancia_id: int) -> m
          raise Exception(f"La instancia {instancia_id} no tiene una plantilla asociada.")
 
     return instancia.plantilla
-
-#Para el profesor
-# Reemplaza la función 'obtener_resultados_agregados_profesor'
-# (aprox. línea 189) con esto:
 
 def obtener_resultados_agregados_profesor(
     db: Session,
@@ -374,9 +361,7 @@ def obtener_resultados_agregados_profesor(
              periodo_val = cursada.cuatrimestre.periodo.value if cursada.cuatrimestre.periodo else '?'
              cuatri_info = f"{cursada.cuatrimestre.anio} - {periodo_val}"
         
-        # === 2. AÑADE ESTA LÓGICA PARA OBTENER EL ID ===
         informe_id = None
-        # Revisa si la instancia del informe existe Y si está PENDIENTE
         if (cursada.actividad_curricular_instancia and 
             cursada.actividad_curricular_instancia.estado == EstadoInforme.PENDIENTE):
             informe_id = cursada.actividad_curricular_instancia.id
@@ -388,8 +373,8 @@ def obtener_resultados_agregados_profesor(
                 cuatrimestre_info=cuatri_info,
                 cantidad_respuestas=cantidad_sets,
                 resultados_por_seccion=resultados_secciones_schema,
-                # === 3. PASA EL ID AL SCHEMA ===
-                informe_curricular_instancia_id=informe_id 
+                informe_curricular_instancia_id=informe_id,
+                fecha_cierre=instancia.fecha_fin
             )
         )
 
@@ -510,7 +495,6 @@ def listar_profesores_por_departamento(db: Session, departamento_id: int) -> Lis
     
     profesores = db.scalars(stmt).all()
     
-    # Si no hay profesores, devolvemos lista vacía en lugar de error 404 para que el select simplemente esté vacío
     return profesores
 
 def listar_materias_por_departamento(db: Session, departamento_id: int) -> List[Materia]:
@@ -542,7 +526,6 @@ def _validar_profesor_en_dpto(db: Session, profesor_id: int, departamento_id: in
     if not profesor:
         raise NotFound(detail=f"Profesor con ID {profesor_id} no encontrado.")
 
-    # (Usamos la misma lógica de JOIN que listar_profesores_por_departamento)
     es_valido = db.scalar(
         select(func.count(Profesor.id))
         .join(Cursada, Profesor.id == Cursada.profesor_id)
@@ -592,15 +575,8 @@ def obtener_resultados_agregados_para_profesor(
     (la que usa el rol DOCENTE), solo cambia el filtro inicial.
     """
     
-    # 1. Validación de seguridad
     _validar_profesor_en_dpto(db, profesor_id, departamento_id)
-    
-    # 2. Reutilizamos la lógica de 'obtener_resultados_agregados_profesor'
-    #    Simplemente le pasamos el 'profesor_id' que recibimos.
-    
-    # (El código de la función 'obtener_resultados_agregados_profesor'
-    #  ya está diseñado para recibir un 'profesor_id', así que podemos llamarla)
-    
+ 
     resultados = obtener_resultados_agregados_profesor(db, profesor_id=profesor_id, cuatrimestre_id=None)
     
     if not resultados:
@@ -621,18 +597,15 @@ def obtener_resultados_agregados_para_materia(
     Es una variación de 'obtener_resultados_agregados_profesor'.
     """
     
-    # 1. Validación de seguridad
     _validar_materia_en_dpto(db, materia_id, departamento_id)
 
-    # 2. Lógica de consulta (similar a 'obtener_resultados_agregados_profesor')
     
-    # La principal diferencia es esta consulta inicial:
     stmt_cursadas = (
         select(Cursada)
         .options(
             joinedload(Cursada.materia), 
             joinedload(Cursada.cuatrimestre),
-            joinedload(Cursada.profesor), # <-- Importante para mostrar quién la dio
+            joinedload(Cursada.profesor), 
             selectinload(Cursada.encuesta_instancia)
             .selectinload(models.EncuestaInstancia.plantilla) 
             .selectinload(models.Encuesta.secciones)
@@ -641,7 +614,7 @@ def obtener_resultados_agregados_para_materia(
             
             selectinload(Cursada.actividad_curricular_instancia) 
         )
-        .where(Cursada.materia_id == materia_id) # <-- FILTRO PRINCIPAL
+        .where(Cursada.materia_id == materia_id) 
     )
     
     cursadas_materia = db.execute(stmt_cursadas).scalars().unique().all()
@@ -651,7 +624,6 @@ def obtener_resultados_agregados_para_materia(
 
     resultados_finales: List[schemas.ResultadoCursada] = []
 
-    # 3. Agregación (Este código es idéntico al de la función original)
     for cursada in cursadas_materia:
         instancia = cursada.encuesta_instancia
 
@@ -662,11 +634,7 @@ def obtener_resultados_agregados_para_materia(
         if not plantilla or not plantilla.secciones:
             continue 
 
-        # (Aquí va toda la lógica de agregación de 'obtener_resultados_agregados_profesor'
-        #  desde la línea ~321 hasta la ~450 de 'backend/src/encuestas/services.py'
-        #  Básicamente, copiar el bucle 'for cursada in ...')
         
-        # --- INICIO DE CÓDIGO REUTILIZADO ---
         stmt_respuestas = (
             select(Respuesta)
             .join(RespuestaSet)
@@ -749,21 +717,19 @@ def obtener_resultados_agregados_para_materia(
             cursada.actividad_curricular_instancia.estado == EstadoInforme.PENDIENTE):
             informe_id = cursada.actividad_curricular_instancia.id
         
-        # ¡Importante! Añadimos el nombre del profesor a la materia
-        # (La plantilla 'ResultadoCursada' ya lo soporta)
+
         materia_nombre_con_profesor = f"{cursada.materia.nombre} (Prof: {cursada.profesor.nombre if cursada.profesor else 'N/A'})"
         
         resultados_finales.append(
             schemas.ResultadoCursada(
                 cursada_id=cursada.id,
-                materia_nombre=materia_nombre_con_profesor, # <-- Usamos el nombre modificado
+                materia_nombre=materia_nombre_con_profesor, 
                 cuatrimestre_info=cuatri_info,
                 cantidad_respuestas=cantidad_sets,
                 resultados_por_seccion=resultados_secciones_schema,
                 informe_curricular_instancia_id=informe_id 
             )
         )
-        # --- FIN DE CÓDIGO REUTILIZADO ---
 
     if not resultados_finales:
         raise NotFound(detail="No se encontraron resultados de encuestas cerradas para esta materia.")

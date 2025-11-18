@@ -1,11 +1,17 @@
 from __future__ import annotations
 from sqlalchemy import Integer, String, ForeignKey, Text, Enum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from typing import Optional, List
+from typing import Optional, List, TYPE_CHECKING  # <--- Importar TYPE_CHECKING
 from src.models import ModeloBase
 from sqlalchemy import Column, DateTime, func
 
 from src.enumerados import TipoPregunta
+
+# --- BLOQUE NUEVO PARA RESOLVER REFERENCIAS ---
+if TYPE_CHECKING:
+    from src.pregunta.models import Pregunta, Opcion
+    from src.instrumento.models import InstrumentoInstancia
+# ----------------------------------------------
 
 class RespuestaSet(ModeloBase):
     __tablename__ = "respuesta_set"
