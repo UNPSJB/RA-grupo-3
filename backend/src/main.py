@@ -19,6 +19,9 @@ from src.auth.router import router as auth_router
 from src.account.router import router as account_router
 from fastapi.middleware.cors import CORSMiddleware
 from src.instrumento.router_departamento import router as instrumento_departamento_router
+from src.system.router import router as system_router
+
+
 
 load_dotenv()
 
@@ -56,3 +59,4 @@ app.include_router(instrumento_departamento_router) #nuevo router para estadisti
 app.include_router(encuesta_profesor_router)
 app.include_router(auth_router)
 app.include_router(account_router)
+app.include_router(system_router)

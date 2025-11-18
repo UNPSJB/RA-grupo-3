@@ -758,3 +758,49 @@ def listar_materias_de_profesor(db: Session, profesor_id: int) -> List[Materia]:
         .order_by(Materia.nombre)
     )
     return db.scalars(stmt).all()
+
+def obtener_dashboard_profesor(db: Session, profesor_id: int) -> List[schemas.DashboardProfesorItem]:
+    """
+    Devuelve estadísticas rápidas de las cursadas del año actual para el dashboard.
+    """
+    current_year = datetime.now().year
+    
+    # Buscamos las cursadas del profesor en el año actual que tengan instancia de encuesta
+    stmt = (
+        select(Cursada)
+        .join(Cuatrimestre)
+        .where(
+            Cursada.profesor_id == profesor_id,
+            Cuatrimestre.anio == current_year
+        )
+        .options(
+            joinedload(Cursada.materia),
+            joinedload(Cursada.encuesta_instancia),
+            selectinload(Cursada.inscripciones) # Cargamos inscripciones para contar
+        )
+    )
+    
+    cursadas = db.execute(stmt).scalars().unique().all()
+    
+    dashboard_items = []
+    
+    for cursada in cursadas:
+        # Solo nos interesan cursadas con encuesta generada (Activa o Cerrada)
+        instancia = cursada.encuesta_instancia
+        if not instancia:
+            continue
+            
+        total_alumnos = len(cursada.inscripciones)
+        # Contamos cuántos tienen ha_respondido = True
+        respuestas = sum(1 for i in cursada.inscripciones if i.ha_respondido)
+        
+        dashboard_items.append(schemas.DashboardProfesorItem(
+            materia_id=cursada.materia.id,
+            materia_nombre=cursada.materia.nombre,
+            cantidad_inscriptos=total_alumnos,
+            cantidad_respuestas=respuestas,
+            fecha_fin=instancia.fecha_fin,
+            estado=instancia.estado.value
+        ))
+        
+    return dashboard_items

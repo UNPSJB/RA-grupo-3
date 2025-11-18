@@ -7,6 +7,14 @@ from src.seccion.schemas import Seccion
 from src.enumerados import EstadoInstancia,TipoPregunta,TipoInstrumento
 
 
+
+class DashboardProfesorItem(BaseModel):
+    materia_id: int
+    materia_nombre: str
+    cantidad_inscriptos: int
+    cantidad_respuestas: int
+    fecha_fin: Optional[datetime] = None
+    estado: str # "activa", "cerrada", etc.
 #instrumento
 class InstrumentoBaseCreate(BaseModel):
     titulo: str

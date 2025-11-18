@@ -1,61 +1,84 @@
-# backend/src/seed_data.py
-import sys
-import os
-from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
 from sqlalchemy import select
-
-# --- Configuración de Path ---
-script_dir = os.path.dirname(os.path.abspath(__file__))
-backend_root = os.path.dirname(script_dir)
-if backend_root not in sys.path:
-    sys.path.insert(0, backend_root)
-# -----------------------------
-
 from src.database import SessionLocal, engine
-from src.models import ModeloBase
-from src.auth.services import get_password_hash
-from src.enumerados import TipoCuatrimestre, EstadoInstancia, TipoInstrumento, EstadoInstrumento
-
+from datetime import datetime, timedelta
 # Imports de Modelos
-from src.materia.models import Materia, Cuatrimestre, Cursada, Sede, Departamento, Carrera
+from src.materia.models import (
+    Materia, 
+    Cuatrimestre, 
+    Cursada, 
+    Sede,           
+    Departamento,   
+    Carrera         
+)
 from src.persona.models import Profesor, Alumno, Inscripcion, AdminDepartamento, AdminSecretaria
 from src.encuestas.models import EncuestaInstancia, Encuesta
+from src.enumerados import TipoCuatrimestre, EstadoInstancia, EstadoInstrumento
+from src.auth.services import get_password_hash
 
 def seed_initial_data(db: Session):
-    print("🌱 Iniciando carga de datos de prueba (v3 - Estadísticas)...")
+    print("🌱 Iniciando carga de datos de prueba (v4 - Multisede y +Alumnos)...")
 
-    # --- 1. Sedes, Deptos y Carreras ---
-    print("   > Configurando Estructura Académica...")
-    sede = db.scalar(select(Sede).filter_by(localidad="Comodoro Rivadavia"))
-    if not sede:
-        sede = Sede(localidad="Comodoro Rivadavia")
-        db.add(sede)
-        db.commit()
-
-    depto_info = db.scalar(select(Departamento).filter_by(nombre="Departamento de Ingeniería Informática"))
-    if not depto_info:
-        depto_info = Departamento(nombre="Departamento de Ingeniería Informática", sede_id=sede.id)
-        db.add(depto_info)
-        db.commit()
-
-    carrera = db.scalar(select(Carrera).filter_by(nombre="Ingeniería en Informática"))
-    if not carrera:
-        carrera = Carrera(nombre="Ingeniería en Informática", departamento_id=depto_info.id)
-        db.add(carrera)
-        db.commit()
+    # --- 1. Sedes ---
+    print("   > Configurando Sedes...")
+    sede_cr = db.scalars(select(Sede).filter_by(localidad="Comodoro Rivadavia")).first()
+    if not sede_cr:
+        sede_cr = Sede(localidad="Comodoro Rivadavia")
+        db.add(sede_cr)
     
-    db.refresh(carrera)
+    sede_tw = db.scalars(select(Sede).filter_by(localidad="Trelew")).first()
+    if not sede_tw:
+        sede_tw = Sede(localidad="Trelew")
+        db.add(sede_tw)
+    
+    db.commit()
+    db.refresh(sede_cr)
+    db.refresh(sede_tw)
 
-    # --- 2. Cuatrimestre ---
+    # --- 2. Departamentos (Uno en CR, Uno en TW) ---
+    print("   > Configurando Departamentos...")
+    
+    # Comodoro
+    depto_info_cr = db.scalars(select(Departamento).filter_by(nombre="Depto. Informática (CR)")).first()
+    if not depto_info_cr:
+        depto_info_cr = Departamento(nombre="Depto. Informática (CR)", sede_id=sede_cr.id)
+        db.add(depto_info_cr)
+
+    # Trelew (Nuevo para el profesor viajero)
+    depto_info_tw = db.scalars(select(Departamento).filter_by(nombre="Depto. Informática (TW)")).first()
+    if not depto_info_tw:
+        depto_info_tw = Departamento(nombre="Depto. Informática (TW)", sede_id=sede_tw.id)
+        db.add(depto_info_tw)
+    
+    db.commit()
+    db.refresh(depto_info_cr)
+    db.refresh(depto_info_tw)
+
+    # --- 3. Carreras ---
+    print("   > Configurando Carreras...")
+    carrera_cr = db.scalars(select(Carrera).filter_by(nombre="Ingeniería en Informática")).first()
+    if not carrera_cr:
+        carrera_cr = Carrera(nombre="Ingeniería en Informática", departamento_id=depto_info_cr.id)
+        db.add(carrera_cr)
+
+    carrera_tw = db.scalars(select(Carrera).filter_by(nombre="Licenciatura en Sistemas")).first()
+    if not carrera_tw:
+        carrera_tw = Carrera(nombre="Licenciatura en Sistemas", departamento_id=depto_info_tw.id)
+        db.add(carrera_tw)
+        
+    db.commit() 
+    db.refresh(carrera_cr)
+    db.refresh(carrera_tw)
+    
+    # --- 4. Cuatrimestre ---
     cuatri = db.query(Cuatrimestre).filter_by(anio=2025, periodo=TipoCuatrimestre.PRIMERO).first()
     if not cuatri:
         cuatri = Cuatrimestre(anio=2025, periodo=TipoCuatrimestre.PRIMERO)
         db.add(cuatri)
-        db.commit()
-        print("     + Cuatrimestre 1C 2025 creado.")
+        db.commit() 
+        db.refresh(cuatri)
 
-    # --- 3. Usuarios (3 Profes, 5 Alumnos, 2 Admins) ---
+    # --- 5. Usuarios (3 Profes, 10 Alumnos, Admins) ---
     print("   > Creando Usuarios...")
     
     # Profesores
@@ -70,12 +93,11 @@ def seed_initial_data(db: Session):
                 hashed_password=get_password_hash("123456")
             )
             db.add(p)
-            print(f"     + Creado: {username}")
         profesores.append(p)
     
-    # Alumnos
+    # Alumnos (Ahora son 10)
     alumnos = []
-    for i in range(1, 6):
+    for i in range(1, 11): # <--- CAMBIO: 1 a 10
         username = f"alumno{i}"
         a = db.query(Alumno).filter_by(username=username).first()
         if not a:
@@ -87,18 +109,16 @@ def seed_initial_data(db: Session):
             db.add(a)
         alumnos.append(a)
     
-    # Admin Departamento
+    # Admins
     if not db.query(AdminDepartamento).filter_by(username="admin_dpto").first():
         ad = AdminDepartamento(
-            nombre="Jefe Departamento Info",
+            nombre="Jefe Depto CR",
             username="admin_dpto",
             hashed_password=get_password_hash("123456"),
-            departamento_id=depto_info.id
+            departamento_id=depto_info_cr.id
         )
         db.add(ad)
-        print("     + Creado: admin_dpto")
 
-    # Admin Secretaria
     if not db.query(AdminSecretaria).filter_by(username="admin_sec").first():
         sec = AdminSecretaria(
             nombre="Secretaria Académica",
@@ -106,24 +126,29 @@ def seed_initial_data(db: Session):
             hashed_password=get_password_hash("123456")
         )
         db.add(sec)
-        print("     + Creado: admin_sec")
 
     db.commit()
-    # Recargar objetos para tener IDs
+    # Recargar para tener IDs
     for p in profesores: db.refresh(p)
     for a in alumnos: db.refresh(a)
 
 
-    # --- 4. Materias y Cursadas ---
-    print("   > Configurando Materias y Cursadas...")
+    # --- 6. Materias y Cursadas (Configuración Multisede) ---
+    print("   > Configurando Cursadas Multisede...")
     
-    # Definición de asignaciones (Materia -> Profesor Index)
-    # Prof 0 (profesor1) tiene 2 materias. Prof 1 y 2 tienen 1 materia.
+    # Definición de materias
+    # Profesor 1 (index 0): Dará clases en CR y en TW
+    # Profesor 2 (index 1): Solo CR
+    # Profesor 3 (index 2): Solo CR
+    
     config_cursadas = [
-        {"nombre": "Álgebra Lineal", "profesor_idx": 0},
-        {"nombre": "Programación I", "profesor_idx": 0},
-        {"nombre": "Sistemas Operativos", "profesor_idx": 1},
-        {"nombre": "Estabilidad I", "profesor_idx": 2},
+        # Sede Comodoro (Carrera Info)
+        {"nombre": "Programación I", "desc": "Intro a prog", "profesor_idx": 0, "carrera": carrera_cr},
+        {"nombre": "Álgebra Lineal", "desc": "Matemática", "profesor_idx": 1, "carrera": carrera_cr},
+        {"nombre": "Sistemas Operativos", "desc": "SO Avanzado", "profesor_idx": 2, "carrera": carrera_cr},
+        
+        # Sede Trelew (Carrera Sistemas) - Profesor 1 viaja aquí
+        {"nombre": "Bases de Datos I", "desc": "SQL y Modelado", "profesor_idx": 0, "carrera": carrera_tw}, 
     ]
 
     cursadas_creadas = []
@@ -132,17 +157,18 @@ def seed_initial_data(db: Session):
         # Crear/Buscar Materia
         materia = db.query(Materia).filter_by(nombre=item["nombre"]).first()
         if not materia:
-            materia = Materia(nombre=item["nombre"], descripcion="Materia obligatoria")
+            materia = Materia(nombre=item["nombre"], descripcion=item["desc"])
             db.add(materia)
             db.commit()
             db.refresh(materia)
-            # Vincular a carrera si no lo está
-            if materia not in carrera.materias:
-                carrera.materias.append(materia)
-                db.add(carrera)
-                db.commit()
+            
+        # Vincular a la carrera correcta (CR o TW)
+        if materia not in item["carrera"].materias:
+            item["carrera"].materias.append(materia)
+            db.add(item["carrera"])
+            db.commit()
         
-        # Crear/Buscar Cursada
+        # Crear Cursada
         profesor = profesores[item["profesor_idx"]]
         cursada = db.query(Cursada).filter_by(
             materia_id=materia.id, cuatrimestre_id=cuatri.id
@@ -156,13 +182,13 @@ def seed_initial_data(db: Session):
             )
             db.add(cursada)
             db.commit()
-            print(f"     + Cursada creada: {materia.nombre} (Prof: {profesor.username})")
+            print(f"     + Cursada: {materia.nombre} ({item['carrera'].departamento.sede.localidad}) -> Prof: {profesor.username}")
         
         db.refresh(cursada)
         cursadas_creadas.append(cursada)
 
-    # --- 5. Inscripciones ---
-    print("   > Inscribiendo alumnos...")
+    # --- 7. Inscripciones ---
+    print("   > Inscribiendo 10 alumnos a todas las cursadas...")
     for cursada in cursadas_creadas:
         for alumno in alumnos:
             inscripcion = db.query(Inscripcion).filter_by(
@@ -173,39 +199,38 @@ def seed_initial_data(db: Session):
                 db.add(ins)
     db.commit()
 
-    # --- 6. Instancias de Encuesta (Preparación para Respuestas) ---
+    # --- 8. Activar Encuestas ---
     print("   > Generando instancias de encuestas...")
-    
-    # Buscamos una plantilla publicada (del seed_plantilla.py)
     plantilla = db.query(Encuesta).filter(
         Encuesta.estado == EstadoInstrumento.PUBLICADA
     ).first()
 
-    if not plantilla:
-        print("     ! ADVERTENCIA: No se encontró ninguna plantilla de encuesta PUBLICADA.")
-        print("     ! Ejecuta 'python -m src.seed_plantilla' primero.")
-        return
+    if plantilla:
+        for cursada in cursadas_creadas:
+            instancia = db.query(EncuestaInstancia).filter_by(cursada_id=cursada.id).first()
+            if not instancia:
+                # CORRECCIÓN AQUÍ: Definimos una fecha de cierre a futuro
+                fecha_inicio = datetime.now()
+                fecha_cierre = fecha_inicio + timedelta(days=14) # Cierra en 2 semanas
 
-    for cursada in cursadas_creadas:
-        instancia = db.query(EncuestaInstancia).filter_by(cursada_id=cursada.id).first()
-        if not instancia:
-            # Creamos la instancia ACTIVA (el otro script la responderá y cerrará)
-            nueva_instancia = EncuestaInstancia(
-                cursada_id=cursada.id,
-                plantilla_id=plantilla.id,
-                fecha_inicio=datetime.now(),
-                estado=EstadoInstancia.ACTIVA
-            )
-            db.add(nueva_instancia)
-            print(f"     + Encuesta activada para cursada ID {cursada.id}")
-    
-    db.commit()
-    print("✅ Carga de estructura y usuarios finalizada.")
+                nueva_instancia = EncuestaInstancia(
+                    cursada_id=cursada.id,
+                    plantilla_id=plantilla.id,
+                    fecha_inicio=fecha_inicio,
+                    fecha_fin=fecha_cierre, # <--- Asignamos la fecha de fin
+                    estado=EstadoInstancia.ACTIVA
+                )
+                db.add(nueva_instancia)
+        db.commit()
+    else:
+        print("     ! No se encontró plantilla publicada. Corre seed_plantilla.py primero.")
+
+    print("✅ Carga de datos finalizada.")
 
 
 def create_tables():
     from src.models import ModeloBase
-    # Importar todos los modelos para que SQLAlchemy los registre
+    # Importar todos los modelos para registrar en metadata
     from src.materia import models
     from src.persona import models
     from src.encuestas import models
@@ -216,6 +241,8 @@ def create_tables():
     
     ModeloBase.metadata.create_all(bind=engine)
 
+# Import necesario para datetime
+from datetime import datetime
 
 if __name__ == "__main__":
     create_tables()
