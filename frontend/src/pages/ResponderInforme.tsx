@@ -6,7 +6,6 @@ import { useAuth } from "../auth/AuthContext";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
 
-// Tipos iguales a los del informe curricular
 interface Opcion {
   id: number;
   texto: string;
@@ -53,9 +52,6 @@ const ResponderInforme: React.FC = () => {
   const [enviando, setEnviando] = useState(false);
   const [completado, setCompletado] = useState(false);
 
-  // --------------------------------------------------------------
-  // 1) GET — Cargar plantilla
-  // --------------------------------------------------------------
   useEffect(() => {
     if (!token) return;
 
@@ -94,9 +90,6 @@ const ResponderInforme: React.FC = () => {
     load();
   }, [instanciaId, token, logout]);
 
-  // --------------------------------------------------------------
-  // Manejo de cambios
-  // --------------------------------------------------------------
   const handleChange = (preguntaId: number, valor: string | number) => {
     setRespuestas((prev) => ({
       ...prev,
@@ -109,15 +102,11 @@ const ResponderInforme: React.FC = () => {
     }
   };
 
-  // --------------------------------------------------------------
-  // Enviar formulario
-  // --------------------------------------------------------------
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!plantilla) return;
 
-    // Validación: solo MULTIPLE_CHOICE son obligatorias
     const obligatorias = plantilla.secciones
       .flatMap((s) => s.preguntas)
       .filter((p) => p.tipo === "MULTIPLE_CHOICE");
@@ -187,9 +176,6 @@ const ResponderInforme: React.FC = () => {
     }
   };
 
-  // --------------------------------------------------------------
-  // PDF
-  // --------------------------------------------------------------
   const handlePDF = () => {
     if (!plantilla) return;
 
@@ -232,9 +218,6 @@ const ResponderInforme: React.FC = () => {
     doc.save(`Informe_Sintetico_${instanciaId}.pdf`);
   };
 
-  // --------------------------------------------------------------
-  // UI
-  // --------------------------------------------------------------
   if (loading)
     return (
       <p className="text-center mt-8 animate-pulse text-gray-500">
@@ -279,7 +262,6 @@ const ResponderInforme: React.FC = () => {
       </p>
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Tabs */}
         <div className="flex border-b border-gray-300 mb-4 overflow-x-auto">
           {plantilla.secciones.map((sec, i) => (
             <button
@@ -301,7 +283,6 @@ const ResponderInforme: React.FC = () => {
           ))}
         </div>
 
-        {/* Preguntas */}
         {plantilla.secciones.map((sec, i) => (
           <div key={sec.id} className={activeTab === i ? "block" : "hidden"}>
             {sec.preguntas.map((p) => (
@@ -351,7 +332,6 @@ const ResponderInforme: React.FC = () => {
           </div>
         ))}
 
-        {/* mensaje */}
         {mensaje && (
           <p className="text-center text-red-600 bg-red-100 p-2 rounded">
             {mensaje}
