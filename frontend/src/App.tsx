@@ -25,7 +25,7 @@ import ProtectedRoute from "./auth/ProtectedRoute.tsx";
 import RedirectHome from "./auth/RedirectHome.tsx";
 import DepartamentoEstadisticas from "./pages/DepartamentoEstadisticas.tsx";
 import DepartamentoEstadisticasCursadas from "./pages/DepartamentoEstadisticasCursadas.tsx";
-import DepartamentoInformesPage from "./pages/DepartamentoInformesPage.tsx";
+import DepartamentoInformesPage from "./pages/DepartamentoInformesPage.tsx"; // Importación requerida
 
 const MainLayout: React.FC = () => {
   const location = useLocation();
@@ -41,6 +41,7 @@ const MainLayout: React.FC = () => {
         {showNavMenu && <NavigationMenu />}
         {showSecretariaNavMenu && <SecretariaAcademicaNavigationMenu />}
         {showProfesorNavMenu && <ProfesorNavigationMenu />}
+        {/* --- CAMBIO: Renderizar el menú de Departamento --- */}
         {showDepartamentoNavMenu && <DepartamentoNavigationMenu />}
       </header>
       <main className="app-main flex-grow  bg-[#f1f5f9] ">
@@ -83,25 +84,37 @@ const App: React.FC = () => {
         <Route path="login" element={<LoginPageWithLoading />} />
         <Route path="privacidad" element={<PoliticasPrivacidadWithLoading />} />
 
-        {/* --- Rutas de Secretaria --- */}
+        {/* --- Rutas de Secretaria  --- */}
         <Route element={<ProtectedRoute allowedRoles={["ADMIN_SECRETARIA"]} />}>
           <Route path="secretaria" element={<Outlet />}>
+            {/* HOME: Ahora apunta al Panel Admin que tenía los accesos rápidos */}
             <Route index element={<PanelAdminWithLoading />} />
+
+            {/* GESTIÓN DE PLANTILLAS */}
             <Route path="modelos" element={<SecretariaModelosWithLoading />} />
-            <Route
-              path="gestion"
-              element={<GestionCuentasWithLoading />}
-            />{" "}
             <Route path="plantillas" element={<Outlet />}>
               <Route index element={<Navigate to="borradores" replace />} />
               <Route path="borradores" element={<EncuestasPageWithLoading />} />
               <Route path="publicadas" element={<EncuestasPageWithLoading />} />
               <Route path="crear" element={<CrearPlantillaWithLoading />} />
             </Route>
+
+            {/* ESTADÍSTICAS Y CUENTA */}
+            <Route
+              path="estadisticas"
+              element={
+                <div className="p-6">Página de Estadísticas (Secretaría)</div>
+              }
+            />
+            <Route
+              path="otros"
+              element={<div className="p-6">Página de Otros (Secretaría)</div>}
+            />
+            <Route path="gestion" element={<GestionCuentasWithLoading />} />
           </Route>
         </Route>
 
-        {/* --- Rutas de Alumno  --- */}
+        {/* --- Rutas de Alumno (Protegidas) --- */}
         <Route element={<ProtectedRoute allowedRoles={["ALUMNO"]} />}>
           <Route path="alumno" element={<Outlet />}>
             <Route index element={<ListaEncuestasAlumnosWithLoading />} />
@@ -117,7 +130,7 @@ const App: React.FC = () => {
           </Route>
         </Route>
 
-        {/* --- Rutas de Profesor --- */}
+        {/* --- Rutas de Profesor (Protegidas) --- */}
         <Route element={<ProtectedRoute allowedRoles={["DOCENTE"]} />}>
           <Route path="profesores" element={<Outlet />}>
             <Route index element={<ProfesoresHomeWithLoading />} />
@@ -135,17 +148,15 @@ const App: React.FC = () => {
           </Route>
         </Route>
 
-        {/* --- Rutas de Departamento (UNIFICADAS) --- */}
+        {/* --- Rutas de Departamento (FINAL: Solo Informes y Stats) --- */}
         <Route
           element={<ProtectedRoute allowedRoles={["ADMIN_DEPARTAMENTO"]} />}
         >
           <Route path="departamento" element={<Outlet />}>
-            {/* 1. La nueva página de informes es la INDEX (HOME) */}
+            {/* HOME: Lista de Informes Sintéticos/Completados */}
             <Route index element={<DepartamentoInformesPageWithLoading />} />
-            {/* 2. El antiguo PanelAdmin (Dashboard) ahora tiene una ruta explícita */}
-            <Route path="dashboard" element={<PanelAdminWithLoading />} />
-            {/* 3. Rutas de gestión y estadísticas avanzadas */}
-            <Route path="gestion" element={<GestionCuentasWithLoading />} />
+
+            {/* ESTADÍSTICAS / INFORMES */}
             <Route
               path="estadisticas"
               element={<DepartamentoEstadisticasWithLoading />}
@@ -154,7 +165,22 @@ const App: React.FC = () => {
               path="estadisticas-cursadas"
               element={<DepartamentoEstadisticasCursadasWithLoading />}
             />
-            <Route path="modelos" element={<SecretariaModelosWithLoading />} />
+
+            {/* GESTIÓN */}
+            <Route path="gestion" element={<GestionCuentasWithLoading />} />
+
+            <Route
+              path="admin"
+              element={<Navigate to="/departamento" replace />}
+            />
+            <Route
+              path="modelos"
+              element={<Navigate to="/departamento/estadisticas" replace />}
+            />
+            <Route
+              path="plantillas/*"
+              element={<Navigate to="/departamento/estadisticas" replace />}
+            />
           </Route>
         </Route>
       </Route>
