@@ -25,7 +25,8 @@ import ProtectedRoute from "./auth/ProtectedRoute.tsx";
 import RedirectHome from "./auth/RedirectHome.tsx";
 import DepartamentoEstadisticas from "./pages/DepartamentoEstadisticas.tsx";
 import DepartamentoEstadisticasCursadas from "./pages/DepartamentoEstadisticasCursadas.tsx";
-import DepartamentoInformesPage from "./pages/DepartamentoInformesPage.tsx"; // Importación requerida
+import DepartamentoInformesPage from "./pages/DepartamentoInformesPage.tsx";
+import HistorialEncuestas from "./pages/HistorialEncuestas";
 
 const MainLayout: React.FC = () => {
   const location = useLocation();
@@ -75,6 +76,7 @@ const DepartamentoEstadisticasCursadasWithLoading = withLoading(
 const DepartamentoInformesPageWithLoading = withLoading(
   DepartamentoInformesPage
 );
+const HistorialEncuestasWithLoading = withLoading(HistorialEncuestas);
 
 const App: React.FC = () => {
   return (
@@ -119,6 +121,10 @@ const App: React.FC = () => {
           <Route path="alumno" element={<Outlet />}>
             <Route index element={<ListaEncuestasAlumnosWithLoading />} />
             <Route path="gestion" element={<GestionCuentasWithLoading />} />
+            <Route
+              path="historial"
+              element={<HistorialEncuestasWithLoading />}
+            />
             <Route path="encuestas" element={<Outlet />}>
               <Route index element={<ListaEncuestasAlumnosWithLoading />} />
               <Route path="ver" element={<VerEncuestasWithLoading />} />
@@ -126,10 +132,9 @@ const App: React.FC = () => {
                 path="instancia/:instanciaId/responder"
                 element={<ResponderEncuestaWithLoading />}
               />
-            </Route>
-          </Route>
+            </Route>{" "}
+          </Route>{" "}
         </Route>
-
         {/* --- Rutas de Profesor (Protegidas) --- */}
         <Route element={<ProtectedRoute allowedRoles={["DOCENTE"]} />}>
           <Route path="profesores" element={<Outlet />}>

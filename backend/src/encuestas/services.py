@@ -226,6 +226,54 @@ def obtener_plantilla_para_instancia_activa(db: Session, instancia_id: int) -> m
 
     return instancia.plantilla
 
+#HISTORIAL DE ALUMNOS
+
+def obtener_historial_alumno_stats(db: Session, alumno_id: int):
+    """
+    Retorna estadísticas SOLO de encuestas CERRADAS (Historial).
+    """
+    stmt = (
+        select(Inscripcion)
+        .join(Cursada)
+        .join(Materia)
+        .join(Cuatrimestre)
+        .join(models.EncuestaInstancia, models.EncuestaInstancia.cursada_id == Cursada.id)
+        .where(Inscripcion.alumno_id == alumno_id)
+        
+
+        .where(models.EncuestaInstancia.estado == EstadoInstancia.CERRADA)
+
+        .options(
+            joinedload(Inscripcion.cursada).joinedload(Cursada.materia),
+            joinedload(Inscripcion.cursada).joinedload(Cursada.cuatrimestre)
+        )
+    )
+    
+    inscripciones = db.scalars(stmt).all()
+    
+    total = len(inscripciones)
+    respondidas = sum(1 for i in inscripciones if i.ha_respondido)
+    no_respondidas = []
+    
+    for i in inscripciones:
+        if not i.ha_respondido:
+            no_respondidas.append({
+                "materia": i.cursada.materia.nombre,
+                "anio": i.cursada.cuatrimestre.anio,
+                "cuatrimestre": i.cursada.cuatrimestre.periodo
+            })
+
+    return {
+        "total": total,
+        "completadas": respondidas,
+        "pendientes": total - respondidas,
+        "detalle_pendientes": no_respondidas
+    }
+
+
+
+#PROFESOR
+
 def obtener_resultados_agregados_profesor(
     db: Session,
     profesor_id: int,
