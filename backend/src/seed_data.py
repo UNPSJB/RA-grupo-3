@@ -17,7 +17,7 @@ from src.enumerados import TipoCuatrimestre, EstadoInstancia, EstadoInstrumento
 from src.auth.services import get_password_hash
 
 def seed_initial_data(db: Session):
-    print("🌱 Iniciando carga de datos de prueba (v4 - Multisede y +Alumnos)...")
+    print("🌱 Iniciando carga de datos de prueba (v4.1 - Múltiples Plantillas)...")
 
     # --- 1. Sedes ---
     print("   > Configurando Sedes...")
@@ -142,13 +142,13 @@ def seed_initial_data(db: Session):
     # Profesor 3 (index 2): Solo CR
     
     config_cursadas = [
-        # Sede Comodoro (Carrera Info)
-        {"nombre": "Programación I", "desc": "Intro a prog", "profesor_idx": 0, "carrera": carrera_cr},
-        {"nombre": "Álgebra Lineal", "desc": "Matemática", "profesor_idx": 1, "carrera": carrera_cr},
-        {"nombre": "Sistemas Operativos", "desc": "SO Avanzado", "profesor_idx": 2, "carrera": carrera_cr},
+        # Las primeras dos usarán Plantilla de Ciclo Básico (ANEXO I)
+        {"nombre": "Programación I", "desc": "Intro a prog", "profesor_idx": 0, "carrera": carrera_cr, "plantilla_tipo": "Ciclo Básico"},
+        {"nombre": "Álgebra Lineal", "desc": "Matemática", "profesor_idx": 1, "carrera": carrera_cr, "plantilla_tipo": "Ciclo Básico"},
         
-        # Sede Trelew (Carrera Sistemas) - Profesor 1 viaja aquí
-        {"nombre": "Bases de Datos I", "desc": "SQL y Modelado", "profesor_idx": 0, "carrera": carrera_tw}, 
+        # Las dos siguientes usarán Plantilla de Ciclo Superior (ANEXO II)
+        {"nombre": "Sistemas Operativos", "desc": "SO Avanzado", "profesor_idx": 2, "carrera": carrera_cr, "plantilla_tipo": "Ciclo Superior"},
+        {"nombre": "Bases de Datos I", "desc": "SQL y Modelado", "profesor_idx": 0, "carrera": carrera_tw, "plantilla_tipo": "Ciclo Superior"}, 
     ]
 
     cursadas_creadas = []
@@ -201,29 +201,59 @@ def seed_initial_data(db: Session):
 
     # --- 8. Activar Encuestas ---
     print("   > Generando instancias de encuestas...")
-    plantilla = db.query(Encuesta).filter(
+    
+    # Buscar las plantillas por título (asumiendo que seed_plantilla.py fue ejecutado)
+    plantilla_basico = db.query(Encuesta).filter(
+        Encuesta.titulo == "Encuesta Alumnos - Ciclo Básico (ANEXO I DCDFI 005/2014)",
+        Encuesta.estado == EstadoInstrumento.PUBLICADA
+    ).first()
+    
+    plantilla_superior = db.query(Encuesta).filter(
+        Encuesta.titulo == "Encuesta Alumnos - Ciclo Superior (ANEXO II DCDFI 005/2014)",
         Encuesta.estado == EstadoInstrumento.PUBLICADA
     ).first()
 
-    if plantilla:
-        for cursada in cursadas_creadas:
-            instancia = db.query(EncuestaInstancia).filter_by(cursada_id=cursada.id).first()
-            if not instancia:
-                # CORRECCIÓN AQUÍ: Definimos una fecha de cierre a futuro
-                fecha_inicio = datetime.now()
-                fecha_cierre = fecha_inicio + timedelta(days=14) # Cierra en 2 semanas
+    if not plantilla_basico or not plantilla_superior:
+        print("     ! ADVERTENCIA: Faltan plantillas publicadas (Ciclo Básico o Superior).")
+        print("     ! Ejecuta 'seed_plantilla.py' primero.")
+        return
 
-                nueva_instancia = EncuestaInstancia(
-                    cursada_id=cursada.id,
-                    plantilla_id=plantilla.id,
-                    fecha_inicio=fecha_inicio,
-                    fecha_fin=fecha_cierre, # <--- Asignamos la fecha de fin
-                    estado=EstadoInstancia.ACTIVA
-                )
-                db.add(nueva_instancia)
-        db.commit()
-    else:
-        print("     ! No se encontró plantilla publicada. Corre seed_plantilla.py primero.")
+    # Mapear cursadas a sus respectivas plantillas
+    for cursada in cursadas_creadas:
+        materia_nombre = cursada.materia.nombre
+        
+        # Buscar la configuración de la materia para saber qué plantilla usar
+        config_item = next((item for item in config_cursadas if item["nombre"] == materia_nombre), None)
+        
+        plantilla_a_usar = None
+        if config_item:
+            if config_item["plantilla_tipo"] == "Ciclo Básico":
+                plantilla_a_usar = plantilla_basico
+            elif config_item["plantilla_tipo"] == "Ciclo Superior":
+                plantilla_a_usar = plantilla_superior
+        
+        if not plantilla_a_usar:
+            print(f"     ! ADVERTENCIA: No se pudo determinar la plantilla para {materia_nombre}. Saltando.")
+            continue
+
+
+        instancia = db.query(EncuestaInstancia).filter_by(cursada_id=cursada.id).first()
+        if not instancia:
+            # CORRECCIÓN AQUÍ: Definimos una fecha de cierre a futuro
+            fecha_inicio = datetime.now()
+            fecha_cierre = fecha_inicio + timedelta(days=14) # Cierra en 2 semanas
+
+            nueva_instancia = EncuestaInstancia(
+                cursada_id=cursada.id,
+                plantilla_id=plantilla_a_usar.id,
+                fecha_inicio=fecha_inicio,
+                fecha_fin=fecha_cierre, # <--- Asignamos la fecha de fin
+                estado=EstadoInstancia.ACTIVA
+            )
+            db.add(nueva_instancia)
+            print(f"     + Encuesta activada para {materia_nombre} (Plantilla: {plantilla_a_usar.titulo})")
+        
+    db.commit()
 
     print("✅ Carga de datos finalizada.")
 
