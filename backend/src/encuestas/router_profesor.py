@@ -54,3 +54,20 @@ def get_detalles_reporte_para_responder(
             status_code=500,
             detail="Ocurrió un error al obtener los detalles del reporte."
         )
+    
+@router_profesores.get(
+    "/dashboard",
+    response_model=list[encuestas_schemas.DashboardProfesorItem]
+)
+def get_dashboard_stats(
+    db: Session = Depends(get_db),
+    profesor: Profesor = Depends(get_current_profesor)
+):
+    """
+    Devuelve métricas clave para el dashboard del profesor (año actual).
+    """
+    try:
+        return services_encuestas.obtener_dashboard_profesor(db, profesor.id)
+    except Exception as e:
+        print(f"Error al obtener dashboard: {e}")
+        raise HTTPException(status_code=500, detail="Error al cargar el dashboard.")

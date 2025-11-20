@@ -109,4 +109,13 @@ def obtener_detalles_encuesta_para_responder(
             detail="Ocurrió un error al obtener los detalles de la encuesta."
         )
 
+@router_alumnos.get("/historial-estadisticas")
+def get_historial_estadisticas(
+    db: Session = Depends(get_db),
+    alumno_actual: Alumno = Depends(get_current_alumno)
+):
+    try:
+        return services_alumno.obtener_historial_alumno_stats(db, alumno_actual.id)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 

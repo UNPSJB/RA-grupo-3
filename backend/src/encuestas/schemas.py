@@ -7,6 +7,14 @@ from src.seccion.schemas import Seccion
 from src.enumerados import EstadoInstancia,TipoPregunta,TipoInstrumento
 
 
+
+class DashboardProfesorItem(BaseModel):
+    materia_id: int
+    materia_nombre: str
+    cantidad_inscriptos: int
+    cantidad_respuestas: int
+    fecha_fin: Optional[datetime] = None
+    estado: str # "activa", "cerrada", etc.
 #instrumento
 class InstrumentoBaseCreate(BaseModel):
     titulo: str
@@ -103,5 +111,25 @@ class ResultadoCursada(BaseModel):
     resultados_por_seccion: List[ResultadoSeccion]  
     
     informe_curricular_instancia_id: Optional[int] = None 
+    fecha_cierre: Optional[datetime] = None
+    model_config = {"from_attributes": True}
 
+class InformeSinteticoResultado(BaseModel):
+    """Schema para los resultados agregados de un Informe Sintético."""
+    informe_id: int
+    departamento_nombre: str
+    fecha_generacion: datetime
+    cantidad_total_reportes: int
+    # Reutilizamos los schemas de resultados de encuestas
+    resultados_por_seccion: List[ResultadoSeccion]  
+    model_config = {"from_attributes": True}
+
+#Para el informe sintetico
+class GenerarSinteticoRequest(BaseModel):
+    departamento_id: int
+class GenerarSinteticoResponse(BaseModel):
+    instancia_id: int
+    departamento_id: int
+    cantidad_informes: int
+    
     model_config = {"from_attributes": True}

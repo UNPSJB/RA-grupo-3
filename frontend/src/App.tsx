@@ -20,19 +20,19 @@ import PoliticasPrivacidad from "./pages/PoliticasPrivacidad.tsx";
 import ResponderReportes from "./pages/ResponderReportes.tsx";
 import GestionCuentas from "./pages/GestionCuentas.tsx";
 import withLoading from "./components/withLoading.tsx";
-import LoginPage from "./pages/LoginPage.tsx"
+import LoginPage from "./pages/LoginPage.tsx";
 import ProtectedRoute from "./auth/ProtectedRoute.tsx";
 import RedirectHome from "./auth/RedirectHome.tsx";
-import ResponderInforme from "./pages/ResponderInforme.tsx";
+import DepartamentoEstadisticas from "./pages/DepartamentoEstadisticas.tsx";
+import DepartamentoEstadisticasCursadas from "./pages/DepartamentoEstadisticasCursadas.tsx";
+import DepartamentoInformesPage from "./pages/DepartamentoInformesPage.tsx";
+import HistorialEncuestas from "./pages/HistorialEncuestas";
 
-
-// ... (MainLayout y withLoading HOCs no cambian)
 const MainLayout: React.FC = () => {
   const location = useLocation();
   const showNavMenu = location.pathname.startsWith("/alumno");
   const showSecretariaNavMenu = location.pathname.startsWith("/secretaria");
   const showProfesorNavMenu = location.pathname.startsWith("/profesores");
-  // --- CAMBIO: El menú de Departamento se muestra en la ruta /departamento ---
   const showDepartamentoNavMenu = location.pathname.startsWith("/departamento");
 
   return (
@@ -66,39 +66,65 @@ const ResponderEncuestaWithLoading = withLoading(ResponderEncuesta);
 const ProfesoresHomeWithLoading = withLoading(ProfesoresHome);
 const ResultadosProfesorPageWithLoading = withLoading(ResultadosProfesorPage);
 const ResponderReportesWithLoading = withLoading(ResponderReportes);
-const LoginPageWithLoading = withLoading(LoginPage); 
-const ResponderInformeWithLoading = withLoading(ResponderInforme);
-
+const LoginPageWithLoading = withLoading(LoginPage);
+const DepartamentoEstadisticasWithLoading = withLoading(
+  DepartamentoEstadisticas
+);
+const DepartamentoEstadisticasCursadasWithLoading = withLoading(
+  DepartamentoEstadisticasCursadas
+);
+const DepartamentoInformesPageWithLoading = withLoading(
+  DepartamentoInformesPage
+);
+const HistorialEncuestasWithLoading = withLoading(HistorialEncuestas);
 
 const App: React.FC = () => {
   return (
     <Routes>
       <Route path="/" element={<MainLayout />}>
-        <Route index element={<RedirectHome />} />        
-        <Route path="login" element={<LoginPageWithLoading />} /> 
+        <Route index element={<RedirectHome />} />
+        <Route path="login" element={<LoginPageWithLoading />} />
         <Route path="privacidad" element={<PoliticasPrivacidadWithLoading />} />
 
-        {/* --- Rutas de Secretaria (Futuro) --- */}
+        {/* --- Rutas de Secretaria  --- */}
         <Route element={<ProtectedRoute allowedRoles={["ADMIN_SECRETARIA"]} />}>
           <Route path="secretaria" element={<Outlet />}>
-            {/* --- CAMBIO: Ahora tiene el texto placeholder --- */}
-            <Route index element={
-              <div className="p-6 text-xl">Panel de Administración de Secretaría</div>
-            } /> 
-             <Route path="modelos" element={<div className="p-6">Página de Modelos (Secretaría)</div>} />
-             <Route path="estadisticas" element={<div className="p-6">Página de Estadísticas (Secretaría)</div>} />
-             <Route path="otros" element={<div className="p-6">Página de Otros (Secretaría)</div>} />
-             <Route path="gestion" element={<GestionCuentasWithLoading />} />
+            {/* HOME: Ahora apunta al Panel Admin que tenía los accesos rápidos */}
+            <Route index element={<PanelAdminWithLoading />} />
+
+            {/* GESTIÓN DE PLANTILLAS */}
+            <Route path="modelos" element={<SecretariaModelosWithLoading />} />
+            <Route path="plantillas" element={<Outlet />}>
+              <Route index element={<Navigate to="borradores" replace />} />
+              <Route path="borradores" element={<EncuestasPageWithLoading />} />
+              <Route path="publicadas" element={<EncuestasPageWithLoading />} />
+              <Route path="crear" element={<CrearPlantillaWithLoading />} />
+            </Route>
+
+            {/* ESTADÍSTICAS Y CUENTA */}
+            <Route
+              path="estadisticas"
+              element={
+                <div className="p-6">Página de Estadísticas (Secretaría)</div>
+              }
+            />
+            <Route
+              path="otros"
+              element={<div className="p-6">Página de Otros (Secretaría)</div>}
+            />
+            <Route path="gestion" element={<GestionCuentasWithLoading />} />
           </Route>
         </Route>
 
-
         {/* --- Rutas de Alumno (Protegidas) --- */}
         <Route element={<ProtectedRoute allowedRoles={["ALUMNO"]} />}>
-          {/* ... (sin cambios) ... */}
           <Route path="alumno" element={<Outlet />}>
             <Route index element={<ListaEncuestasAlumnosWithLoading />} />
             <Route path="gestion" element={<GestionCuentasWithLoading />} />
+            <Route
+              path="historial"
+              element={<HistorialEncuestasWithLoading />}
+            />
             <Route path="encuestas" element={<Outlet />}>
               <Route index element={<ListaEncuestasAlumnosWithLoading />} />
               <Route path="ver" element={<VerEncuestasWithLoading />} />
@@ -106,13 +132,11 @@ const App: React.FC = () => {
                 path="instancia/:instanciaId/responder"
                 element={<ResponderEncuestaWithLoading />}
               />
-            </Route>
-          </Route>
+            </Route>{" "}
+          </Route>{" "}
         </Route>
-
         {/* --- Rutas de Profesor (Protegidas) --- */}
         <Route element={<ProtectedRoute allowedRoles={["DOCENTE"]} />}>
-           {/* ... (sin cambios) ... */}
           <Route path="profesores" element={<Outlet />}>
             <Route index element={<ProfesoresHomeWithLoading />} />
             <Route path="reportes" element={<Outlet />}>
@@ -128,38 +152,42 @@ const App: React.FC = () => {
             <Route path="gestion" element={<GestionCuentasWithLoading />} />
           </Route>
         </Route>
-        
-        {/* --- Rutas de Departamento --- */}
-        <Route element={<ProtectedRoute allowedRoles={["ADMIN_DEPARTAMENTO"]} />}>
+
+        {/* --- Rutas de Departamento (FINAL: Solo Informes y Stats) --- */}
+        <Route
+          element={<ProtectedRoute allowedRoles={["ADMIN_DEPARTAMENTO"]} />}
+        >
           <Route path="departamento" element={<Outlet />}>
+            {/* HOME: Lista de Informes Sintéticos/Completados */}
+            <Route index element={<DepartamentoInformesPageWithLoading />} />
 
-            <Route path="modelos" element={<SecretariaModelosWithLoading />} />
-            <Route path="gestion" element={<CuentaPageWithLoading />} />
+            {/* ESTADÍSTICAS / INFORMES */}
+            <Route
+              path="estadisticas"
+              element={<DepartamentoEstadisticasWithLoading />}
+            />
+            <Route
+              path="estadisticas-cursadas"
+              element={<DepartamentoEstadisticasCursadasWithLoading />}
+            />
 
-            {/* Página principal del departamento */}
-            <Route index element={<PanelAdminWithLoading />} />
+            {/* GESTIÓN */}
+            <Route path="gestion" element={<GestionCuentasWithLoading />} />
 
-            {/* Plantillas */}
-            <Route path="plantillas" element={<Outlet />}>
-              <Route index element={<Navigate to="borradores" replace />} />
-              <Route path="borradores" element={<EncuestasPageWithLoading />} />
-              <Route path="publicadas" element={<EncuestasPageWithLoading />} />
-              <Route path="crear" element={<CrearPlantillaWithLoading />} />
-            </Route>
-
-            {/* Informes Sintéticos */}
-            <Route path="informes-sinteticos" element={<Outlet />}>
-              <Route
-                path="instancia/:instanciaId/responder"
-                element={<ResponderInformeWithLoading />}
-              />
-              <Route index element={<Navigate to="instancia/1/responder" replace />} />
-            </Route>
-
+            <Route
+              path="admin"
+              element={<Navigate to="/departamento" replace />}
+            />
+            <Route
+              path="modelos"
+              element={<Navigate to="/departamento/estadisticas" replace />}
+            />
+            <Route
+              path="plantillas/*"
+              element={<Navigate to="/departamento/estadisticas" replace />}
+            />
           </Route>
         </Route>
-
-        
       </Route>
     </Routes>
   );

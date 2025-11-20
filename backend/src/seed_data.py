@@ -1,334 +1,288 @@
 from sqlalchemy.orm import Session
-from sqlalchemy import select # <-- Importar 'select'
+from sqlalchemy import select
 from src.database import SessionLocal, engine
-
-# --- NUEVOS IMPORTS ---
+from datetime import datetime, timedelta
+# Imports de Modelos
 from src.materia.models import (
     Materia, 
     Cuatrimestre, 
     Cursada, 
-    Sede,           # <-- NUEVO
-    Departamento,   # <-- NUEVO
-    Carrera         # <-- NUEVO
+    Sede,           
+    Departamento,   
+    Carrera         
 )
-# ----------------------
-
-from src.persona.models import Persona, Profesor, Alumno, Inscripcion, AdminSecretaria, AdminDepartamento
-from src.instrumento.models import InformeSintetico, ActividadCurricularInstancia
-from src.encuestas.models import EncuestaInstancia
-from src.seccion.models import Seccion
-from src.pregunta.models import PreguntaRedaccion, PreguntaMultipleChoice, Opcion
-from src.enumerados import TipoCuatrimestre, TipoInstrumento
-from src.persona.models import TipoPersona
-from src.models import ModeloBase
+from src.persona.models import Profesor, Alumno, Inscripcion, AdminDepartamento, AdminSecretaria
+from src.encuestas.models import EncuestaInstancia, Encuesta
+from src.enumerados import TipoCuatrimestre, EstadoInstancia, EstadoInstrumento
 from src.auth.services import get_password_hash
 
 def seed_initial_data(db: Session):
-    
-    """Inserta datos iniciales de simulación si no existen."""
-    
-    print("Verificando/Insertando datos semilla...")
+    print("🌱 Iniciando carga de datos de prueba (v4.1 - Múltiples Plantillas)...")
 
-    # --- 1. Crear Sedes (NUEVO) ---
-    print("   - Verificando Sedes...")
+    # --- 1. Sedes ---
+    print("   > Configurando Sedes...")
     sede_cr = db.scalars(select(Sede).filter_by(localidad="Comodoro Rivadavia")).first()
     if not sede_cr:
-        print("     + Creando Sede 'Comodoro Rivadavia'")
         sede_cr = Sede(localidad="Comodoro Rivadavia")
         db.add(sede_cr)
     
     sede_tw = db.scalars(select(Sede).filter_by(localidad="Trelew")).first()
     if not sede_tw:
-        print("     + Creando Sede 'Trelew'")
         sede_tw = Sede(localidad="Trelew")
         db.add(sede_tw)
     
-    db.commit() # Commit para obtener IDs de Sede
+    db.commit()
     db.refresh(sede_cr)
     db.refresh(sede_tw)
 
-    # --- 2. Crear Departamentos (NUEVO) ---
-    print("   - Verificando Departamentos...")
-    depto_info = db.scalars(select(Departamento).filter_by(nombre="Departamento de Ingeniería Informática")).first()
-    if not depto_info:
-        print("     + Creando Depto. 'Ingeniería Informática'")
-        depto_info = Departamento(nombre="Departamento de Ingeniería Informática", sede_id=sede_cr.id)
-        db.add(depto_info)
-
-    depto_civil = db.scalars(select(Departamento).filter_by(nombre="Departamento de Ingeniería Civil")).first()
-    if not depto_civil:
-        print("     + Creando Depto. 'Ingeniería Civil'")
-        depto_civil = Departamento(nombre="Departamento de Ingeniería Civil", sede_id=sede_cr.id)
-        db.add(depto_civil)
+    # --- 2. Departamentos (Uno en CR, Uno en TW) ---
+    print("   > Configurando Departamentos...")
     
-    db.commit() # Commit para obtener IDs de Depto
-    db.refresh(depto_info)
-    db.refresh(depto_civil)
+    # Comodoro
+    depto_info_cr = db.scalars(select(Departamento).filter_by(nombre="Depto. Informática (CR)")).first()
+    if not depto_info_cr:
+        depto_info_cr = Departamento(nombre="Depto. Informática (CR)", sede_id=sede_cr.id)
+        db.add(depto_info_cr)
 
-    # --- 3. Crear Carreras (NUEVO) ---
-    print("   - Verificando Carreras...")
-    carrera_info = db.scalars(select(Carrera).filter_by(nombre="Ingeniería en Informática")).first()
-    if not carrera_info:
-        print("     + Creando Carrera 'Ingeniería en Informática'")
-        carrera_info = Carrera(nombre="Ingeniería en Informática", departamento_id=depto_info.id)
-        db.add(carrera_info)
+    # Trelew (Nuevo para el profesor viajero)
+    depto_info_tw = db.scalars(select(Departamento).filter_by(nombre="Depto. Informática (TW)")).first()
+    if not depto_info_tw:
+        depto_info_tw = Departamento(nombre="Depto. Informática (TW)", sede_id=sede_tw.id)
+        db.add(depto_info_tw)
+    
+    db.commit()
+    db.refresh(depto_info_cr)
+    db.refresh(depto_info_tw)
 
-    carrera_civil = db.scalars(select(Carrera).filter_by(nombre="Ingeniería Civil")).first()
-    if not carrera_civil:
-        print("     + Creando Carrera 'Ingeniería Civil'")
-        carrera_civil = Carrera(nombre="Ingeniería Civil", departamento_id=depto_civil.id)
-        db.add(carrera_civil)
+    # --- 3. Carreras ---
+    print("   > Configurando Carreras...")
+    carrera_cr = db.scalars(select(Carrera).filter_by(nombre="Ingeniería en Informática")).first()
+    if not carrera_cr:
+        carrera_cr = Carrera(nombre="Ingeniería en Informática", departamento_id=depto_info_cr.id)
+        db.add(carrera_cr)
+
+    carrera_tw = db.scalars(select(Carrera).filter_by(nombre="Licenciatura en Sistemas")).first()
+    if not carrera_tw:
+        carrera_tw = Carrera(nombre="Licenciatura en Sistemas", departamento_id=depto_info_tw.id)
+        db.add(carrera_tw)
         
-    db.commit() # Commit para obtener IDs de Carrera
-    db.refresh(carrera_info)
-    db.refresh(carrera_civil)
+    db.commit() 
+    db.refresh(carrera_cr)
+    db.refresh(carrera_tw)
     
-    # --- 4. Crear Cuatrimestre (Sin cambios) ---
+    # --- 4. Cuatrimestre ---
     cuatri = db.query(Cuatrimestre).filter_by(anio=2025, periodo=TipoCuatrimestre.PRIMERO).first()
     if not cuatri:
-        print("   - Creando cuatrimestre 1C 2025...")
         cuatri = Cuatrimestre(anio=2025, periodo=TipoCuatrimestre.PRIMERO)
         db.add(cuatri)
         db.commit() 
         db.refresh(cuatri)
-    else:
-        print(f"   - Cuatrimestre 1C 2025 (ID: {cuatri.id}) ya existe.")
 
-    # --- 5. Crear Materias (MODIFICADO) ---
-    print("   - Verificando Materias...")
+    # --- 5. Usuarios (3 Profes, 10 Alumnos, Admins) ---
+    print("   > Creando Usuarios...")
     
-    # Nombres de materias más realistas
-    materias_a_crear = [
-        {"nombre": "Álgebra Lineal", "descripcion": "Materia de 1er año, común a varias ingenierías"},
-        {"nombre": "Programación I", "descripcion": "Materia de 1er año de Ing. Informática"},
-        {"nombre": "Análisis Matemático I", "descripcion": "Materia de 1er año, común a varias ingenierías"},
-        {"nombre": "Física I", "descripcion": "Materia de 1er año, común a varias ingenierías"},
-        {"nombre": "Sistemas Operativos", "descripcion": "Materia de 3er año de Ing. Informática"},
-        {"nombre": "Estabilidad I", "descripcion": "Materia de 2do año de Ing. Civil"},
-    ]
-    materias_obj = {} 
-
-    for mat_data in materias_a_crear:
-        materia = db.query(Materia).filter_by(nombre=mat_data["nombre"]).first()
-        if not materia:
-            print(f"     + Creando materia '{mat_data['nombre']}'...")
-            materia = Materia(nombre=mat_data["nombre"], descripcion=mat_data["descripcion"])
-            db.add(materia)
-        else:
-            print(f"     - Materia '{mat_data['nombre']}' (ID: {materia.id}) ya existe.")
-        materias_obj[mat_data["nombre"]] = materia 
-
-    db.commit()
-    
-    # Refrescar objetos para asegurar que tenemos los IDs
-    for nombre, materia_obj in materias_obj.items():
-        if materia_obj not in db: 
-             try:
-                 db.refresh(materia_obj)
-             except Exception: 
-                 print(f"   - Aviso: No se pudo refrescar la materia '{nombre}'. Recargando...")
-                 materias_obj[nombre] = db.query(Materia).filter_by(nombre=nombre).first()
-
-
-    # --- 6. Vincular Materias a Carreras (NUEVO) ---
-    print("   - Vinculando Materias a Carreras...")
-    
-    # Asegurarnos que los objetos carrera y materia están listos
-    db.refresh(carrera_info)
-    db.refresh(carrera_civil)
-    
-    # Materias para Ing. Informática
-    if not any(m.nombre == "Programación I" for m in carrera_info.materias):
-        print("     + Vinculando materias a Ing. Informática...")
-        carrera_info.materias.extend([
-            materias_obj["Álgebra Lineal"],
-            materias_obj["Análisis Matemático I"],
-            materias_obj["Física I"],
-            materias_obj["Programación I"],
-            materias_obj["Sistemas Operativos"]
-        ])
-        db.add(carrera_info)
-
-    # Materias para Ing. Civil
-    if not any(m.nombre == "Estabilidad I" for m in carrera_civil.materias):
-        print("     + Vinculando materias a Ing. Civil...")
-        carrera_civil.materias.extend([
-            materias_obj["Álgebra Lineal"],
-            materias_obj["Análisis Matemático I"],
-            materias_obj["Física I"],
-            materias_obj["Estabilidad I"]
-        ])
-        db.add(carrera_civil)
-
-    db.commit()
-
-    # --- 7. Crear Usuarios de Prueba (MODIFICADO) ---
-    print("   - Verificando Usuarios de Prueba...")
-    
-    # Profesor
-    profe_nombre = "Profesor Prueba Ingeniería"
-    profe = db.query(Profesor).filter(Profesor.username == "profesor1").first()
-    if not profe:
-        print(f"     + Creando profesor '{profe_nombre}'...")
-        profe = Profesor(
-            nombre=profe_nombre,
-            username="profesor1",
-            hashed_password=get_password_hash("profesor123")
+    # Profesores
+    profesores = []
+    for i in range(1, 4):
+        username = f"profesor{i}"
+        p = db.query(Profesor).filter_by(username=username).first()
+        if not p:
+            p = Profesor(
+                nombre=f"Profesor {i} Apellido",
+                username=username,
+                hashed_password=get_password_hash("123456")
             )
-        db.add(profe)
-    else:
-         print(f"     - Profesor '{profe_nombre}' (ID: {profe.id}) ya existe.")
-
-    # Admin Departamento
-    admin_nombre = "Admin Informática"
-    admin_user = db.query(AdminDepartamento).filter(AdminDepartamento.username == "admin1").first()
-    if not admin_user:
-        print(f"     + Creando admin DEPARTAMENTO '{admin_nombre}'...")
-        admin_user = AdminDepartamento( 
-            nombre=admin_nombre,
-            username="admin1",
-            hashed_password=get_password_hash("admin123")
+            db.add(p)
+        profesores.append(p)
+    
+    # Alumnos (Ahora son 10)
+    alumnos = []
+    for i in range(1, 11): # <--- CAMBIO: 1 a 10
+        username = f"alumno{i}"
+        a = db.query(Alumno).filter_by(username=username).first()
+        if not a:
+            a = Alumno(
+                nombre=f"Alumno {i} Test",
+                username=username,
+                hashed_password=get_password_hash("123456")
             )
-        db.add(admin_user)
-    else:
-         print(f"     - Admin DEPARTAMENTO '{admin_nombre}' (ID: {admin_user.id}) ya existe.")
-         
-    # Alumno
-    alumno_nombre = "Alumno Prueba Ingeniería"
-    alumno_prueba = db.query(Alumno).filter(Alumno.username == "alumno1").first()
-    if not alumno_prueba:
-        print(f"     + Creando alumno de prueba '{alumno_nombre}'...")
-        alumno_prueba = Alumno(
-            nombre=alumno_nombre,
-            username="alumno1",
-            hashed_password=get_password_hash("alumno123")
+            db.add(a)
+        alumnos.append(a)
+    
+    # Admins
+    if not db.query(AdminDepartamento).filter_by(username="admin_dpto").first():
+        ad = AdminDepartamento(
+            nombre="Jefe Depto CR",
+            username="admin_dpto",
+            hashed_password=get_password_hash("123456"),
+            departamento_id=depto_info_cr.id
         )
-        db.add(alumno_prueba)
-    else:
-        print(f"     - Alumno de prueba '{alumno_nombre}' (ID: {alumno_prueba.id}) ya existe.")
+        db.add(ad)
+
+    if not db.query(AdminSecretaria).filter_by(username="admin_sec").first():
+        sec = AdminSecretaria(
+            nombre="Secretaria Académica",
+            username="admin_sec",
+            hashed_password=get_password_hash("123456")
+        )
+        db.add(sec)
 
     db.commit()
+    # Recargar para tener IDs
+    for p in profesores: db.refresh(p)
+    for a in alumnos: db.refresh(a)
+
+
+    # --- 6. Materias y Cursadas (Configuración Multisede) ---
+    print("   > Configurando Cursadas Multisede...")
     
-    # Refrescar usuarios
-    db.refresh(profe)
-    db.refresh(admin_user)
-    db.refresh(alumno_prueba)
-
-    if not alumno_prueba:
-        print("   - ERROR CRÍTICO: No se pudo obtener/crear el alumno de prueba.")
-        return
-    print(f"   - Alumno de prueba (ID: {alumno_prueba.id}) listo.")
-
-
-    # --- 8. Crear Cursadas (MODIFICADO) ---
-    print("   - Verificando Cursadas...")
+    # Definición de materias
+    # Profesor 1 (index 0): Dará clases en CR y en TW
+    # Profesor 2 (index 1): Solo CR
+    # Profesor 3 (index 2): Solo CR
     
-    # Usamos las materias realistas
-    cursadas_a_crear = [
-        {"materia_nombre": "Álgebra Lineal"},
-        {"materia_nombre": "Programación I"},
-        {"materia_nombre": "Sistemas Operativos"}, 
-        {"materia_nombre": "Estabilidad I"},
+    config_cursadas = [
+        # Las primeras dos usarán Plantilla de Ciclo Básico (ANEXO I)
+        {"nombre": "Programación I", "desc": "Intro a prog", "profesor_idx": 0, "carrera": carrera_cr, "plantilla_tipo": "Ciclo Básico"},
+        {"nombre": "Álgebra Lineal", "desc": "Matemática", "profesor_idx": 1, "carrera": carrera_cr, "plantilla_tipo": "Ciclo Básico"},
+        
+        # Las dos siguientes usarán Plantilla de Ciclo Superior (ANEXO II)
+        {"nombre": "Sistemas Operativos", "desc": "SO Avanzado", "profesor_idx": 2, "carrera": carrera_cr, "plantilla_tipo": "Ciclo Superior"},
+        {"nombre": "Bases de Datos I", "desc": "SQL y Modelado", "profesor_idx": 0, "carrera": carrera_tw, "plantilla_tipo": "Ciclo Superior"}, 
     ]
-    cursadas_obj = {}
 
-    if not cuatri or not profe:
-        print("   - ERROR: Falta Cuatrimestre o Profesor base para crear cursadas.")
-        return
+    cursadas_creadas = []
 
-    for curs_data in cursadas_a_crear:
-        materia_obj = materias_obj.get(curs_data["materia_nombre"])
-        if not materia_obj:
-            print(f"   - ERROR: No se encontró la materia '{curs_data['materia_nombre']}' para crear su cursada.")
-            continue
-
+    for item in config_cursadas:
+        # Crear/Buscar Materia
+        materia = db.query(Materia).filter_by(nombre=item["nombre"]).first()
+        if not materia:
+            materia = Materia(nombre=item["nombre"], descripcion=item["desc"])
+            db.add(materia)
+            db.commit()
+            db.refresh(materia)
+            
+        # Vincular a la carrera correcta (CR o TW)
+        if materia not in item["carrera"].materias:
+            item["carrera"].materias.append(materia)
+            db.add(item["carrera"])
+            db.commit()
+        
+        # Crear Cursada
+        profesor = profesores[item["profesor_idx"]]
         cursada = db.query(Cursada).filter_by(
-            materia_id=materia_obj.id,
-            cuatrimestre_id=cuatri.id,
-            profesor_id=profe.id
+            materia_id=materia.id, cuatrimestre_id=cuatri.id
         ).first()
-
+        
         if not cursada:
-            print(f"     + Creando cursada para '{materia_obj.nombre}'...")
             cursada = Cursada(
-                materia_id=materia_obj.id,
+                materia_id=materia.id,
                 cuatrimestre_id=cuatri.id,
-                profesor_id=profe.id
+                profesor_id=profesor.id
             )
             db.add(cursada)
-        else:
-            print(f"     - Cursada para '{materia_obj.nombre}' (ID: {cursada.id}) ya existe.")
-        cursadas_obj[materia_obj.nombre] = cursada
+            db.commit()
+            print(f"     + Cursada: {materia.nombre} ({item['carrera'].departamento.sede.localidad}) -> Prof: {profesor.username}")
+        
+        db.refresh(cursada)
+        cursadas_creadas.append(cursada)
 
-    db.commit()
-    
-    # Refrescar cursadas
-    for nombre, cursada_obj in cursadas_obj.items():
-         if cursada_obj not in db:
-             try:
-                 db.refresh(cursada_obj)
-             except Exception:
-                  print(f"   - Aviso: No se pudo refrescar la cursada para '{nombre}'. Recargando...")
-                  materia_correspondiente = materias_obj.get(nombre)
-                  if materia_correspondiente:
-                      cursadas_obj[nombre] = db.query(Cursada).filter_by(
-                          materia_id=materia_correspondiente.id,
-                          cuatrimestre_id=cuatri.id,
-                          profesor_id=profe.id
-                      ).first()
-
-
-    # --- 9. Inscribir Alumno de Prueba en Cursadas (MODIFICADO) ---
-    print("   - Verificando Inscripciones...")
-    
-    # Usamos las cursadas que acabamos de crear
-    cursada_nombres = ["Álgebra Lineal", "Programación I", "Sistemas Operativos", "Estabilidad I"]
-    
-    for i, nombre_cursada in enumerate(cursada_nombres, 1):
-        cursada = cursadas_obj.get(nombre_cursada)
-        if not cursada or not hasattr(cursada, 'id'):
-            print(f"   - Aviso: No se pudo obtener la Cursada {i} ({nombre_cursada}) para inscripción.")
-        else:
-            inscripcion = db.query(Inscripcion).filter_by(alumno_id=alumno_prueba.id, cursada_id=cursada.id).first()
+    # --- 7. Inscripciones ---
+    print("   > Inscribiendo 10 alumnos a todas las cursadas...")
+    for cursada in cursadas_creadas:
+        for alumno in alumnos:
+            inscripcion = db.query(Inscripcion).filter_by(
+                alumno_id=alumno.id, cursada_id=cursada.id
+            ).first()
             if not inscripcion:
-                print(f"     + Inscribiendo Alumno ID {alumno_prueba.id} en Cursada ID {cursada.id} ({nombre_cursada})...")
-                nueva_inscripcion = Inscripcion(alumno_id=alumno_prueba.id, cursada_id=cursada.id, ha_respondido=False)
-                db.add(nueva_inscripcion)
-            else:
-                print(f"     - Alumno ID {alumno_prueba.id} ya inscripto en Cursada ID {cursada.id} ({nombre_cursada}).")
+                ins = Inscripcion(alumno_id=alumno.id, cursada_id=cursada.id)
+                db.add(ins)
+    db.commit()
 
-    db.commit() # Commit final
-    print("Datos semilla verificados/insertados.")
+    # --- 8. Activar Encuestas ---
+    print("   > Generando instancias de encuestas...")
+    
+    # Buscar las plantillas por título (asumiendo que seed_plantilla.py fue ejecutado)
+    plantilla_basico = db.query(Encuesta).filter(
+        Encuesta.titulo == "Encuesta Alumnos - Ciclo Básico (ANEXO I DCDFI 005/2014)",
+        Encuesta.estado == EstadoInstrumento.PUBLICADA
+    ).first()
+    
+    plantilla_superior = db.query(Encuesta).filter(
+        Encuesta.titulo == "Encuesta Alumnos - Ciclo Superior (ANEXO II DCDFI 005/2014)",
+        Encuesta.estado == EstadoInstrumento.PUBLICADA
+    ).first()
+
+    if not plantilla_basico or not plantilla_superior:
+        print("     ! ADVERTENCIA: Faltan plantillas publicadas (Ciclo Básico o Superior).")
+        print("     ! Ejecuta 'seed_plantilla.py' primero.")
+        return
+
+    # Mapear cursadas a sus respectivas plantillas
+    for cursada in cursadas_creadas:
+        materia_nombre = cursada.materia.nombre
+        
+        # Buscar la configuración de la materia para saber qué plantilla usar
+        config_item = next((item for item in config_cursadas if item["nombre"] == materia_nombre), None)
+        
+        plantilla_a_usar = None
+        if config_item:
+            if config_item["plantilla_tipo"] == "Ciclo Básico":
+                plantilla_a_usar = plantilla_basico
+            elif config_item["plantilla_tipo"] == "Ciclo Superior":
+                plantilla_a_usar = plantilla_superior
+        
+        if not plantilla_a_usar:
+            print(f"     ! ADVERTENCIA: No se pudo determinar la plantilla para {materia_nombre}. Saltando.")
+            continue
+
+
+        instancia = db.query(EncuestaInstancia).filter_by(cursada_id=cursada.id).first()
+        if not instancia:
+            # CORRECCIÓN AQUÍ: Definimos una fecha de cierre a futuro
+            fecha_inicio = datetime.now()
+            fecha_cierre = fecha_inicio + timedelta(days=14) # Cierra en 2 semanas
+
+            nueva_instancia = EncuestaInstancia(
+                cursada_id=cursada.id,
+                plantilla_id=plantilla_a_usar.id,
+                fecha_inicio=fecha_inicio,
+                fecha_fin=fecha_cierre, # <--- Asignamos la fecha de fin
+                estado=EstadoInstancia.ACTIVA
+            )
+            db.add(nueva_instancia)
+            print(f"     + Encuesta activada para {materia_nombre} (Plantilla: {plantilla_a_usar.titulo})")
+        
+    db.commit()
+
+    print("✅ Carga de datos finalizada.")
+
 
 def create_tables():
-     print("Creando tablas si no existen...")
-     # --- MODIFICADO: Solo importamos los módulos ---
-     from src.materia import models
-     from src.persona import models
-     from src.encuestas import models
-     from src.seccion import models
-     from src.pregunta import models
-     from src.respuesta import models
-     from src.instrumento import models
-     ModeloBase.metadata.create_all(bind=engine)
-     print("Tablas verificadas/creadas.")
+    from src.models import ModeloBase
+    # Importar todos los modelos para registrar en metadata
+    from src.materia import models
+    from src.persona import models
+    from src.encuestas import models
+    from src.seccion import models
+    from src.pregunta import models
+    from src.respuesta import models
+    from src.instrumento import models
+    
+    ModeloBase.metadata.create_all(bind=engine)
 
+# Import necesario para datetime
+from datetime import datetime
 
-# --- Punto de entrada para ejecutar el script ---
 if __name__ == "__main__":
-    print("Iniciando script de carga de datos semilla (v2 - UNPSJB)...")
     create_tables()
-
     db = SessionLocal()
     try:
         seed_initial_data(db)
-        print("\nScript finalizado exitosamente.")
     except Exception as e:
-        print(f"ERROR durante la carga de datos semilla: {e}")
+        print(f"❌ Error: {e}")
         import traceback
         traceback.print_exc()
         db.rollback()
     finally:
         db.close()
-        
-#Ejecutar con `python -m src.seed_data`

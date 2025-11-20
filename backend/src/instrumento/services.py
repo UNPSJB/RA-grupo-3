@@ -1,13 +1,34 @@
-from sqlalchemy.orm import Session, selectinload
+from sqlalchemy.orm import Session, selectinload, joinedload
 from src.instrumento import models, schemas
 from src.enumerados import TipoInstrumento,EstadoInstrumento,EstadoInforme
 from src.encuestas.models import Encuesta
 from typing import List
-from sqlalchemy import select
+from sqlalchemy import select, func
 from fastapi import HTTPException
 from src.seccion.models import Seccion
-from src.instrumento.models import ActividadCurricularInstancia
-from src.pregunta.models import Pregunta, PreguntaMultipleChoice
+from src.instrumento.models import (
+    ActividadCurricularInstancia, 
+    InformeSinteticoInstancia, 
+    InformeSintetico
+)
+from src.materia.models import (
+    Cursada, 
+    Materia, 
+    Carrera, 
+    Departamento, 
+    carrera_materia_association
+)
+from src.pregunta.models import  PreguntaMultipleChoice
+from src.database import get_db
+from src.exceptions import BadRequest, NotFound
+from src.encuestas.schemas import (
+    ResultadoSeccion, 
+    ResultadoPregunta, 
+    ResultadoOpcion, 
+    RespuestaTextoItem,
+    InformeSinteticoResultado # <-- nuevo schema
+)
+
 
 def get_instrumento_completo(db: Session, instrumento_id: int) -> models.InstrumentoBase:
     instrumento = db.query(models.InstrumentoBase).options(
@@ -62,8 +83,10 @@ def listar_plantillas_por_estado(
 ) -> List[models.InstrumentoBase]:
     
 
+    estado_string = estado.value
+
     statement = select(models.InstrumentoBase).where(
-        models.InstrumentoBase.estado == estado
+        func.lower(models.InstrumentoBase.estado) == func.lower(estado_string)
     ).order_by(models.InstrumentoBase.id.desc())
     
     return db.scalars(statement).all()
@@ -154,64 +177,73 @@ def get_plantilla_para_instancia_reporte(
     # Devuelve la plantilla (InstrumentoBase) completa
     return instancia.actividad_curricular
 
-# --- INICIO: funciones para Informe Sintético ---
-
-from typing import Optional
-from sqlalchemy.orm import selectinload
-
-def crear_instancia_informe_sintetico(
-    db: Session,
-    informe_sintetico_id: int,
-    departamento_id: Optional[int] = None
-) -> models.InformeSinteticoInstancia:
+def generar_informe_sintetico_para_departamento(
+    db: Session, 
+    departamento_id: int
+) -> InformeSinteticoInstancia:
+    """
+    Busca los Informes Curriculares COMPLETADOS del departamento, 
+    crea un Informe Sintético y marca los informes como RESUMIDO.
+    """
     
-    plantilla = db.get(models.InformeSintetico, informe_sintetico_id)
-    if not plantilla:
-        raise HTTPException(status_code=404, detail="Plantilla de Informe Sintético no encontrada.")
+    # 1. Verificar que el departamento exista
+    departamento = db.get(Departamento, departamento_id)
+    if not departamento:
+        raise NotFound(detail=f"Departamento con ID {departamento_id} no encontrado.")
 
+    # 2. Encontrar la plantilla de Informe Sintético que esté publicada
+    stmt_plantilla = select(InformeSintetico.id).where(
+        InformeSintetico.estado == EstadoInstrumento.PUBLICADA,
+        InformeSintetico.tipo == TipoInstrumento.INFORME_SINTETICO
+    ).limit(1)
     
-    nueva = models.InformeSinteticoInstancia(
-        informe_sintetico_id=informe_sintetico_id,
+    plantilla_sintetico_id = db.scalars(stmt_plantilla).first()
+    if not plantilla_sintetico_id:
+        raise BadRequest(detail="No se encontró una plantilla de 'Informe Sintético' publicada.")
+
+    # 3. Encontrar todos los informes de actividad curricular COMPLETADOS y no resumidos
+
+    stmt_ac_completadas = (
+        select(ActividadCurricularInstancia)
+        .join(Cursada, ActividadCurricularInstancia.cursada_id == Cursada.id)
+        .join(Materia, Cursada.materia_id == Materia.id)
+        # Unión explícita a la tabla de asociación M:N
+        .join(carrera_materia_association, Materia.id == carrera_materia_association.c.materia_id)
+        .join(Carrera, carrera_materia_association.c.carrera_id == Carrera.id)
+        .where(
+            Carrera.departamento_id == departamento_id,
+            ActividadCurricularInstancia.estado == EstadoInforme.COMPLETADO,
+            ActividadCurricularInstancia.informe_sintetico_instancia_id == None
+        )
+    ).distinct()
+    
+    informes_a_resumir: List[ActividadCurricularInstancia] = db.scalars(stmt_ac_completadas).all()
+
+    if not informes_a_resumir:
+        raise NotFound(detail=f"No se encontraron informes de actividad curricular 'Completados' para el departamento '{departamento.nombre}'.")
+
+    # 4. Crear la nueva instancia de Informe Sintético
+    print(f"Generando informe sintético para Depto. {departamento_id} con {len(informes_a_resumir)} informes.")
+    
+    nueva_instancia_sintetica = InformeSinteticoInstancia(
+        informe_sintetico_id=plantilla_sintetico_id,
+        departamento_id=departamento_id,
         tipo=TipoInstrumento.INFORME_SINTETICO
     )
-    db.add(nueva)
-    db.flush()  
-    actividades_q = db.query(models.ActividadCurricularInstancia).filter(
-        models.ActividadCurricularInstancia.estado == EstadoInforme.COMPLETADO,
-        models.ActividadCurricularInstancia.informe_sintetico_instancia_id == None
-    )
-
-    actividades = actividades_q.all()
- 
-    for act in actividades:
-        act.informe_sintetico_instancia_id = nueva.id
-        db.add(act)
-
-    db.commit()
-    db.refresh(nueva)
-    return nueva
-
-
-def get_plantilla_para_instancia_sintetico(
-    db: Session,
-    instancia_id: int,
-    departamento_id: Optional[int] = None
-) -> models.InstrumentoBase:
     
-    instancia = db.query(models.InformeSinteticoInstancia).filter(
-        models.InformeSinteticoInstancia.id == instancia_id
-    ).options(
-        selectinload(models.InformeSinteticoInstancia.informe_sintetico)
-        .selectinload(models.InformeSintetico.secciones)
-        .selectinload(Seccion.preguntas.of_type(PreguntaMultipleChoice))
-        .selectinload(PreguntaMultipleChoice.opciones)
-    ).first()
+    # 5. Vincular los informes y marcar como RESUMIDO
+    for informe_ac in informes_a_resumir:
+        informe_ac.informe_sintetico_instancia = nueva_instancia_sintetica
+        informe_ac.estado = EstadoInforme.RESUMIDO # Actualiza el estado
+        db.add(informe_ac)
+        
+    db.add(nueva_instancia_sintetica)
+    
+    try:
+        db.commit()
+        db.refresh(nueva_instancia_sintetica)
+    except Exception as e:
+        db.rollback()
+        raise BadRequest(detail=f"Error al guardar en BBDD: {e}")
 
-    if not instancia:
-        raise HTTPException(status_code=404, detail=f"Instancia de informe sintético {instancia_id} no encontrada.")
-
-    if not instancia.informe_sintetico:
-        raise HTTPException(status_code=500, detail="La instancia no tiene una plantilla asociada.")
-
-    return instancia.informe_sintetico
-
+    return nueva_instancia_sintetica
