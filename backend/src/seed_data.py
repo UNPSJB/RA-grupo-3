@@ -17,7 +17,7 @@ from src.enumerados import TipoCuatrimestre, EstadoInstancia, EstadoInstrumento
 from src.auth.services import get_password_hash
 
 def seed_initial_data(db: Session):
-    print("🌱 Iniciando carga de datos de prueba (v4.1 - Múltiples Plantillas)...")
+    print("🌱 Iniciando carga de datos de prueba (v4.2 - Cursadas SIN Encuestas)...")
 
     # --- 1. Sedes ---
     print("   > Configurando Sedes...")
@@ -97,7 +97,7 @@ def seed_initial_data(db: Session):
     
     # Alumnos (Ahora son 10)
     alumnos = []
-    for i in range(1, 11): # <--- CAMBIO: 1 a 10
+    for i in range(1, 11): 
         username = f"alumno{i}"
         a = db.query(Alumno).filter_by(username=username).first()
         if not a:
@@ -135,11 +135,6 @@ def seed_initial_data(db: Session):
 
     # --- 6. Materias y Cursadas (Configuración Multisede) ---
     print("   > Configurando Cursadas Multisede...")
-    
-    # Definición de materias
-    # Profesor 1 (index 0): Dará clases en CR y en TW
-    # Profesor 2 (index 1): Solo CR
-    # Profesor 3 (index 2): Solo CR
     
     config_cursadas = [
         # Las primeras dos usarán Plantilla de Ciclo Básico (ANEXO I)
@@ -182,7 +177,9 @@ def seed_initial_data(db: Session):
             )
             db.add(cursada)
             db.commit()
-            print(f"     + Cursada: {materia.nombre} ({item['carrera'].departamento.sede.localidad}) -> Prof: {profesor.username}")
+            print(f"     + Cursada Creada: {materia.nombre} ({item['carrera'].departamento.sede.localidad}) -> Prof: {profesor.username}")
+        else:
+            print(f"     . Cursada existente: {materia.nombre}")
         
         db.refresh(cursada)
         cursadas_creadas.append(cursada)
@@ -199,63 +196,11 @@ def seed_initial_data(db: Session):
                 db.add(ins)
     db.commit()
 
-    # --- 8. Activar Encuestas ---
-    print("   > Generando instancias de encuestas...")
-    
-    # Buscar las plantillas por título (asumiendo que seed_plantilla.py fue ejecutado)
-    plantilla_basico = db.query(Encuesta).filter(
-        Encuesta.titulo == "Encuesta Alumnos - Ciclo Básico (ANEXO I DCDFI 005/2014)",
-        Encuesta.estado == EstadoInstrumento.PUBLICADA
-    ).first()
-    
-    plantilla_superior = db.query(Encuesta).filter(
-        Encuesta.titulo == "Encuesta Alumnos - Ciclo Superior (ANEXO II DCDFI 005/2014)",
-        Encuesta.estado == EstadoInstrumento.PUBLICADA
-    ).first()
+    # --- 8. (MODIFICADO) NO Activar Encuestas Automáticamente ---
+    print("   > ⚠️ Cursadas generadas. Las Encuestas NO se han activado automáticamente.")
+    print("   > Ahora puedes ir al panel 'Gestión de Ciclo Académico' para asignar fechas y activarlas manualmente.")
 
-    if not plantilla_basico or not plantilla_superior:
-        print("     ! ADVERTENCIA: Faltan plantillas publicadas (Ciclo Básico o Superior).")
-        print("     ! Ejecuta 'seed_plantilla.py' primero.")
-        return
-
-    # Mapear cursadas a sus respectivas plantillas
-    for cursada in cursadas_creadas:
-        materia_nombre = cursada.materia.nombre
-        
-        # Buscar la configuración de la materia para saber qué plantilla usar
-        config_item = next((item for item in config_cursadas if item["nombre"] == materia_nombre), None)
-        
-        plantilla_a_usar = None
-        if config_item:
-            if config_item["plantilla_tipo"] == "Ciclo Básico":
-                plantilla_a_usar = plantilla_basico
-            elif config_item["plantilla_tipo"] == "Ciclo Superior":
-                plantilla_a_usar = plantilla_superior
-        
-        if not plantilla_a_usar:
-            print(f"     ! ADVERTENCIA: No se pudo determinar la plantilla para {materia_nombre}. Saltando.")
-            continue
-
-
-        instancia = db.query(EncuestaInstancia).filter_by(cursada_id=cursada.id).first()
-        if not instancia:
-            # CORRECCIÓN AQUÍ: Definimos una fecha de cierre a futuro
-            fecha_inicio = datetime.now()
-            fecha_cierre = fecha_inicio + timedelta(days=14) # Cierra en 2 semanas
-
-            nueva_instancia = EncuestaInstancia(
-                cursada_id=cursada.id,
-                plantilla_id=plantilla_a_usar.id,
-                fecha_inicio=fecha_inicio,
-                fecha_fin=fecha_cierre, # <--- Asignamos la fecha de fin
-                estado=EstadoInstancia.ACTIVA
-            )
-            db.add(nueva_instancia)
-            print(f"     + Encuesta activada para {materia_nombre} (Plantilla: {plantilla_a_usar.titulo})")
-        
-    db.commit()
-
-    print("✅ Carga de datos finalizada.")
+    print("✅ Carga de datos base finalizada.")
 
 
 def create_tables():
