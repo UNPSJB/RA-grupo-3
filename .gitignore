@@ -198,3 +198,4 @@ sketch
 
 # --- Archivos de configuración locales opcionales ---
 .env
+.env.local
