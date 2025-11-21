@@ -247,3 +247,63 @@ def generar_informe_sintetico_para_departamento(
         raise BadRequest(detail=f"Error al guardar en BBDD: {e}")
 
     return nueva_instancia_sintetica
+
+"""PARA PROBAR"""
+
+from typing import Optional
+from sqlalchemy.orm import selectinload
+
+def crear_instancia_informe_sintetico(
+    db: Session,
+    informe_sintetico_id: int,
+    departamento_id: Optional[int] = None
+) -> models.InformeSinteticoInstancia:
+    
+    plantilla = db.get(models.InformeSintetico, informe_sintetico_id)
+    if not plantilla:
+        raise HTTPException(status_code=404, detail="Plantilla de Informe Sintético no encontrada.")
+
+    
+    nueva = models.InformeSinteticoInstancia(
+        informe_sintetico_id=informe_sintetico_id,
+        tipo=TipoInstrumento.INFORME_SINTETICO
+    )
+    db.add(nueva)
+    db.flush()  
+    actividades_q = db.query(models.ActividadCurricularInstancia).filter(
+        models.ActividadCurricularInstancia.estado == EstadoInforme.COMPLETADO,
+        models.ActividadCurricularInstancia.informe_sintetico_instancia_id == None
+    )
+
+    actividades = actividades_q.all()
+ 
+    for act in actividades:
+        act.informe_sintetico_instancia_id = nueva.id
+        db.add(act)
+
+    db.commit()
+    db.refresh(nueva)
+    return nueva
+
+def get_plantilla_para_instancia_sintetico(
+    db: Session,
+    instancia_id: int,
+    departamento_id: Optional[int] = None
+) -> models.InstrumentoBase:
+    
+    instancia = db.query(models.InformeSinteticoInstancia).filter(
+        models.InformeSinteticoInstancia.id == instancia_id
+    ).options(
+        selectinload(models.InformeSinteticoInstancia.informe_sintetico)
+        .selectinload(models.InformeSintetico.secciones)
+        .selectinload(Seccion.preguntas.of_type(PreguntaMultipleChoice))
+        .selectinload(PreguntaMultipleChoice.opciones)
+    ).first()
+
+    if not instancia:
+        raise HTTPException(status_code=404, detail=f"Instancia de informe sintético {instancia_id} no encontrada.")
+
+    if not instancia.informe_sintetico:
+        raise HTTPException(status_code=500, detail="La instancia no tiene una plantilla asociada.")
+
+    return instancia.informe_sintetico

@@ -380,7 +380,7 @@ def seed_plantillas_data(db: Session):
         # Corresponde a la tabla 0 del Anexo II [cite: 97, 98]
         seccion_0_sint = find_or_create_seccion(db, plantilla_informe_sintetico, "0. Información general")
         crear_pregunta_redaccion(db, seccion_0_sint, 
-            "Completar tabla de Información General (Código, Actividad Curricular, Inscriptos, Comisiones Teóricas, Comisiones Prácticas).")
+            "Informacion General.")
 
         # --- Sección 1: Necesidades de equipamiento y bibliografía ---
         # Corresponde a la tabla 1 del Anexo II [cite: 100, 103]

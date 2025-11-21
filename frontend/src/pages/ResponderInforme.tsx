@@ -1,21 +1,28 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { jsPDF } from "jspdf";
-import autoTable from "jspdf-autotable";
 import { useAuth } from "../auth/AuthContext";
+import Seccion2 from "../components/informe_sintetico/Seccion2";
+import Seccion2A from "../components/informe_sintetico/Seccion2A";
+import Seccion2B from "../components/informe_sintetico/Seccion2B";
+import Seccion2C from "../components/informe_sintetico/Seccion2C";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
 
-interface Opcion {
+interface InformeCurricular {
   id: number;
-  texto: string;
+  estado: "pendiente" | "completado";
+  materia_nombre: string;
+  profesor_nombre: string;
+  cuatrimestre_info: string;
+  equipamiento?: string;
+  bibliografia?: string;
 }
 
 interface Pregunta {
   id: number;
   texto: string;
   tipo: "REDACCION" | "MULTIPLE_CHOICE";
-  opciones?: Opcion[] | null;
+  opciones?: { id: number; texto: string }[] | null;
   origen_datos?: string | null;
 }
 
@@ -35,22 +42,16 @@ interface PlantillaInforme {
 const ResponderInforme: React.FC = () => {
   const { instanciaId } = useParams<{ instanciaId: string }>();
   const navigate = useNavigate();
-
-  const { token, logout } = useAuth();
+  const { token } = useAuth();
 
   const [plantilla, setPlantilla] = useState<PlantillaInforme | null>(null);
+  const [informes, setInformes] = useState<InformeCurricular[]>([]);
   const [loading, setLoading] = useState(true);
-
-  const [respuestas, setRespuestas] = useState<{
-    [key: number]: string | number;
-  }>({});
-
   const [activeTab, setActiveTab] = useState(0);
-
   const [mensaje, setMensaje] = useState<string | null>(null);
-  const [errorPreguntaId, setErrorPreguntaId] = useState<number | null>(null);
-  const [enviando, setEnviando] = useState(false);
-  const [completado, setCompletado] = useState(false);
+  const [cuatrimestreSeleccionado, setCuatrimestreSeleccionado] = useState<string>("2025 - primero");
+  const [informeSeleccionadoId, setInformeSeleccionadoId] = useState<string>("todas");
+  const [respuestas, setRespuestas] = useState<{ [key: string]: string }>({});
 
   useEffect(() => {
     if (!token) return;
@@ -58,296 +59,241 @@ const ResponderInforme: React.FC = () => {
     const load = async () => {
       try {
         setLoading(true);
-        setMensaje(null);
 
-        const res = await fetch(
-          `${API_BASE_URL}/departamento/informes-sinteticos/instancia/${instanciaId}/detalles`,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
+        const resPlantilla = await fetch(
+          `${API_BASE_URL}/departamento/instancia/${instanciaId}/detalles?departamento_id=1`,
+          { headers: { Authorization: `Bearer ${token}` } }
         );
+        if (!resPlantilla.ok) throw new Error("Error cargando plantilla");
+        const dataPlantilla = await resPlantilla.json();
+        setPlantilla(dataPlantilla);
 
-        if (!res.ok) {
-          if (res.status === 401 || res.status === 403) {
-            logout();
-            return;
-          }
-          const err = await res.json();
-          throw new Error(err.detail);
-        }
+        const resInformes = await fetch(
+          `${API_BASE_URL}/departamento/mis-informes-curriculares`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        if (!resInformes.ok) throw new Error("Error cargando informes");
+        const dataInformes = await resInformes.json();
 
-        const data = await res.json();
-        setPlantilla(data);
+        const filtrados = dataInformes
+          .filter((i: InformeCurricular) => i.estado === "completado")
+          .filter((i: InformeCurricular) => i.cuatrimestre_info === cuatrimestreSeleccionado);
+        setInformes(filtrados);
+
+        if (filtrados.length > 0) setInformeSeleccionadoId("todas");
       } catch (e) {
-        setMensaje(
-          e instanceof Error ? e.message : "Error al cargar el informe"
-        );
+        setMensaje(e instanceof Error ? e.message : "Error al cargar datos");
       } finally {
         setLoading(false);
       }
     };
 
     load();
-  }, [instanciaId, token, logout]);
+  }, [instanciaId, token, cuatrimestreSeleccionado]);
 
-  const handleChange = (preguntaId: number, valor: string | number) => {
-    setRespuestas((prev) => ({
-      ...prev,
-      [preguntaId]: valor,
-    }));
+  const informeSeleccionado = informeSeleccionadoId === "todas"
+    ? null
+    : informes.find(i => i.id === Number(informeSeleccionadoId));
 
-    if (errorPreguntaId === preguntaId) {
-      setErrorPreguntaId(null);
-      setMensaje(null);
-    }
-  };
+  const materiasFiltradas = informeSeleccionado ? [informeSeleccionado] : informes;
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!plantilla) return;
-
-    const obligatorias = plantilla.secciones
-      .flatMap((s) => s.preguntas)
-      .filter((p) => p.tipo === "MULTIPLE_CHOICE");
-
-    const falta = obligatorias.find((p) => !respuestas[p.id]);
-
-    if (falta) {
-      const indexTab = plantilla.secciones.findIndex((s) =>
-        s.preguntas.some((p) => p.id === falta.id)
-      );
-
-      if (indexTab !== -1) setActiveTab(indexTab);
-
-      setErrorPreguntaId(falta.id);
-      setMensaje("Debes completar todas las preguntas obligatorias (*)");
-      return;
-    }
-
-    const payload = {
-      respuestas: Object.entries(respuestas).map(([id, valor]) => {
-        const p = plantilla
-          .secciones.flatMap((s) => s.preguntas)
-          .find((x) => x.id === parseInt(id));
-
-        if (!p) return null;
-
-        if (p.tipo === "MULTIPLE_CHOICE") {
-          return { pregunta_id: Number(id), opcion_id: valor };
-        } else {
-          return { pregunta_id: Number(id), texto: String(valor) };
-        }
-      }),
-    };
-
-    setEnviando(true);
-
-    try {
-      const res = await fetch(
-        `${API_BASE_URL}/departamento/informes-sinteticos/instancia/${instanciaId}/responder`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify(payload),
-        }
-      );
-
-      if (!res.ok) {
-        if (res.status === 401 || res.status === 403) {
-          logout();
-          return;
-        }
-        const err = await res.json();
-        throw new Error(err.detail);
-      }
-
-      setCompletado(true);
-      setMensaje("¡Informe enviado correctamente!");
-    } catch (e) {
-      setMensaje(
-        e instanceof Error ? e.message : "Error al enviar el informe"
-      );
-    } finally {
-      setEnviando(false);
-    }
-  };
-
-  const handlePDF = () => {
-    if (!plantilla) return;
-
-    const doc = new jsPDF();
-    doc.setFontSize(16);
-    doc.text(plantilla.titulo, 14, 20);
-
-    const body: any[] = [];
-
-    plantilla.secciones.forEach((sec) => {
-      body.push([
-        {
-          content: sec.nombre,
-          colSpan: 2,
-          styles: { fontStyle: "bold", fillColor: [240, 240, 240] },
-        },
-      ]);
-
-      sec.preguntas.forEach((p) => {
-        let resp = respuestas[p.id];
-        let texto = "No respondida";
-
-        if (p.tipo === "MULTIPLE_CHOICE") {
-          const op = p.opciones?.find((o) => o.id === resp);
-          texto = op?.texto || "No respondida";
-        } else {
-          texto = resp ? String(resp) : "No respondida";
-        }
-
-        body.push([p.texto, texto]);
-      });
-    });
-
-    autoTable(doc, {
-      startY: 30,
-      head: [["Pregunta", "Respuesta"]],
-      body,
-    });
-
-    doc.save(`Informe_Sintetico_${instanciaId}.pdf`);
+  const handleInputChange = (key: string, valor: string) => {
+    setRespuestas(prev => ({ ...prev, [key]: valor }));
   };
 
   if (loading)
-    return (
-      <p className="text-center mt-8 animate-pulse text-gray-500">
-        Cargando informe...
-      </p>
-    );
+    return <p className="text-center mt-8 animate-pulse text-gray-500">Cargando informe...</p>;
 
   if (!plantilla)
-    return (
-      <p className="text-center mt-8 text-red-600">{mensaje || "Error"}</p>
-    );
-
-  if (completado) {
-    return (
-      <div className="flex flex-col items-center mt-20 space-y-6">
-        <h2 className="text-xl font-bold text-green-700">
-          ¡Informe enviado correctamente!
-        </h2>
-        <button
-          onClick={() => navigate("/departamento")}
-          className="bg-blue-600 text-white px-5 py-2 rounded"
-        >
-          Volver al inicio
-        </button>
-        <button
-          onClick={handlePDF}
-          className="bg-green-600 text-white px-5 py-2 rounded"
-        >
-          Descargar PDF
-        </button>
-      </div>
-    );
-  }
+    return <p className="text-center mt-8 text-red-600">{mensaje || "Error"}</p>;
 
   return (
-    <div className="max-w-3xl mx-auto bg-white p-6 rounded-lg shadow mt-6 border">
-      <h1 className="text-2xl font-bold text-center text-indigo-800 mb-2">
-        {plantilla.titulo}
-      </h1>
-      <p className="text-center text-gray-600 italic mb-6">
-        {plantilla.descripcion}
-      </p>
-
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <div className="flex border-b border-gray-300 mb-4 overflow-x-auto">
-          {plantilla.secciones.map((sec, i) => (
-            <button
-              key={sec.id}
-              type="button"
-              onClick={() => {
-                setActiveTab(i);
-                setMensaje(null);
-                setErrorPreguntaId(null);
-              }}
-              className={`py-3 px-5 ${
-                activeTab === i
-                  ? "border-b-2 border-indigo-600 text-indigo-600"
-                  : "text-gray-500 hover:text-gray-700"
-              }`}
-            >
-              {sec.nombre}
-            </button>
-          ))}
-        </div>
-
+    <div className="max-w-4xl mx-auto bg-white p-6 rounded-lg shadow mt-6 border">
+      <h1 className="text-2xl font-bold text-center text-indigo-800 mb-2">{plantilla.titulo}</h1>
+      <p className="text-center text-gray-600 italic mb-6">{plantilla.descripcion}</p>
+      <div className="flex border-b border-gray-300 mb-4 overflow-x-auto">
         {plantilla.secciones.map((sec, i) => (
-          <div key={sec.id} className={activeTab === i ? "block" : "hidden"}>
-            {sec.preguntas.map((p) => (
-              <div
-                key={p.id}
-                className={`p-4 bg-gray-50 rounded border ${
-                  errorPreguntaId === p.id
-                    ? "border-red-400 ring-2 ring-red-100"
-                    : "border-gray-200"
-                }`}
-              >
-                <p className="font-medium mb-3 text-gray-800">
-                  {p.texto}
-                  {p.tipo === "MULTIPLE_CHOICE" && (
-                    <span className="text-red-500 ml-1">*</span>
-                  )}
-                </p>
+          <button
+            key={sec.id}
+            type="button"
+            onClick={() => { setActiveTab(i); setMensaje(null); }}
+            className={`py-3 px-5 ${activeTab === i ? "border-b-2 border-indigo-600 text-indigo-600" : "text-gray-500 hover:text-gray-700"}`}
+          >
+            {sec.nombre}
+          </button>
+        ))}
+      </div>
 
+      {/* Contenido secciones */}
+      {plantilla.secciones.map((sec, i) => (
+        <div key={sec.id} className={activeTab === i ? "block" : "hidden"}>
+          {i === 0 ? (
+            <div className="p-4 bg-gray-50 rounded border border-gray-200 mb-4">
+              {sec.preguntas.map((p) => (
+                <p key={p.id} className="font-medium mb-4 text-gray-800">{p.texto}</p>
+              ))}
+
+              <div className="mb-4 flex items-center space-x-2">
+                <label className="font-medium text-gray-700">Cuatrimestre:</label>
+                <select
+                  className="border rounded p-1"
+                  value={cuatrimestreSeleccionado}
+                  onChange={(e) => setCuatrimestreSeleccionado(e.target.value)}
+                >
+                  <option value="2025 - primero">2025 - primero</option>
+                  <option value="2025 - segundo">2025 - segundo</option>
+                </select>
+              </div>
+
+              <div className="overflow-x-auto">
+                <div className="flex font-bold bg-gray-100 p-2 rounded">
+                  <div className="w-1/5">Código de la actividad curricular</div>
+                  <div className="w-2/5">Actividad curricular</div>
+                  <div className="w-1/5">Cantidad de alumnos inscriptos</div>
+                  <div className="w-1/5">Cantidad de comisiones clases teóricas</div>
+                  <div className="w-1/5">Cantidad de comisiones clases prácticas</div>
+                </div>
+                {informes.map((i) => (
+                  <div key={i.id} className="flex border-b border-gray-200 p-2">
+                    <div className="w-1/5">{i.id}</div>
+                    <div className="w-2/5">{i.materia_nombre}</div>
+                    <div className="w-1/5">-</div>
+                    <div className="w-1/5">-</div>
+                    <div className="w-1/5">-</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : i === 1 ? (
+            <div className="p-4 bg-gray-50 rounded border border-gray-200 mb-4">
+              {sec.preguntas.map((p) => (
+                <p key={p.id} className="font-medium mb-4 text-gray-800">{p.texto}</p>
+              ))}
+              <div className="mb-4 flex items-center space-x-2">
+                <label className="font-medium text-gray-700">Informe curricular:</label>
+                <select
+                  className="border rounded p-1"
+                  value={informeSeleccionadoId}
+                  onChange={(e) => setInformeSeleccionadoId(e.target.value)}
+                >
+                  <option value="todas">Todas</option>
+                  {informes.map((i) => (
+                    <option key={i.id} value={i.id}>
+                      {i.materia_nombre} - {i.profesor_nombre}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="overflow-x-auto">
+                <div className="flex font-bold bg-gray-100 p-2 rounded">
+                  <div className="w-2/5">Actividad curricular</div>
+                  <div className="w-1/5">Equipamiento e insumos</div>
+                  <div className="w-1/5">Bibliografía</div>
+                </div>
+                {materiasFiltradas.length > 0 ? (
+                  materiasFiltradas.map((i) => (
+                    <div key={i.id} className="flex border-b border-gray-200 p-2">
+                      <div className="w-2/5">{`${i.id} - ${i.materia_nombre}`}</div>
+                      <div className="w-1/5">{i.equipamiento ?? "-"}</div>
+                      <div className="w-1/5">{i.bibliografia ?? "-"}</div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="p-2 text-gray-500">No hay informe seleccionado</div>
+                )}
+              </div>
+            </div>
+          ) : i === 2 ? (
+            // Sección 2: 2, 2A, 2B, 2C
+            <div>
+              {sec.preguntas.map((p) => {
+                console.log("Pregunta:", p.texto);
+
+                if (p.texto.startsWith("2.") && !p.texto.startsWith("2.A") && !p.texto.startsWith("2.B") && !p.texto.startsWith("2.C")) {
+                  return (
+                    <div key={p.id} className="mb-4">
+                      <p className="font-medium mb-3 text-gray-800">{p.texto}</p>
+                      <Seccion2
+                        materiasFiltradas={materiasFiltradas}
+                        respuestas={respuestas}
+                        handleInputChange={handleInputChange}
+                        preguntaId={p.id}
+                      />
+                    </div>
+                  );
+                }
+
+                if (p.texto.startsWith("2.A")) {
+                  return (
+                    <div key={p.id} className="mb-4">
+                      <p className="font-medium mb-3 text-gray-800">{p.texto}</p>
+                      <Seccion2A
+                        materiasFiltradas={materiasFiltradas}
+                        respuestas={respuestas}
+                        handleInputChange={handleInputChange}
+                        preguntaId={p.id}
+                      />
+                    </div>
+                  );
+                }
+
+                if (p.texto.startsWith("2.B")) {
+                  return (
+                    <div key={p.id} className="mb-4">
+                      <p className="font-medium mb-3 text-gray-800">{p.texto}</p>
+                      <Seccion2B
+                        materiasFiltradas={materiasFiltradas}
+                        respuestas={respuestas}
+                        handleInputChange={handleInputChange}
+                        preguntaId={p.id}
+                      />
+                    </div>
+                  );
+                }
+
+                if (p.texto.startsWith("2.C")) {
+                  return (
+                    <div key={p.id} className="mb-4">
+                      <p className="font-medium mb-3 text-gray-800">{p.texto}</p>
+                      <Seccion2C
+                        materiasFiltradas={materiasFiltradas}
+                        respuestas={respuestas}
+                        handleInputChange={handleInputChange}
+                        preguntaId={p.id}
+                      />
+                    </div>
+                  );
+                }
+
+                return null;
+              })}
+            </div>
+          ) : (
+            sec.preguntas.map((p) => (
+              <div key={p.id} className="p-4 bg-gray-50 rounded border border-gray-200 mb-4">
+                <p className="font-medium mb-3 text-gray-800">{p.texto}</p>
                 {p.tipo === "REDACCION" ? (
-                  <textarea
-                    className="w-full p-2 border rounded"
-                    rows={6}
-                    value={(respuestas[p.id] as string) || ""}
-                    onChange={(e) => handleChange(p.id, e.target.value)}
-                  />
+                  <textarea className="w-full p-2 border rounded" rows={6} readOnly value="" />
                 ) : (
                   <div className="space-y-2">
                     {p.opciones?.map((op) => (
-                      <label
-                        key={op.id}
-                        className="flex items-center space-x-2 p-2 hover:bg-indigo-50"
-                      >
-                        <input
-                          type="radio"
-                          name={`preg-${p.id}`}
-                          value={op.id}
-                          checked={Number(respuestas[p.id]) === op.id}
-                          onChange={() => handleChange(p.id, op.id)}
-                        />
+                      <label key={op.id} className="flex items-center space-x-2 p-2 hover:bg-indigo-50">
+                        <input type="radio" disabled />
                         <span>{op.texto}</span>
                       </label>
                     ))}
                   </div>
                 )}
               </div>
-            ))}
-          </div>
-        ))}
-
-        {mensaje && (
-          <p className="text-center text-red-600 bg-red-100 p-2 rounded">
-            {mensaje}
-          </p>
-        )}
-
-        <div className="text-center">
-          <button
-            type="submit"
-            disabled={enviando}
-            className="bg-indigo-600 text-white px-8 py-3 rounded"
-          >
-            {enviando ? "Enviando..." : "Enviar Informe"}
-          </button>
+            ))
+          )}
         </div>
-      </form>
+      ))}
+
+      {mensaje && (
+        <p className="text-center text-red-600 bg-red-100 p-2 rounded">{mensaje}</p>
+      )}
     </div>
   );
 };

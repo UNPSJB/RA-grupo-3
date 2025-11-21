@@ -27,6 +27,7 @@ import DepartamentoEstadisticas from "./pages/DepartamentoEstadisticas.tsx";
 import DepartamentoEstadisticasCursadas from "./pages/DepartamentoEstadisticasCursadas.tsx";
 import DepartamentoInformesPage from "./pages/DepartamentoInformesPage.tsx";
 import HistorialEncuestas from "./pages/HistorialEncuestas";
+import ResponderInforme from "./pages/ResponderInforme"; 
 
 const MainLayout: React.FC = () => {
   const location = useLocation();
@@ -160,6 +161,11 @@ const App: React.FC = () => {
           <Route path="departamento" element={<Outlet />}>
             {/* HOME: Lista de Informes Sintéticos/Completados */}
             <Route index element={<DepartamentoInformesPageWithLoading />} />
+
+            <Route
+              path="/departamento/informe-sintetico/:instanciaId"
+              element={<ResponderInforme />}
+            />
 
             {/* ESTADÍSTICAS / INFORMES */}
             <Route
