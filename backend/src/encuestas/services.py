@@ -482,54 +482,75 @@ def _obtener_plantilla_informe_activa(db: Session) -> int:
 def cerrar_instancia_encuesta(
     db: Session, 
     instancia_id: int, 
-    fecha_fin_informe: Optional[datetime] = None  # <--- Nuevo parámetro
+    fecha_fin_informe: Optional[datetime] = None 
 ) -> models.EncuestaInstancia:
 
     instancia = db.get(models.EncuestaInstancia, instancia_id)
     if not instancia:
         raise NotFound(detail=f"EncuestaInstancia con ID {instancia_id} no encontrada.")
     
-    # ... (validaciones de estado existentes) ...
 
-    instancia.estado = models.EstadoInstancia.CERRADA
+    if instancia.estado != EstadoInstancia.ACTIVA:
+
+        if instancia.estado == EstadoInstancia.CERRADA:
+             return instancia 
+        raise BadRequest(detail=f"La instancia {instancia_id} no está ACTIVA, no se puede cerrar.")
+
+
+    instancia.estado = EstadoInstancia.CERRADA
     if instancia.fecha_fin is None:
         instancia.fecha_fin = datetime.now() 
 
     db.add(instancia)
+
+
     try:
-        # ... (lógica de obtención de IDs existente) ...
-        
+
+        cursada = instancia.cursada 
+        if not cursada:
+             raise BadRequest(detail="La instancia no tiene una cursada asociada.")
+             
         profesor_id = cursada.profesor_id
-        # ... (validación de existencia previa) ...
+        if not profesor_id:
+             raise BadRequest(detail="La cursada no tiene profesor asignado.")
 
-        # CREACIÓN DEL INFORME PARA EL PROFESOR
-        nueva_instancia_informe = instrumento_models.ActividadCurricularInstancia(
-            actividad_curricular_id=plantilla_informe_id,
-            cursada_id=cursada_id,
-            encuesta_instancia_id=encuesta_instancia_id,
-            profesor_id=profesor_id,
-            estado=EstadoInforme.PENDIENTE,
-            tipo=TipoInstrumento.ACTIVIDAD_CURRICULAR,
-            
-            # --- TUS REQUERIMIENTOS ---
-            fecha_inicio=datetime.now(),   # Inicio: Hoy/Ahora
-            fecha_fin=fecha_fin_informe    # Fin: El que viene del frontend (o None)
-        )
 
-        db.add(nueva_instancia_informe)
+        plantilla_informe_id = _obtener_plantilla_informe_activa(db)
 
-    except BadRequest as e:
-        print(f"ADVERTENCIA: {e.detail}")
+
+        existe_instancia = db.query(instrumento_models.ActividadCurricularInstancia).filter(
+            instrumento_models.ActividadCurricularInstancia.cursada_id == cursada.id
+        ).first()
+
+        if existe_instancia:
+            print(f"ADVERTENCIA: Ya existe un informe (ID {existe_instancia.id}) para esta cursada.")
+        else:
+
+            nueva_instancia_informe = instrumento_models.ActividadCurricularInstancia(
+                actividad_curricular_id=plantilla_informe_id,
+                cursada_id=cursada.id,
+                encuesta_instancia_id=instancia.id,
+                profesor_id=profesor_id,
+                estado=EstadoInforme.PENDIENTE,
+                tipo=TipoInstrumento.ACTIVIDAD_CURRICULAR,
+                fecha_inicio=datetime.now(),
+                fecha_fin=fecha_fin_informe
+            )
+            db.add(nueva_instancia_informe)
+            print(f"EXITO: Informe de Actividad Curricular generado para Cursada {cursada.id}")
+
     except Exception as e:
-        print(f"ERROR grave: {e}")
+
+        print(f"ERROR GRAVE al intentar instanciar Informe de Actividad Curricular: {e}")
+
     
-    # ... (commit y retorno existente) ...
+
     try:
         db.commit()
         db.refresh(instancia)
     except Exception as e:
         db.rollback()
-        raise BadRequest(detail=f"Error al guardar: {e}")
+        raise BadRequest(detail=f"Error al guardar el cambio de estado: {e}")
 
     return instancia
 
