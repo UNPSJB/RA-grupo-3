@@ -47,26 +47,6 @@ def listar_mis_informes_curriculares(
         print(f"Error al listar informes para depto {current_user.departamento_id}: {e}")
         raise HTTPException(status_code=500, detail=f"Error interno: {e}")
 
-@router.post(
-    "/instancia/{informe_id}/crear",
-    status_code=status.HTTP_201_CREATED
-)
-def crear_instancia_informe_sintetico(
-    informe_id: int,
-    departamento_id: int | None = None,  
-    db: Session = Depends(get_db)
-) -> Dict[str, int]:
-    
-    #Crea una instancia de informe sintético a partir de la plantilla (informe_id).
-    
-    try:
-        instancia = instrumento_services.crear_instancia_informe_sintetico(db, informe_id, departamento_id)
-        return {"instancia_id": instancia.id}
-    except HTTPException as e:
-        raise e
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
 
 @router.get(
     "/instancia/{instancia_id}/detalles",
