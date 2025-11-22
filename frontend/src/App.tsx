@@ -14,7 +14,7 @@ import SecretariaAcademicaNavigationMenu from "./components/NavigationMenuSecret
 import ProfesorNavigationMenu from "./components/NavigationMenuProfesores.tsx";
 import DepartamentoNavigationMenu from "./components/NavigationMenuDepartamento.tsx";
 import ResultadosProfesorPage from "./pages/ResultadosProfesorPage.tsx";
-import SecretariaModelos from "./pages/SecretariaModelos.tsx";
+import GestionCicloVida from "./pages/GestionCicloVida.tsx";
 import ProfesoresHome from "./pages/ProfesoresHome.tsx";
 import PoliticasPrivacidad from "./pages/PoliticasPrivacidad.tsx";
 import ResponderReportes from "./pages/ResponderReportes.tsx";
@@ -55,7 +55,7 @@ const MainLayout: React.FC = () => {
 };
 
 const PoliticasPrivacidadWithLoading = withLoading(PoliticasPrivacidad);
-const SecretariaModelosWithLoading = withLoading(SecretariaModelos);
+const GestionCicloVidaWithLoading = withLoading(GestionCicloVida);
 const CuentaPageWithLoading = withLoading(GestionCuentas);
 const PanelAdminWithLoading = withLoading(PanelAdmin);
 const EncuestasPageWithLoading = withLoading(EncuestasPage);
@@ -94,7 +94,7 @@ const App: React.FC = () => {
             <Route index element={<PanelAdminWithLoading />} />
 
             {/* GESTIÓN DE PLANTILLAS */}
-            <Route path="modelos" element={<SecretariaModelosWithLoading />} />
+            <Route path="modelos" element={<GestionCicloVidaWithLoading />} />
             <Route path="plantillas" element={<Outlet />}>
               <Route index element={<Navigate to="borradores" replace />} />
               <Route path="borradores" element={<EncuestasPageWithLoading />} />

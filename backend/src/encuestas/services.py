@@ -12,6 +12,9 @@ from src.pregunta.models import Pregunta, PreguntaMultipleChoice
 from src.enumerados import EstadoInstancia, TipoPregunta,EstadoInstrumento, EstadoInforme, TipoInstrumento
 from src.respuesta.models import Respuesta, RespuestaMultipleChoice, RespuestaRedaccion, RespuestaSet
 from src.instrumento import models as instrumento_models
+from src.materia.models import Departamento, Sede
+from datetime import datetime
+from typing import Optional
 
 
 def crear_plantilla_encuesta(
@@ -476,62 +479,80 @@ def _obtener_plantilla_informe_activa(db: Session) -> int:
         
     return plantilla_id
 
-def cerrar_instancia_encuesta(db: Session, instancia_id: int) -> models.EncuestaInstancia:
+def cerrar_instancia_encuesta(
+    db: Session, 
+    instancia_id: int, 
+    fecha_fin_informe: Optional[datetime] = None 
+) -> models.EncuestaInstancia:
 
     instancia = db.get(models.EncuestaInstancia, instancia_id)
     if not instancia:
         raise NotFound(detail=f"EncuestaInstancia con ID {instancia_id} no encontrada.")
-    if instancia.estado != models.EstadoInstancia.ACTIVA:
-        raise BadRequest(detail=f"La instancia {instancia_id} no está ACTIVA, no se puede cerrar.")
-    if instancia.estado == models.EstadoInstancia.CERRADA:
-         print(f"Instancia {instancia_id} ya estaba cerrada.")
-         return instancia 
+    
 
-    instancia.estado = models.EstadoInstancia.CERRADA
+    if instancia.estado != EstadoInstancia.ACTIVA:
+
+        if instancia.estado == EstadoInstancia.CERRADA:
+             return instancia 
+        raise BadRequest(detail=f"La instancia {instancia_id} no está ACTIVA, no se puede cerrar.")
+
+
+    instancia.estado = EstadoInstancia.CERRADA
     if instancia.fecha_fin is None:
         instancia.fecha_fin = datetime.now() 
 
     db.add(instancia)
+
+
     try:
-        cursada_id = instancia.cursada_id
-        encuesta_instancia_id = instancia.id
-        plantilla_informe_id = _obtener_plantilla_informe_activa(db)
-        cursada = db.get(Cursada, cursada_id)
-        if not cursada or not cursada.profesor_id: 
-             raise BadRequest(detail=f"La Cursada con ID {cursada_id} no tiene un profesor asignado.")
-        
+
+        cursada = instancia.cursada 
+        if not cursada:
+             raise BadRequest(detail="La instancia no tiene una cursada asociada.")
+             
         profesor_id = cursada.profesor_id
+        if not profesor_id:
+             raise BadRequest(detail="La cursada no tiene profesor asignado.")
+
+
+        plantilla_informe_id = _obtener_plantilla_informe_activa(db)
+
+
         existe_instancia = db.query(instrumento_models.ActividadCurricularInstancia).filter(
-            instrumento_models.ActividadCurricularInstancia.cursada_id == cursada_id
+            instrumento_models.ActividadCurricularInstancia.cursada_id == cursada.id
         ).first()
+
         if existe_instancia:
-            raise BadRequest(detail=f"Ya existe un informe de actividad curricular (ID {existe_instancia.id}) para la cursada {cursada_id}. No se crea una nueva instancia.")
+            print(f"ADVERTENCIA: Ya existe un informe (ID {existe_instancia.id}) para esta cursada.")
+        else:
 
-        nueva_instancia_informe = instrumento_models.ActividadCurricularInstancia(
-            actividad_curricular_id=plantilla_informe_id,
-            cursada_id=cursada_id,
-            encuesta_instancia_id=encuesta_instancia_id,
-            profesor_id=profesor_id,
-            estado=EstadoInforme.PENDIENTE,
-            tipo=TipoInstrumento.ACTIVIDAD_CURRICULAR
-        )
+            nueva_instancia_informe = instrumento_models.ActividadCurricularInstancia(
+                actividad_curricular_id=plantilla_informe_id,
+                cursada_id=cursada.id,
+                encuesta_instancia_id=instancia.id,
+                profesor_id=profesor_id,
+                estado=EstadoInforme.PENDIENTE,
+                tipo=TipoInstrumento.ACTIVIDAD_CURRICULAR,
+                fecha_inicio=datetime.now(),
+                fecha_fin=fecha_fin_informe
+            )
+            db.add(nueva_instancia_informe)
+            print(f"EXITO: Informe de Actividad Curricular generado para Cursada {cursada.id}")
 
-        db.add(nueva_instancia_informe)
-
-    except BadRequest as e:
-        print(f"ADVERTENCIA: No se pudo instanciar el Informe de Actividad Curricular. Causa: {e.detail}")
     except Exception as e:
-        print(f"ERROR grave al intentar instanciar Informe de Actividad Curricular: {e}")
+
+        print(f"ERROR GRAVE al intentar instanciar Informe de Actividad Curricular: {e}")
+
+    
+
     try:
         db.commit()
         db.refresh(instancia)
     except Exception as e:
         db.rollback()
-        print(f"ERROR en commit al cerrar instancia {instancia_id}: {e}")
         raise BadRequest(detail=f"Error al guardar el cambio de estado: {e}")
 
     return instancia
-
 
 def listar_profesores_por_departamento(db: Session, departamento_id: int) -> List[Profesor]:
     """
@@ -852,3 +873,55 @@ def obtener_dashboard_profesor(db: Session, profesor_id: int) -> List[schemas.Da
         ))
         
     return dashboard_items
+
+#Para activar las encuestas
+def listar_cursadas_sin_encuesta(db: Session) -> List[Dict[str, Any]]:
+    """Lista cursadas del año actual/futuro que NO tienen encuesta activa o cerrada."""
+    # Subquery para encontrar cursadas que ya tienen instancia
+    stmt_con_instancia = select(models.EncuestaInstancia.cursada_id)
+    
+    stmt = (
+        select(Cursada)
+        .join(Cursada.materia)
+        .join(Cursada.cuatrimestre)
+        .join(Cursada.profesor)
+        .where(Cursada.id.not_in(stmt_con_instancia)) # Filtramos las que ya tienen
+        .order_by(Cuatrimestre.anio.desc(), Materia.nombre)
+    )
+    
+    cursadas = db.scalars(stmt).all()
+    
+    resultado = []
+    for c in cursadas:
+        resultado.append({
+            "id": c.id,
+            "materia_nombre": c.materia.nombre,
+            "profesor_nombre": c.profesor.nombre,
+            "anio": c.cuatrimestre.anio,
+            "periodo": c.cuatrimestre.periodo.value if c.cuatrimestre.periodo else "-"
+        })
+    return resultado
+
+def listar_todas_instancias_activas(db: Session) -> List[Dict[str, Any]]:
+    """Lista todas las encuestas actualmente ACTIVAS para admin."""
+    stmt = (
+        select(models.EncuestaInstancia)
+        .join(models.EncuestaInstancia.cursada)
+        .join(Cursada.materia)
+        .where(models.EncuestaInstancia.estado == EstadoInstancia.ACTIVA)
+    )
+    instancias = db.scalars(stmt).all()
+    
+    resultado = []
+    for i in instancias:
+        resultado.append({
+            "id": i.id,
+            "materia_nombre": i.cursada.materia.nombre,
+            "fecha_inicio": i.fecha_inicio,
+            "estado": i.estado
+        })
+    return resultado
+
+def listar_todos_departamentos(db: Session) -> List[Departamento]:
+    """Lista simple de departamentos para el selector."""
+    return db.scalars(select(Departamento)).all()

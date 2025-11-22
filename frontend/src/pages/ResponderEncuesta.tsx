@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
-import { useAuth } from "../auth/AuthContext.tsx"
+import { useAuth } from "../auth/AuthContext.tsx";
+import BarraProgreso from "../components/estadisticas/BarraProgreso.tsx";
 
-// --- Interfaces (sin cambios) ---
+// --- Interfaces ---
 interface Opcion {
   id: number;
   texto: string;
@@ -34,7 +35,7 @@ const ResponderEncuesta: React.FC = () => {
   const { instanciaId } = useParams<{ instanciaId: string }>();
   const navigate = useNavigate();
   const location = useLocation();
-  const {token, logout} = useAuth();
+  const { token, logout } = useAuth();
 
   const { materiaNombre, profesorNombre } = (location.state as {
     materiaNombre?: string;
@@ -52,12 +53,39 @@ const ResponderEncuesta: React.FC = () => {
   const [cargandoEnvio, setCargandoEnvio] = useState(false);
 
   const [activeTab, setActiveTab] = useState(0);
-
   const [errorPreguntaId, setErrorPreguntaId] = useState<number | null>(null);
+
+  const totalPreguntas = useMemo(() => {
+    if (!plantilla) return 0;
+    return plantilla.secciones.reduce(
+      (acc, seccion) => acc + seccion.preguntas.length,
+      0
+    );
+  }, [plantilla]);
+
+  const respuestasCount = useMemo(() => {
+    return Object.values(respuestas).filter(
+      (v) => v !== "" && v !== undefined && v !== null
+    ).length;
+  }, [respuestas]);
+
+  const isSeccionActualCompleta = useMemo(() => {
+    if (!plantilla || !plantilla.secciones[activeTab]) return false;
+    const seccionActual = plantilla.secciones[activeTab];
+    //Filtramos las preguntas que son obligatorias
+    const preguntasObligatorias = seccionActual.preguntas.filter(
+      (p) => p.tipo === "MULTIPLE_CHOICE"
+    );
+    //Veo si hay valor en el estado de respuestas
+    return preguntasObligatorias.every((p) => {
+      const valor = respuestas[p.id];
+      return valor !== undefined && valor !== null && valor !== "";
+    });
+  }, [plantilla, activeTab, respuestas]);
 
   useEffect(() => {
     let isMounted = true;
-    
+
     if (!token) {
       setLoading(false);
       setMensaje("Necesitas iniciar sesión para responder la encuesta.");
@@ -82,18 +110,16 @@ const ResponderEncuesta: React.FC = () => {
           `${API_BASE_URL}/encuestas-abiertas/instancia/${instanciaId}/detalles`,
           {
             headers: {
-              "Authorization": `Bearer ${token}`
-            }
+              Authorization: `Bearer ${token}`,
+            },
           }
         );
 
         if (!response.ok) {
-
           if (response.status === 401 || response.status === 403) {
             logout();
             return;
           }
-
           let errorDetail = `Error ${response.status}: ${response.statusText}`;
           try {
             const errorData = await response.json();
@@ -114,7 +140,7 @@ const ResponderEncuesta: React.FC = () => {
           setPlantilla(plantillaData);
         }
       } catch (error) {
-        console.error("Error al obtener la plantilla de la encuesta:", error);
+        console.error("Error al obtener la plantilla:", error);
         if (isMounted && !mensaje) {
           setMensaje(
             `Error al cargar la encuesta: ${
@@ -138,10 +164,24 @@ const ResponderEncuesta: React.FC = () => {
 
   const manejarCambio = (preguntaId: number, valor: string | number) => {
     setRespuestas((prev) => ({ ...prev, [preguntaId]: valor }));
-
     if (errorPreguntaId === preguntaId) {
       setErrorPreguntaId(null);
       setMensaje(null);
+    }
+  };
+
+  // Nuevos Handlers de Navegación
+  const irSiguiente = () => {
+    if (plantilla && activeTab < plantilla.secciones.length - 1) {
+      setActiveTab(activeTab + 1);
+      window.scrollTo(0, 0); // Subir al inicio al cambiar de página
+    }
+  };
+
+  const irAnterior = () => {
+    if (activeTab > 0) {
+      setActiveTab(activeTab - 1);
+      window.scrollTo(0, 0);
     }
   };
 
@@ -159,6 +199,7 @@ const ResponderEncuesta: React.FC = () => {
     setErrorPreguntaId(null);
     setMensaje(null);
 
+    // Validación global de obligatorias antes de enviar
     const preguntasObligatorias = plantilla.secciones
       .flatMap((s) => s.preguntas)
       .filter((p) => p.tipo === "MULTIPLE_CHOICE");
@@ -168,6 +209,7 @@ const ResponderEncuesta: React.FC = () => {
     );
 
     if (primeraPreguntaSinRespuesta) {
+      // Encontrar en qué sección está la pregunta que falta
       let tabIndex = -1;
       for (let i = 0; i < plantilla.secciones.length; i++) {
         if (
@@ -180,14 +222,18 @@ const ResponderEncuesta: React.FC = () => {
         }
       }
 
-      if (tabIndex !== -1) {
+      // Si la pregunta está en otra sección, llevamos al usuario ahí
+      if (tabIndex !== -1 && tabIndex !== activeTab) {
         setActiveTab(tabIndex);
       }
 
       setErrorPreguntaId(primeraPreguntaSinRespuesta.id);
       setMensaje(
-        "Por favor, responde todas las preguntas obligatorias (*). Hemos resaltado la primera que falta."
+        "Faltan preguntas obligatorias (*). Hemos resaltado la que falta."
       );
+
+      // Pequeño scroll hacia el mensaje de error o la pregunta
+      window.scrollTo(0, 200);
       return;
     }
 
@@ -206,9 +252,9 @@ const ResponderEncuesta: React.FC = () => {
         `${API_BASE_URL}/encuestas-abiertas/instancia/${instanciaId}/responder`,
         {
           method: "POST",
-          headers: { 
+          headers: {
             "Content-Type": "application/json",
-            "Authorization": `Bearer ${token}`
+            Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify(payload),
         }
@@ -219,7 +265,7 @@ const ResponderEncuesta: React.FC = () => {
           logout();
           return;
         }
-        let errorDetail = `Error ${response.status}: ${response.statusText}`;
+        let errorDetail = `Error ${response.status}`;
         try {
           const errorData = await response.json();
           errorDetail = errorData.detail || errorDetail;
@@ -230,7 +276,7 @@ const ResponderEncuesta: React.FC = () => {
       setMensaje("¡Respuestas enviadas correctamente!");
       setEncuestaCompletada(true);
     } catch (error) {
-      console.error("Error al enviar respuestas:", error);
+      console.error("Error al enviar:", error);
       setMensaje(
         `Error al enviar respuestas: ${
           error instanceof Error ? error.message : "Error desconocido"
@@ -307,7 +353,7 @@ const ResponderEncuesta: React.FC = () => {
   }
 
   return (
-    <div className="max-w-3xl mx-auto bg-white p-6 sm:p-8 rounded-lg shadow-md mt-6 mb-8 border border-gray-200">
+    <div className="max-w-6xl mx-auto bg-white p-6 sm:p-8 rounded-lg shadow-md mt-6 mb-8 border border-gray-200">
       <div className="pb-4 mb-4 border-b border-gray-200">
         <h1 className="text-2xl font-bold text-center text-indigo-800">
           {materiaNombre || "Encuesta"}
@@ -318,34 +364,47 @@ const ResponderEncuesta: React.FC = () => {
           </p>
         )}
       </div>
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <div className="flex border-b border-gray-300 mb-4 -mx-6 sm:-mx-8 px-6 sm:px-8 overflow-x-auto">
-          {plantilla.secciones?.map((seccion, index) => (
-            <button
-              key={seccion.id}
-              type="button"
-              onClick={() => {
-                setMensaje(null);
-                setErrorPreguntaId(null);
-                setActiveTab(index);
-              }}
-              className={`py-3 px-5 font-medium text-sm whitespace-nowrap ${
-                activeTab === index
-                  ? "border-b-2 border-indigo-600 text-indigo-600"
-                  : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
-              } transition-colors duration-150 focus:outline-none`}
-            >
-              {seccion.nombre}
-            </button>
-          ))}
-        </div>
 
+      <BarraProgreso actual={respuestasCount} total={totalPreguntas} />
+
+      {/* --- Pestañas: Solo visuales (No clickeables) --- */}
+      <div className="flex border-b border-gray-300 mb-6 -mx-6 sm:-mx-8 px-6 sm:px-8 overflow-x-auto">
+        {plantilla.secciones?.map((seccion, index) => (
+          <button
+            key={seccion.id}
+            type="button"
+            disabled
+            className={`py-3 px-5 font-medium text-sm whitespace-nowrap transition-colors duration-150 cursor-default ${
+              activeTab === index
+                ? "border-b-2 border-indigo-600 text-indigo-600 font-bold"
+                : "text-gray-400"
+            }`}
+            title={seccion.nombre}
+          >
+            {seccion.nombre.includes(":")
+              ? seccion.nombre.split(":")[0]
+              : `Parte ${index + 1}`}
+          </button>
+        ))}
+      </div>
+
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {/* --- Contenido de la Sección Activa --- */}
         <div>
           {plantilla.secciones?.map((seccion, index) => (
             <div
               key={seccion.id}
-              className={activeTab === index ? "block space-y-5" : "hidden"}
+              className={
+                activeTab === index
+                  ? "block space-y-5 animate-fadeIn"
+                  : "hidden"
+              }
             >
+              {/* Título de la sección para contexto */}
+              <h3 className="text-lg font-semibold text-gray-700 border-b pb-2 mb-4">
+                {seccion.nombre}
+              </h3>
+
               {seccion.preguntas.map((pregunta) => {
                 const tipo = pregunta.tipo;
                 const esRedaccion = tipo === "REDACCION";
@@ -363,7 +422,6 @@ const ResponderEncuesta: React.FC = () => {
                   >
                     <p className="font-medium mb-3 text-gray-800">
                       {pregunta.texto}
-
                       {esMultipleChoice && (
                         <span className="text-red-500 ml-1">*</span>
                       )}
@@ -371,9 +429,9 @@ const ResponderEncuesta: React.FC = () => {
 
                     {esRedaccion ? (
                       <textarea
-                        className="w-full p-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 transition duration-150 ease-in-out"
+                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition duration-150 ease-in-out"
                         placeholder="Escribe tu respuesta..."
-                        rows={3}
+                        rows={4}
                         value={String(respuestas[pregunta.id] ?? "")}
                         onChange={(e) =>
                           manejarCambio(pregunta.id, e.target.value)
@@ -384,7 +442,7 @@ const ResponderEncuesta: React.FC = () => {
                         {pregunta.opciones.map((opcion) => (
                           <label
                             key={opcion.id}
-                            className="flex items-center space-x-3 cursor-pointer p-2 rounded hover:bg-indigo-50 transition-colors"
+                            className="flex items-center space-x-3 cursor-pointer p-3 rounded hover:bg-indigo-50 transition-colors"
                           >
                             <input
                               type="radio"
@@ -404,11 +462,7 @@ const ResponderEncuesta: React.FC = () => {
                           </label>
                         ))}
                       </div>
-                    ) : (
-                      <p className="text-red-500 text-sm italic">
-                        Tipo de pregunta no soportado: {pregunta.tipo}
-                      </p>
-                    )}
+                    ) : null}
                   </div>
                 );
               })}
@@ -417,25 +471,61 @@ const ResponderEncuesta: React.FC = () => {
         </div>
 
         {mensaje && (
-          <p
-            className={`text-center font-medium p-3 rounded border ${
+          <div
+            className={`text-center font-medium p-4 rounded border ${
               mensaje.toLowerCase().includes("error") ||
-              errorPreguntaId !== null
+              mensaje.includes("Faltan")
                 ? "text-red-700 bg-red-100 border-red-300"
                 : "text-green-700 bg-green-100 border-green-300"
             }`}
           >
             {mensaje}
-          </p>
+          </div>
         )}
-        <div className="text-center pt-4">
+
+        {/* --- Botonera de Navegación --- */}
+        <div className="flex justify-between items-center pt-6 mt-8 border-t border-gray-200">
+          {/* Botón Anterior */}
           <button
-            type="submit"
-            disabled={cargandoEnvio}
-            className={`bg-indigo-600 text-white px-8 py-3 rounded-lg font-semibold hover:bg-indigo-700 transition duration-150 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed`}
+            type="button"
+            onClick={irAnterior}
+            disabled={activeTab === 0}
+            className={`px-6 py-2 rounded-lg font-medium transition-colors border ${
+              activeTab === 0
+                ? "text-gray-300 border-gray-200 cursor-not-allowed bg-gray-50"
+                : "text-gray-700 border-gray-300 hover:bg-gray-100 hover:text-gray-900"
+            }`}
           >
-            {cargandoEnvio ? "Enviando Respuestas..." : "Finalizar y Enviar"}
+            ← Anterior
           </button>
+
+          {/* Botón Siguiente o Finalizar */}
+          {activeTab < (plantilla.secciones.length || 0) - 1 ? (
+            <button
+              type="button"
+              onClick={irSiguiente}
+              disabled={!isSeccionActualCompleta}
+              className={`px-6 py-2.5 rounded-lg font-semibold transition duration-150 ease-in-out shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+                !isSeccionActualCompleta
+                  ? "bg-indigo-300 text-white cursor-not-allowed" // Estilo deshabilitado
+                  : "bg-indigo-600 text-white hover:bg-indigo-700 hover:shadow focus:ring-indigo-500" // Estilo habilitado
+              }`}
+            >
+              Siguiente →
+            </button>
+          ) : (
+            <button
+              type="submit"
+              disabled={cargandoEnvio || !isSeccionActualCompleta}
+              className={`px-8 py-2.5 rounded-lg font-semibold transition duration-150 ease-in-out shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+                cargandoEnvio || !isSeccionActualCompleta
+                  ? "bg-green-300 text-white cursor-not-allowed" // Estilo deshabilitado
+                  : "bg-green-600 text-white hover:bg-green-700 hover:shadow-lg focus:ring-green-500" // Estilo habilitado
+              }`}
+            >
+              {cargandoEnvio ? "Enviando..." : "Finalizar y Enviar"}
+            </button>
+          )}
         </div>
       </form>
     </div>

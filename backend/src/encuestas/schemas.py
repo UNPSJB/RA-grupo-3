@@ -133,3 +133,34 @@ class GenerarSinteticoResponse(BaseModel):
     cantidad_informes: int
     
     model_config = {"from_attributes": True}
+
+#Para la funcionalidad de activar encuestas
+class CursadaAdminList(BaseModel):
+    id: int
+    materia_nombre: str
+    profesor_nombre: str
+    anio: int
+    periodo: str
+    
+    model_config = {"from_attributes": True}
+
+class EncuestaActivaAdminList(BaseModel):
+    id: int
+    materia_nombre: str
+    fecha_inicio: datetime
+    estado: EstadoInstancia
+
+    model_config = {"from_attributes": True}
+
+class DepartamentoSimple(BaseModel):
+    id: int
+    nombre: str
+    
+    model_config = {"from_attributes": True}
+
+class CerrarEncuestaBody(BaseModel):
+    fecha_fin_informe: Optional[datetime] = None
+
+class GenerarSinteticoRequest(BaseModel):
+    departamento_id: int
+    fecha_fin_informe: Optional[datetime] = None 

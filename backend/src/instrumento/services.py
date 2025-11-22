@@ -26,7 +26,7 @@ from src.encuestas.schemas import (
     ResultadoPregunta, 
     ResultadoOpcion, 
     RespuestaTextoItem,
-    InformeSinteticoResultado # <-- nuevo schema
+    InformeSinteticoResultado 
 )
 
 
@@ -228,9 +228,10 @@ def generar_informe_sintetico_para_departamento(
     nueva_instancia_sintetica = InformeSinteticoInstancia(
         informe_sintetico_id=plantilla_sintetico_id,
         departamento_id=departamento_id,
-        tipo=TipoInstrumento.INFORME_SINTETICO
-    )
-    
+        tipo=TipoInstrumento.INFORME_SINTETICO,
+        fecha_inicio=datetime.now(),     
+        fecha_fin=fecha_fin_informe       
+    )   
     # 5. Vincular los informes y marcar como RESUMIDO
     for informe_ac in informes_a_resumir:
         informe_ac.informe_sintetico_instancia = nueva_instancia_sintetica
