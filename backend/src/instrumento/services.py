@@ -2,7 +2,7 @@ from sqlalchemy.orm import Session, selectinload, joinedload
 from src.instrumento import models, schemas
 from src.enumerados import TipoInstrumento,EstadoInstrumento,EstadoInforme
 from src.encuestas.models import Encuesta
-from typing import List
+from typing import List, Optional
 from sqlalchemy import select, func
 from fastapi import HTTPException
 from src.seccion.models import Seccion
@@ -29,6 +29,7 @@ from src.encuestas.schemas import (
     InformeSinteticoResultado 
 )
 from datetime import datetime
+
 
 def get_instrumento_completo(db: Session, instrumento_id: int) -> models.InstrumentoBase:
     instrumento = db.query(models.InstrumentoBase).options(
@@ -250,42 +251,6 @@ def generar_informe_sintetico_para_departamento(
 
     return nueva_instancia_sintetica
 
-"""PARA PROBAR"""
-
-from typing import Optional
-from sqlalchemy.orm import selectinload
-
-def crear_instancia_informe_sintetico(
-    db: Session,
-    informe_sintetico_id: int,
-    departamento_id: Optional[int] = None
-) -> models.InformeSinteticoInstancia:
-    
-    plantilla = db.get(models.InformeSintetico, informe_sintetico_id)
-    if not plantilla:
-        raise HTTPException(status_code=404, detail="Plantilla de Informe Sintético no encontrada.")
-
-    
-    nueva = models.InformeSinteticoInstancia(
-        informe_sintetico_id=informe_sintetico_id,
-        tipo=TipoInstrumento.INFORME_SINTETICO
-    )
-    db.add(nueva)
-    db.flush()  
-    actividades_q = db.query(models.ActividadCurricularInstancia).filter(
-        models.ActividadCurricularInstancia.estado == EstadoInforme.COMPLETADO,
-        models.ActividadCurricularInstancia.informe_sintetico_instancia_id == None
-    )
-
-    actividades = actividades_q.all()
- 
-    for act in actividades:
-        act.informe_sintetico_instancia_id = nueva.id
-        db.add(act)
-
-    db.commit()
-    db.refresh(nueva)
-    return nueva
 
 def get_plantilla_para_instancia_sintetico(
     db: Session,
