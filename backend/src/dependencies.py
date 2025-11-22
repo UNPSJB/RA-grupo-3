@@ -88,3 +88,18 @@ async def get_current_admin_secretaria(
     if current_user.tipo != TipoPersona.ADMIN_SECRETARIA:
         raise PermissionDenied(detail="No tienes permisos de Administrador de Secretaría")
     return current_user
+
+# --- Nueva Guardia para Roles Mixtos (Departamento O Secretaría) ---
+async def get_current_admin_departamento_o_secretaria(
+        current_user: Persona = Depends(get_current_user)
+) -> Persona:
+    """
+    DEPENDENCIA REAL: verifica que sea un Admin de Departamento O de Secretaría.
+    Devuelve el objeto Persona para mayor flexibilidad.
+    """
+    if current_user.tipo not in [TipoPersona.ADMIN_DEPARTAMENTO, TipoPersona.ADMIN_SECRETARIA]:
+        raise PermissionDenied(
+            detail="Se requieren permisos de Administrador de Departamento o Secretaría"
+        )
+    # Devolvemos el usuario, ya que ambos roles son válidos
+    return current_user

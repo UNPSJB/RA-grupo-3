@@ -28,7 +28,7 @@ from src.encuestas.schemas import (
     RespuestaTextoItem,
     InformeSinteticoResultado 
 )
-
+from datetime import datetime
 
 def get_instrumento_completo(db: Session, instrumento_id: int) -> models.InstrumentoBase:
     instrumento = db.query(models.InstrumentoBase).options(
@@ -179,7 +179,8 @@ def get_plantilla_para_instancia_reporte(
 
 def generar_informe_sintetico_para_departamento(
     db: Session, 
-    departamento_id: int
+    departamento_id: int,
+    fecha_fin_informe: datetime
 ) -> InformeSinteticoInstancia:
     """
     Busca los Informes Curriculares COMPLETADOS del departamento, 

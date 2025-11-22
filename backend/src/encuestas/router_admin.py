@@ -1,31 +1,34 @@
-# src/encuestas/router_admin.py
 from fastapi import APIRouter, Depends, HTTPException, status 
 from fastapi.encoders import jsonable_encoder
 from sqlalchemy.orm import Session
 from src.database import get_db
-from src.encuestas import  schemas, services
-from src.exceptions import NotFound,BadRequest
+from src.encuestas import schemas, services
+from src.exceptions import NotFound, BadRequest
 from src.instrumento import services as instrumento_services
 from src.encuestas.schemas import GenerarSinteticoResponse, GenerarSinteticoRequest
 from typing import List
 from src.encuestas.schemas import CerrarEncuestaBody
 
-# --- CAMBIO: Importar el guardia de Secretaria ---
-from src.dependencies import get_current_admin_secretaria
+# --- CAMBIO 1: Importamos AMBOS guardias ---
+from src.dependencies import (
+    get_current_admin_secretaria, 
+    get_current_admin_departamento_o_secretaria
+)
 
-    
 router_gestion = APIRouter(
     prefix="/admin/gestion-encuestas", 
     tags=["Admin Encuestas - Instancias"],
-    # --- CAMBIO: Proteger con el guardia de Secretaria ---
-    dependencies=[Depends(get_current_admin_secretaria)]
+    # --- CAMBIO 2: QUITAMOS la dependencia global aquí para no bloquear al Departamento ---
+    # dependencies=[Depends(get_current_admin_secretaria)] 
 )
 
+# --- Endpoints Exclusivos de SECRETARIA (Les agregamos la dependencia aquí) ---
 
 @router_gestion.post(
     "/activar",
     response_model=schemas.EncuestaInstancia,
-    status_code=status.HTTP_201_CREATED     
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(get_current_admin_secretaria)] # <--- Solo Secretaria
 )
 def activar_encuesta_cursada(
     data: schemas.EncuestaInstanciaCreate,
@@ -47,17 +50,17 @@ def activar_encuesta_cursada(
     
 @router_gestion.patch(
     "/instancia/{instancia_id}/cerrar",
-    response_model=schemas.EncuestaInstancia 
+    response_model=schemas.EncuestaInstancia,
+    dependencies=[Depends(get_current_admin_secretaria)] # <--- Solo Secretaria
 )
 def cerrar_encuesta_instancia(
     instancia_id: int,
-    body: CerrarEncuestaBody = None, # Recibimos el body opcional
+    body: CerrarEncuestaBody = None,
     db: Session = Depends(get_db)
 ):
     fecha_fin = body.fecha_fin_informe if body else None
     
     try:
-        # Pasamos la fecha al servicio
         instancia_cerrada = services.cerrar_instancia_encuesta(
             db, 
             instancia_id=instancia_id, 
@@ -71,11 +74,15 @@ def cerrar_encuesta_instancia(
     except Exception as e:
         print(f"Error: {e}")
         raise HTTPException(status_code=500, detail="Error interno.")
-    
+
+# --- CAMBIO 3: Endpoint Compartido (Secretaria O Departamento) ---
+
 @router_gestion.post(
     "/generar-sintetico",
     response_model=GenerarSinteticoResponse,
-    status_code=status.HTTP_201_CREATED
+    status_code=status.HTTP_201_CREATED,
+    # Usamos el nuevo guardia flexible
+    dependencies=[Depends(get_current_admin_departamento_o_secretaria)] 
 )
 def generar_informe_sintetico_departamental(
     request_data: GenerarSinteticoRequest,
@@ -85,7 +92,7 @@ def generar_informe_sintetico_departamental(
         nueva_instancia = instrumento_services.generar_informe_sintetico_para_departamento(
             db=db,
             departamento_id=request_data.departamento_id,
-            fecha_fin_informe=request_data.fecha_fin_informe # <--- Pasamos la fecha
+            fecha_fin_informe=request_data.fecha_fin_informe 
         )
         
         return GenerarSinteticoResponse(
@@ -98,16 +105,29 @@ def generar_informe_sintetico_departamental(
         raise HTTPException(status_code=e.STATUS_CODE, detail=e.DETAIL)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error interno: {e}")
-#Nueva funcionalidad para activar/cerrar encuestas, informes de actividad curricular e informes sinteticos
-    
-@router_gestion.get("/cursadas-disponibles", response_model=List[schemas.CursadaAdminList])
+
+# --- Endpoints de Listado (Asumimos que siguen siendo solo para Secretaria, si no, cambialos también) ---
+
+@router_gestion.get(
+    "/cursadas-disponibles", 
+    response_model=List[schemas.CursadaAdminList],
+    dependencies=[Depends(get_current_admin_secretaria)] # <--- Solo Secretaria
+)
 def get_cursadas_para_activar(db: Session = Depends(get_db)):
     return services.listar_cursadas_sin_encuesta(db)
 
-@router_gestion.get("/activas", response_model=List[schemas.EncuestaActivaAdminList])
+@router_gestion.get(
+    "/activas", 
+    response_model=List[schemas.EncuestaActivaAdminList],
+    dependencies=[Depends(get_current_admin_secretaria)] # <--- Solo Secretaria
+)
 def get_encuestas_activas_admin(db: Session = Depends(get_db)):
     return services.listar_todas_instancias_activas(db)
 
-@router_gestion.get("/departamentos", response_model=List[schemas.DepartamentoSimple])
+@router_gestion.get(
+    "/departamentos", 
+    response_model=List[schemas.DepartamentoSimple],
+    dependencies=[Depends(get_current_admin_secretaria)] # <--- Solo Secretaria
+)
 def get_lista_departamentos(db: Session = Depends(get_db)):
     return services.listar_todos_departamentos(db)

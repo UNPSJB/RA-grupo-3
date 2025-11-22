@@ -10,7 +10,7 @@ const API_BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
 
 interface InformeCurricular {
   id: number;
-  estado: "pendiente" | "completado";
+  estado: string; 
   materia_nombre: string;
   profesor_nombre: string;
   cuatrimestre_info: string;
@@ -32,11 +32,13 @@ interface Seccion {
   preguntas: Pregunta[];
 }
 
+// ACTUALIZADA: Incluye la lista que viene del backend
 interface PlantillaInforme {
   id: number;
   titulo: string;
   descripcion: string;
   secciones: Seccion[];
+  informes_curriculares_asociados?: InformeCurricular[]; 
 }
 
 const ResponderInforme: React.FC = () => {
@@ -60,24 +62,24 @@ const ResponderInforme: React.FC = () => {
       try {
         setLoading(true);
 
+        // 1. ÚNICA LLAMADA: Trae plantilla + informes asociados
         const resPlantilla = await fetch(
           `${API_BASE_URL}/departamento/instancia/${instanciaId}/detalles?departamento_id=1`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
         if (!resPlantilla.ok) throw new Error("Error cargando plantilla");
-        const dataPlantilla = await resPlantilla.json();
+        
+        const dataPlantilla: PlantillaInforme = await resPlantilla.json();
         setPlantilla(dataPlantilla);
 
-        const resInformes = await fetch(
-          `${API_BASE_URL}/departamento/mis-informes-curriculares`,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-        if (!resInformes.ok) throw new Error("Error cargando informes");
-        const dataInformes = await resInformes.json();
+        // 2. Extraer informes directamente de la respuesta
+        const informesAsociados = dataPlantilla.informes_curriculares_asociados || [];
 
-        const filtrados = dataInformes
-          .filter((i: InformeCurricular) => i.estado === "completado")
-          .filter((i: InformeCurricular) => i.cuatrimestre_info === cuatrimestreSeleccionado);
+        // 3. Filtramos SOLO por el cuatrimestre del dropdown (no por estado, ya vienen correctos)
+        const filtrados = informesAsociados.filter(
+            (i) => i.cuatrimestre_info === cuatrimestreSeleccionado
+        );
+        
         setInformes(filtrados);
 
         if (filtrados.length > 0) setInformeSeleccionadoId("todas");
@@ -147,21 +149,25 @@ const ResponderInforme: React.FC = () => {
 
               <div className="overflow-x-auto">
                 <div className="flex font-bold bg-gray-100 p-2 rounded">
-                  <div className="w-1/5">Código de la actividad curricular</div>
+                  <div className="w-1/5">Código</div>
                   <div className="w-2/5">Actividad curricular</div>
-                  <div className="w-1/5">Cantidad de alumnos inscriptos</div>
-                  <div className="w-1/5">Cantidad de comisiones clases teóricas</div>
-                  <div className="w-1/5">Cantidad de comisiones clases prácticas</div>
+                  <div className="w-1/5">Inscriptos</div>
+                  <div className="w-1/5">Com. Teóricas</div>
+                  <div className="w-1/5">Com. Prácticas</div>
                 </div>
-                {informes.map((i) => (
-                  <div key={i.id} className="flex border-b border-gray-200 p-2">
-                    <div className="w-1/5">{i.id}</div>
-                    <div className="w-2/5">{i.materia_nombre}</div>
-                    <div className="w-1/5">-</div>
-                    <div className="w-1/5">-</div>
-                    <div className="w-1/5">-</div>
-                  </div>
-                ))}
+                {informes.length === 0 ? (
+                    <div className="p-4 text-center text-gray-500 italic">No hay informes para este cuatrimestre.</div>
+                ) : (
+                    informes.map((i) => (
+                    <div key={i.id} className="flex border-b border-gray-200 p-2 text-sm">
+                        <div className="w-1/5">{i.id}</div>
+                        <div className="w-2/5">{i.materia_nombre}</div>
+                        <div className="w-1/5">-</div>
+                        <div className="w-1/5">-</div>
+                        <div className="w-1/5">-</div>
+                    </div>
+                    ))
+                )}
               </div>
             </div>
           ) : i === 1 ? (
@@ -193,7 +199,7 @@ const ResponderInforme: React.FC = () => {
                 </div>
                 {materiasFiltradas.length > 0 ? (
                   materiasFiltradas.map((i) => (
-                    <div key={i.id} className="flex border-b border-gray-200 p-2">
+                    <div key={i.id} className="flex border-b border-gray-200 p-2 text-sm">
                       <div className="w-2/5">{`${i.id} - ${i.materia_nombre}`}</div>
                       <div className="w-1/5">{i.equipamiento ?? "-"}</div>
                       <div className="w-1/5">{i.bibliografia ?? "-"}</div>
@@ -208,8 +214,6 @@ const ResponderInforme: React.FC = () => {
             // Sección 2: 2, 2A, 2B, 2C
             <div>
               {sec.preguntas.map((p) => {
-                console.log("Pregunta:", p.texto);
-
                 if (p.texto.startsWith("2.") && !p.texto.startsWith("2.A") && !p.texto.startsWith("2.B") && !p.texto.startsWith("2.C")) {
                   return (
                     <div key={p.id} className="mb-4">
@@ -223,7 +227,6 @@ const ResponderInforme: React.FC = () => {
                     </div>
                   );
                 }
-
                 if (p.texto.startsWith("2.A")) {
                   return (
                     <div key={p.id} className="mb-4">
@@ -237,7 +240,6 @@ const ResponderInforme: React.FC = () => {
                     </div>
                   );
                 }
-
                 if (p.texto.startsWith("2.B")) {
                   return (
                     <div key={p.id} className="mb-4">
@@ -251,7 +253,6 @@ const ResponderInforme: React.FC = () => {
                     </div>
                   );
                 }
-
                 if (p.texto.startsWith("2.C")) {
                   return (
                     <div key={p.id} className="mb-4">
@@ -265,7 +266,6 @@ const ResponderInforme: React.FC = () => {
                     </div>
                   );
                 }
-
                 return null;
               })}
             </div>
