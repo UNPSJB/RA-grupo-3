@@ -22,41 +22,50 @@ const Seccion2C: React.FC<Seccion2CProps> = ({
 
   return (
     <div className="p-4 bg-gray-50 rounded border border-gray-200 mb-4">
-      <p className="font-medium mb-3 text-gray-800">
-        2.C. Completar tabla de Espacio curricular, Aspectos positivos, Obstáculos y Estrategias a implementar
-      </p>
+      <div className="overflow-x-auto bg-white rounded-lg border border-gray-200 shadow-sm">
+        <table className="min-w-full divide-y divide-gray-200 text-sm">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="px-4 py-3 text-left font-bold text-gray-700 uppercase tracking-wider w-1/4 border-r border-gray-200">Espacio curricular</th>
+              {columnas.map((col, index) => (
+                <th 
+                  key={col} 
+                  className={`px-4 py-3 text-left font-bold text-gray-700 uppercase tracking-wider w-1/4 ${index < columnas.length - 1 ? 'border-r border-gray-200' : ''}`}
+                >
+                  {col}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y divide-gray-200">
+            {materiasFiltradas.map((m) => (
+              <tr key={m.id} className="hover:bg-gray-50 transition-colors">
+                <td className="px-4 py-3 align-top font-medium text-gray-700 w-1/4 border-r border-gray-200">{m.materia_nombre}</td>
+                {columnas.map((col, index) => {
+                  const key = col.toLowerCase().replace(/\s/g, "");
+                  const respuestaKey = `p${preguntaId}_m${m.id}_${key}`;
 
-      <div className="overflow-x-auto">
-        {/* Encabezado */}
-        <div className="flex font-bold bg-gray-100 p-2 rounded">
-          <div className="w-1/5">Espacio curricular</div>
-          {columnas.map((col, idx) => (
-            <div key={idx} className="w-1/5 text-center">{col}</div>
-          ))}
-        </div>
-
-        {/* Filas */}
-        {materiasFiltradas.map((m) => (
-          <div key={m.id} className="flex border-b border-gray-200 p-2 items-start">
-            <div className="w-1/5">{m.materia_nombre}</div>
-            {columnas.map((col) => (
-              <input
-                key={col}
-                type="text"
-                className="w-1/5 h-10 border rounded p-1 text-center"
-                value={respuestas[`p${preguntaId}_m${m.id}_${col}`] || ""}
-                onChange={(e) =>
-                  handleInputChange(`p${preguntaId}_m${m.id}_${col}`, e.target.value)
-                }
-                required
-              />
+                  return (
+                    <td 
+                      key={col} 
+                      className={`px-4 py-3 align-top w-1/4 ${index < columnas.length - 1 ? 'border-r border-gray-200' : ''}`}
+                    >
+                      <textarea
+                        className="w-full h-10 border border-gray-300 rounded p-1 resize-none text-sm focus:ring-indigo-500 focus:border-indigo-500"
+                        rows={2}
+                        value={respuestas[respuestaKey] || ""}
+                        onChange={(e) => handleInputChange(respuestaKey, e.target.value)}
+                      />
+                    </td>
+                  );
+                })}
+              </tr>
             ))}
-          </div>
-        ))}
+          </tbody>
+        </table>
       </div>
     </div>
   );
 };
 
 export default Seccion2C;
-
