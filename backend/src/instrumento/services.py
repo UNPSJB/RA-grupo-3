@@ -155,48 +155,6 @@ def actualizar_plantilla(
     db.refresh(db_plantilla)
     return db_plantilla
 
-def get_plantilla_para_instancia_reporte(
-    db: Session, 
-    instancia_id: int,
-    profesor_id: int # Para verificar permisos
-) -> models.InstrumentoBase:
-    """
-    Obtiene la plantilla (InstrumentoBase) completa con preguntas y opciones
-    para una instancia de Actividad Curricular (un reporte) específica,
-    verificando que pertenezca al profesor.
-    """
-    
-    # 1. Busca la Instancia del Reporte
-    instancia = db.query(ActividadCurricularInstancia)\
-        .filter(ActividadCurricularInstancia.id == instancia_id)\
-        .options(
-            # 2. Carga la Plantilla (ActividadCurricular) asociada
-            selectinload(ActividadCurricularInstancia.actividad_curricular) 
-            # 3. Carga las Secciones de esa plantilla
-            .selectinload(models.ActividadCurricular.secciones) 
-            # 4. Carga las Preguntas de esas secciones
-            .selectinload(Seccion.preguntas.of_type(PreguntaMultipleChoice)) 
-            # 5. Carga las Opciones de esas preguntas
-            .selectinload(PreguntaMultipleChoice.opciones)
-        )\
-        .first()
-
-    if not instancia:
-        raise HTTPException(status_code=404, detail=f"Instancia de reporte con ID {instancia_id} no encontrada.")
-    
-    # Verificación de permisos
-    if instancia.profesor_id != profesor_id:
-        raise HTTPException(status_code=403, detail="No tienes permiso para responder este reporte.")
-    
-    # Verificación de estado
-    if instancia.estado != EstadoInforme.PENDIENTE:
-            raise HTTPException(status_code=400, detail=f"El reporte {instancia_id} no está pendiente, no se puede responder.")
-
-    if not instancia.actividad_curricular:
-            raise HTTPException(status_code=500, detail=f"La instancia {instancia_id} no tiene una plantilla de reporte asociada.")
-
-    # Devuelve la plantilla (InstrumentoBase) completa
-    return instancia.actividad_curricular
 
 def generar_informe_sintetico_para_departamento(
     db: Session, 
@@ -578,3 +536,66 @@ def obtener_dashboard_departamento(
         cobertura_contenidos=stats_cobertura,
         necesidades_recientes=necesidades[:5] # Solo las 5 más recientes
     )
+
+#para el profe
+def get_plantilla_para_instancia_reporte(
+    db: Session, 
+    instancia_id: int,
+    profesor_id: int
+) -> schemas.InstrumentoCompleto:
+    
+    instancia = db.query(ActividadCurricularInstancia)\
+        .filter(ActividadCurricularInstancia.id == instancia_id)\
+        .options(
+            selectinload(ActividadCurricularInstancia.actividad_curricular) 
+            .selectinload(models.ActividadCurricular.secciones) 
+            .selectinload(Seccion.preguntas.of_type(PreguntaMultipleChoice)) 
+            .selectinload(PreguntaMultipleChoice.opciones),
+            
+            # Estrategia JOIN para Cursada (Consistente en todo el bloque)
+            joinedload(ActividadCurricularInstancia.cursada)
+            .joinedload(Cursada.materia)
+            .selectinload(Materia.carreras)
+            .joinedload(Carrera.departamento)
+            .joinedload(Departamento.sede),
+
+            joinedload(ActividadCurricularInstancia.cursada)
+            .joinedload(Cursada.cuatrimestre),
+            
+            joinedload(ActividadCurricularInstancia.cursada)
+            .selectinload(Cursada.inscripciones),
+            # -----------------------
+            
+            joinedload(ActividadCurricularInstancia.profesor)
+        )\
+        .first()
+
+    # ... (validaciones de error 404, 403, etc. siguen igual) ...
+
+    # Lógica de Sedes (sigue igual)
+    sedes_set = set()
+    if instancia.cursada and instancia.cursada.materia:
+        for carrera in instancia.cursada.materia.carreras:
+            if carrera.departamento and carrera.departamento.sede:
+                sedes_set.add(carrera.departamento.sede.localidad)
+    sede_str = ", ".join(sedes_set) if sedes_set else "Sede Central"
+
+    # --- CÁLCULO DE ALUMNOS ---
+    cant_alumnos = 0
+    if instancia.cursada and instancia.cursada.inscripciones:
+        cant_alumnos = len(instancia.cursada.inscripciones)
+    # --------------------------
+
+    plantilla_db = instancia.actividad_curricular
+    resultado = schemas.InstrumentoCompleto.model_validate(plantilla_db)
+    
+    resultado.materia_nombre = instancia.cursada.materia.nombre if instancia.cursada else "Desconocida"
+    resultado.sede = sede_str
+    resultado.anio = instancia.cursada.cuatrimestre.anio if instancia.cursada and instancia.cursada.cuatrimestre else datetime.now().year
+    resultado.codigo = str(instancia.cursada.materia.id) if instancia.cursada else "-"
+    resultado.docente_responsable = instancia.profesor.nombre if instancia.profesor else "-"
+    
+    # Asignamos el valor calculado
+    resultado.cantidad_inscriptos = cant_alumnos
+
+    return resultado

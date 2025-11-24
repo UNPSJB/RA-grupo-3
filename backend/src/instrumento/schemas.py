@@ -58,3 +58,17 @@ class InformeSinteticoInstanciaList(InformeSinteticoInstanciaBase):
 
 class ResumenResponse(BaseModel):
     texto_resumen: str
+
+class InstrumentoCompleto(InstrumentoPlantilla):
+    secciones: List[Seccion] = []
+    informes_curriculares_asociados: List[InformeCurricularSimple] = []
+    
+    # Datos de contexto
+    materia_nombre: Optional[str] = None
+    sede: Optional[str] = None
+    anio: Optional[int] = None
+    codigo: Optional[str] = None
+    docente_responsable: Optional[str] = None
+    
+
+    cantidad_inscriptos: Optional[int] = 0

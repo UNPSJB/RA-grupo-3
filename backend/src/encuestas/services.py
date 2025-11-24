@@ -233,7 +233,7 @@ def obtener_plantilla_para_instancia_activa(db: Session, instancia_id: int) -> m
 
 def obtener_historial_alumno_stats(db: Session, alumno_id: int):
     """
-    Retorna estadísticas SOLO de encuestas CERRADAS (Historial).
+    Retorna estadísticas de encuestas (ACTIVA o CERRADA).
     """
     stmt = (
         select(Inscripcion)
@@ -243,8 +243,12 @@ def obtener_historial_alumno_stats(db: Session, alumno_id: int):
         .join(models.EncuestaInstancia, models.EncuestaInstancia.cursada_id == Cursada.id)
         .where(Inscripcion.alumno_id == alumno_id)
         
-
-        .where(models.EncuestaInstancia.estado == EstadoInstancia.CERRADA)
+        # --- CORRECCIÓN: Permitimos ACTIVA y CERRADA ---
+        .where(models.EncuestaInstancia.estado.in_([
+            EstadoInstancia.CERRADA, 
+            EstadoInstancia.ACTIVA
+        ]))
+        # -----------------------------------------------
 
         .options(
             joinedload(Inscripcion.cursada).joinedload(Cursada.materia),

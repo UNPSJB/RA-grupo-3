@@ -24,7 +24,7 @@ try:
     from src.pregunta import models as pregunta_models
     from src.respuesta import models as respuesta_models
 
-    # Ahora podemos importar las clases específicas que necesitamos de esos módulos
+    # Ahora podemos importar las clases específicas que necesitamos
     from src.instrumento.models import InstrumentoBase, ActividadCurricular, InformeSintetico
     from src.encuestas.models import Encuesta 
     from src.seccion.models import Seccion
@@ -50,15 +50,13 @@ opciones_a4 = ["Escasos", "Suficientes"]
 # --- Funciones Helper ---
 
 def find_or_create_plantilla(db: Session, titulo: str, descripcion: str, tipo: TipoInstrumento, anexo: str, estado: EstadoInstrumento) -> InstrumentoBase:
-    """Busca una plantilla por título. Si no existe, la crea.
-    SI EXISTE, VERIFICA Y ACTUALIZA SU ESTADO."""
+    """Busca una plantilla por título. Si no existe, la crea. SI EXISTE, VERIFICA Y ACTUALIZA SU ESTADO."""
     
     stmt = select(InstrumentoBase).where(InstrumentoBase.titulo == titulo)
     plantilla = db.scalars(stmt).first()
     
     if plantilla:
         print(f"   - Plantilla encontrada: '{titulo}' (ID: {plantilla.id})")
-        
         estado_correcto = estado.value 
         
         if plantilla.estado is None or plantilla.estado.lower() != estado_correcto.lower():
@@ -73,26 +71,11 @@ def find_or_create_plantilla(db: Session, titulo: str, descripcion: str, tipo: T
     print(f"   + Creando plantilla: '{titulo}'")
     
     if tipo == TipoInstrumento.ENCUESTA:
-        plantilla = Encuesta(
-            titulo=titulo,
-            descripcion=descripcion,
-            anexo=anexo,
-            estado=estado.value 
-        )
+        plantilla = Encuesta(titulo=titulo, descripcion=descripcion, anexo=anexo, estado=estado.value)
     elif tipo == TipoInstrumento.ACTIVIDAD_CURRICULAR:
-        plantilla = ActividadCurricular(
-            titulo=titulo,
-            descripcion=descripcion,
-            anexo=anexo,
-            estado=estado.value 
-        )
+        plantilla = ActividadCurricular(titulo=titulo, descripcion=descripcion, anexo=anexo, estado=estado.value)
     elif tipo == TipoInstrumento.INFORME_SINTETICO:
-        plantilla = InformeSintetico(
-            titulo=titulo,
-            descripcion=descripcion,
-            anexo=anexo,
-            estado=estado.value
-        )
+        plantilla = InformeSintetico(titulo=titulo, descripcion=descripcion, anexo=anexo, estado=estado.value)
     else:
         raise ValueError(f"Tipo de instrumento no manejado: {tipo}")
         
@@ -114,10 +97,7 @@ def find_or_create_seccion(db: Session, instrumento: InstrumentoBase, nombre_sec
         return seccion
         
     print(f"     + Añadiendo sección: '{nombre_seccion}'")
-    seccion = Seccion(
-        nombre=nombre_seccion,
-        instrumento_id=instrumento.id
-    )
+    seccion = Seccion(nombre=nombre_seccion, instrumento_id=instrumento.id)
     db.add(seccion)
     db.commit()
     db.refresh(seccion)
@@ -135,9 +115,7 @@ def crear_pregunta_mc(db: Session, seccion: Seccion, texto_pregunta: str, opcion
         return
 
     print(f"       + Pregunta (MC): {texto_pregunta[:50]}...")
-    
     opciones_obj = [Opcion(texto=texto) for texto in opciones_texto]
-    
     nueva_pregunta = PreguntaMultipleChoice(
         texto=texto_pregunta,
         tipo=TipoPregunta.MULTIPLE_CHOICE,
@@ -147,7 +125,7 @@ def crear_pregunta_mc(db: Session, seccion: Seccion, texto_pregunta: str, opcion
     db.add(nueva_pregunta)
 
 def crear_pregunta_redaccion(db: Session, seccion: Seccion, texto_pregunta: str, origen_datos: str|None=None):
-    """Crea una pregunta de Redacción si no existe en la sección."""
+    """Crea una pregunta de Redacción. Si existe con otro tipo, la actualiza (recreándola)."""
     stmt = select(Pregunta).where(
         Pregunta.seccion_id == seccion.id,
         Pregunta.texto == texto_pregunta
@@ -155,13 +133,21 @@ def crear_pregunta_redaccion(db: Session, seccion: Seccion, texto_pregunta: str,
     pregunta_existente = db.scalars(stmt).first()
     
     if pregunta_existente:
-        # Si existe pero queremos actualizar el origen de datos (por si cambio la logica)
-        if origen_datos and pregunta_existente.origen_datos != origen_datos:
-             print(f"       ~ Actualizando origen_datos de: {texto_pregunta[:30]}...")
-             pregunta_existente.origen_datos = origen_datos
-             db.add(pregunta_existente)
+        # LOGICA DE ACTUALIZACION: Si ya existe, verificamos que sea del tipo correcto.
+        # Si antes era MC y ahora queremos Redacción, debemos borrar la vieja y crear la nueva.
+        if pregunta_existente.tipo != TipoPregunta.REDACCION:
+             print(f"       ! CORRIGIENDO TIPO de pregunta: '{texto_pregunta[:30]}...' (Era {pregunta_existente.tipo}, ahora será REDACCION)")
+             db.delete(pregunta_existente)
              db.commit()
-        return
+             # Continuamos hacia abajo para crearla de nuevo
+        else:
+            # Si el tipo es correcto, verificamos si cambió la lógica de origen_datos
+            if origen_datos and pregunta_existente.origen_datos != origen_datos:
+                 print(f"       ~ Actualizando origen_datos de: {texto_pregunta[:30]}...")
+                 pregunta_existente.origen_datos = origen_datos
+                 db.add(pregunta_existente)
+                 db.commit()
+            return
         
     print(f"       + Pregunta (Redacción): {texto_pregunta[:50]}...")
     
@@ -182,7 +168,6 @@ def seed_plantillas_data(db: Session):
         # =============================================================================
         # 1. PLANTILLA: ENCUESTA ALUMNOS (CICLO BÁSICO)
         # =============================================================================
-        
         plantilla_encuesta_basico = find_or_create_plantilla(
             db=db,
             titulo="Encuesta Alumnos - Ciclo Básico (ANEXO I DCDFI 005/2014)",
@@ -191,8 +176,7 @@ def seed_plantillas_data(db: Session):
             anexo="Anexo I (DCDFI N° 005/2014)",
             estado=EstadoInstrumento.PUBLICADA
         )
-        
-        # Secciones Encuesta Básico (Sin cambios, MC es correcto aquí)
+        # ... (Secciones A-F de Básico, sin cambios) ...
         seccion_a_basico = find_or_create_seccion(db, plantilla_encuesta_basico, "A: Información General")
         crear_pregunta_mc(db, seccion_a_basico, "¿Cuántas veces te has inscripto para cursar esta asignatura?", opciones_a1)
         crear_pregunta_mc(db, seccion_a_basico, "¿Cuál ha sido aproximadamente tu porcentaje de asistencia a clases teóricas?", opciones_a2_a3)
@@ -251,7 +235,6 @@ def seed_plantillas_data(db: Session):
         # =============================================================================
         # 2. PLANTILLA: ENCUESTA ALUMNOS (CICLO SUPERIOR)
         # =============================================================================
-        
         plantilla_encuesta_superior = find_or_create_plantilla(
             db=db,
             titulo="Encuesta Alumnos - Ciclo Superior (ANEXO II DCDFI 005/2014)",
@@ -260,8 +243,7 @@ def seed_plantillas_data(db: Session):
             anexo="Anexo II (DCDFI N° 005/2014)",
             estado=EstadoInstrumento.PUBLICADA
         )
-
-        # Secciones Encuesta Superior (Sin cambios, MC es correcto)
+        # ... (Secciones A-G de Superior, sin cambios) ...
         seccion_a_sup = find_or_create_seccion(db, plantilla_encuesta_superior, "A: Información General")
         crear_pregunta_mc(db, seccion_a_sup, "¿Cuántas veces te has inscripto para cursar esta asignatura?", opciones_a1)
         crear_pregunta_mc(db, seccion_a_sup, "¿Cuál ha sido aproximadamente tu porcentaje de asistencia a clases teóricas?", opciones_a2_a3)
@@ -330,17 +312,40 @@ def seed_plantillas_data(db: Session):
             estado=EstadoInstrumento.PUBLICADA
         )
 
+        # --- NUEVA SECCIÓN 0: INFORMACIÓN GENERAL (Según Anexo I - Tabla inicial) ---
+        seccion_0_inf = find_or_create_seccion(db, plantilla_informe_curricular, "0. Información General")
+        
+        # Estos son los datos que pide la normativa al principio 
+        crear_pregunta_redaccion(db, seccion_0_inf, "Cantidad de alumnos inscriptos")
+        crear_pregunta_redaccion(db, seccion_0_inf, "Cantidad de comisiones de clases teóricas")
+        crear_pregunta_redaccion(db, seccion_0_inf, "Cantidad de comisiones de clases prácticas")
+
         seccion_1_inf = find_or_create_seccion(db, plantilla_informe_curricular, "1. Necesidades de Equipamiento y Bibliografía")
         crear_pregunta_redaccion(db, seccion_1_inf, "Indique necesidades de equipamiento e insumos (Verifique si lo solicitado en años anteriores ya se encuentra disponible).")
         crear_pregunta_redaccion(db, seccion_1_inf, "Indique necesidades de actualización de bibliografía (Verifique si lo solicitado en años anteriores ya se encuentra disponible).")
 
         seccion_2_inf = find_or_create_seccion(db, plantilla_informe_curricular, "2. Desarrollo de la Actividad Curricular")
         
-        # --- CAMBIO SOLICITADO: Estas preguntas ahora son de REDACCIÓN para permitir inputs numéricos 0-100 ---
-        crear_pregunta_redaccion(db, seccion_2_inf, "2. Porcentaje de horas de clases TEÓRICAS dictadas")
-        crear_pregunta_redaccion(db, seccion_2_inf, "2. Porcentaje de horas de clases PRÁCTICAS dictadas")
-        crear_pregunta_redaccion(db, seccion_2_inf, "2.A. Porcentaje de contenidos planificados alcanzados")
-        # --------------------------------------------------------------------------------------------------
+        crear_pregunta_redaccion(
+            db, 
+            seccion_2_inf, 
+            "2. Porcentaje de horas de clases TEÓRICAS dictadas", 
+            origen_datos="dropdown_porcentaje_justificacion"
+        )
+        
+        crear_pregunta_redaccion(
+            db, 
+            seccion_2_inf, 
+            "2. Porcentaje de horas de clases PRÁCTICAS dictadas", 
+            origen_datos="dropdown_porcentaje_justificacion"
+        )
+        
+        crear_pregunta_redaccion(
+            db, 
+            seccion_2_inf, 
+            "2.A. Porcentaje de contenidos planificados alcanzados", 
+            origen_datos="dropdown_porcentaje_justificacion"
+        )
 
         # Pregunta 2.B 
         crear_pregunta_redaccion(db, seccion_2_inf, "2.B. Consigne los valores que figuran en el reporte de la Encuesta a alumnos (B, C, D, E) y emita un juicio de valor u observaciones si lo considera oportuno.", origen_datos="resultados_encuesta")
@@ -354,15 +359,19 @@ def seed_plantillas_data(db: Session):
         crear_pregunta_redaccion(db, seccion_3_inf, "3. Consigne las actividades de Capacitación, Investigación, Extensión y Gestión desarrolladas por los integrantes de la cátedra (Profesores, JTP y Auxiliares). Explicite las observaciones y comentarios que considere pertinentes.")
         
         seccion_4_inf = find_or_create_seccion(db, plantilla_informe_curricular, "4. Desempeño de Auxiliares")
-        crear_pregunta_redaccion(db, seccion_4_inf, "4. Valore el desempeño de los JTP/Auxiliares (E, MB, B, R, I) y justifique (Art. 14 Reglamento Académico).")
+        
+        crear_pregunta_redaccion(
+            db, 
+            seccion_4_inf, 
+            "4. Valore el desempeño de los JTP/Auxiliares y justifique (Art. 14 Reglamento Académico)."
+        )
         
         db.commit()
-        print("   - Plantilla 'Informe de Actividad Curricular' (CORREGIDA) completada.")
+        print("   - Plantilla 'Informe de Actividad Curricular' completada.")
         
         # =============================================================================
         # 4. PLANTILLA: INFORME SINTÉTICO
         # =============================================================================
-        
         plantilla_informe_sintetico = find_or_create_plantilla(
             db=db,
             titulo="Informe Sintético Departamental (ANEXO II RCDFI 283/2015)",
@@ -371,7 +380,7 @@ def seed_plantillas_data(db: Session):
             anexo="Anexo II (RCDFI N° 283/2015)",
             estado=EstadoInstrumento.PUBLICADA
         )
-
+        # ... (Secciones Informe Sintético, sin cambios, todas son redacción) ...
         seccion_0_sint = find_or_create_seccion(db, plantilla_informe_sintetico, "0. Información general")
         crear_pregunta_redaccion(db, seccion_0_sint, "Informacion General.")
 
@@ -379,13 +388,9 @@ def seed_plantillas_data(db: Session):
         crear_pregunta_redaccion(db, seccion_1_sint, "Completar tabla de Necesidades (Equipamiento e Insumos, Bibliografía) para cada actividad curricular.")
 
         seccion_2_sint = find_or_create_seccion(db, plantilla_informe_sintetico, "2. Desarrollo de la Actividad Curricular")
-        
         crear_pregunta_redaccion(db, seccion_2_sint, "2. Completar tabla de Porcentaje de horas de clases dictadas y justificación.")
-        
         crear_pregunta_redaccion(db, seccion_2_sint, "2.A. Completar tabla de Porcentaje de contenidos planificados y estrategias propuestas.")
-        
         crear_pregunta_redaccion(db, seccion_2_sint, "2.B. Completar tabla de valores de Encuesta a Alumnos (B, C, D, E) y Juicio de Valor del responsable.", origen_datos="resumen_encuestas_departamento") 
-        
         crear_pregunta_redaccion(db, seccion_2_sint, "2.C. Completar tabla de Aspectos Positivos, Obstáculos y Estrategias (Proceso Enseñanza/Aprendizaje).")
 
         seccion_3_sint = find_or_create_seccion(db, plantilla_informe_sintetico, "3. Actividades del Equipo de Cátedra")
@@ -424,15 +429,10 @@ def create_tables():
 
 # --- Punto de entrada para ejecutar el script ---
 if __name__ == "__main__":
-    print("Iniciando script de carga de plantillas (Versión corregida y ajustada a Redacción)...")
-    
-    # 1. Asegurarse que las tablas existan
+    print("Iniciando script de carga de plantillas...")
     create_tables()
-
-    # 2. Obtener sesión de BBDD
     db = SessionLocal()
     try:
-        # 3. Ejecutar la lógica de seeding
         seed_plantillas_data(db)
     finally:
         db.close()
