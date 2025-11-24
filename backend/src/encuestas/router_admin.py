@@ -106,12 +106,12 @@ def generar_informe_sintetico_departamental(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error interno: {e}")
 
-# --- Endpoints de Listado (Asumimos que siguen siendo solo para Secretaria, si no, cambialos también) ---
+
 
 @router_gestion.get(
     "/cursadas-disponibles", 
     response_model=List[schemas.CursadaAdminList],
-    dependencies=[Depends(get_current_admin_secretaria)] # <--- Solo Secretaria
+    dependencies=[Depends(get_current_admin_secretaria)] 
 )
 def get_cursadas_para_activar(db: Session = Depends(get_db)):
     return services.listar_cursadas_sin_encuesta(db)
@@ -119,7 +119,7 @@ def get_cursadas_para_activar(db: Session = Depends(get_db)):
 @router_gestion.get(
     "/activas", 
     response_model=List[schemas.EncuestaActivaAdminList],
-    dependencies=[Depends(get_current_admin_secretaria)] # <--- Solo Secretaria
+    dependencies=[Depends(get_current_admin_secretaria)] 
 )
 def get_encuestas_activas_admin(db: Session = Depends(get_db)):
     return services.listar_todas_instancias_activas(db)
@@ -127,7 +127,7 @@ def get_encuestas_activas_admin(db: Session = Depends(get_db)):
 @router_gestion.get(
     "/departamentos", 
     response_model=List[schemas.DepartamentoSimple],
-    dependencies=[Depends(get_current_admin_secretaria)] # <--- Solo Secretaria
+    dependencies=[Depends(get_current_admin_secretaria)] 
 )
 def get_lista_departamentos(db: Session = Depends(get_db)):
     return services.listar_todos_departamentos(db)

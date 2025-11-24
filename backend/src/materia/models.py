@@ -1,6 +1,7 @@
 from __future__ import annotations
 from datetime import datetime
-from src.encuestas.models import EncuestaInstancia
+from typing import TYPE_CHECKING, List
+
 
 from sqlalchemy import Integer, String, DateTime, ForeignKey, Table, Column
 from sqlalchemy import Enum as SQLEnum
@@ -9,16 +10,11 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from src.models import ModeloBase
 from src.enumerados import TipoCuatrimestre
 
-from src.instrumento.models import ActividadCurricularInstancia, InformeSinteticoInstancia
-from typing import TYPE_CHECKING, List
-
+# Mover imports conflictivos aquí dentro
 if TYPE_CHECKING:
     from src.encuestas.models import EncuestaInstancia
     from src.instrumento.models import ActividadCurricularInstancia, InformeSinteticoInstancia
     from src.persona.models import Profesor, Inscripcion
-    # --- AÑADIR ESTAS ---
-    from src.materia.models import Materia, Departamento, Carrera, Sede
-
 
 # Tabla de asociación Many-to-Many entre Carrera y Materia
 carrera_materia_association = Table(

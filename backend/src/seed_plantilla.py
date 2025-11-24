@@ -37,18 +37,17 @@ except ImportError as e:
     sys.exit(1)
 
 
-# --- Listas de Opciones Reutilizables (Basadas en el PDF) ---
+# --- Listas de Opciones Reutilizables ---
 opciones_si_no_npo = ["Sí", "No", "No puedo opinar (NPO)"]
 opciones_satisfaccion_g1 = ["Muy satisfactorio (4)", "Satisfactorio (3)", "Poco Satisfactorio (2)", "No satisfactorio (1)"]
 opciones_ciclo_superior = ["Muy Bueno / Muy satisfactorio (4)", "Bueno / Satisfactorio (3)", "Regular / Poco Satisfactorio (2)", "Malo / No Satisfactorio (1)"]
 
-# Opciones para Sección A
+# Opciones para Sección A (Encuesta Alumnos)
 opciones_a1 = ["Una", "Más de una"]
 opciones_a2_a3 = ["Entre 0 y 50%", "Más 50%"]
 opciones_a4 = ["Escasos", "Suficientes"]
-opciones_porcentaje = ["0% - 25%", "26% - 50%", "51% - 75%", "76% - 100%"]
 
-# --- Funciones Helper (sin cambios) ---
+# --- Funciones Helper ---
 
 def find_or_create_plantilla(db: Session, titulo: str, descripcion: str, tipo: TipoInstrumento, anexo: str, estado: EstadoInstrumento) -> InstrumentoBase:
     """Busca una plantilla por título. Si no existe, la crea.
@@ -60,9 +59,7 @@ def find_or_create_plantilla(db: Session, titulo: str, descripcion: str, tipo: T
     if plantilla:
         print(f"   - Plantilla encontrada: '{titulo}' (ID: {plantilla.id})")
         
-        # --- INICIO DE LA CORRECCIÓN ---
-        # Comparamos los estados (ignorando may/min)
-        estado_correcto = estado.value # ej: "publicada"
+        estado_correcto = estado.value 
         
         if plantilla.estado is None or plantilla.estado.lower() != estado_correcto.lower():
             print(f"     -> ACTUALIZANDO estado de '{plantilla.estado}' a '{estado_correcto}'")
@@ -70,7 +67,6 @@ def find_or_create_plantilla(db: Session, titulo: str, descripcion: str, tipo: T
             db.add(plantilla)
             db.commit()
             db.refresh(plantilla)
-        # --- FIN DE LA CORRECCIÓN ---
             
         return plantilla
     
@@ -81,14 +77,14 @@ def find_or_create_plantilla(db: Session, titulo: str, descripcion: str, tipo: T
             titulo=titulo,
             descripcion=descripcion,
             anexo=anexo,
-            estado=estado.value # Usamos .value para asignar el string
+            estado=estado.value 
         )
     elif tipo == TipoInstrumento.ACTIVIDAD_CURRICULAR:
         plantilla = ActividadCurricular(
             titulo=titulo,
             descripcion=descripcion,
             anexo=anexo,
-            estado=estado.value # Usamos .value para asignar el string
+            estado=estado.value 
         )
     elif tipo == TipoInstrumento.INFORME_SINTETICO:
         plantilla = InformeSintetico(
@@ -96,13 +92,6 @@ def find_or_create_plantilla(db: Session, titulo: str, descripcion: str, tipo: T
             descripcion=descripcion,
             anexo=anexo,
             estado=estado.value
-        )
-    elif tipo == TipoInstrumento.INFORME_SINTETICO:
-        plantilla = InformeSintetico(
-            titulo=titulo,
-            descripcion=descripcion,
-            anexo=anexo,
-            estado=estado
         )
     else:
         raise ValueError(f"Tipo de instrumento no manejado: {tipo}")
@@ -166,6 +155,12 @@ def crear_pregunta_redaccion(db: Session, seccion: Seccion, texto_pregunta: str,
     pregunta_existente = db.scalars(stmt).first()
     
     if pregunta_existente:
+        # Si existe pero queremos actualizar el origen de datos (por si cambio la logica)
+        if origen_datos and pregunta_existente.origen_datos != origen_datos:
+             print(f"       ~ Actualizando origen_datos de: {texto_pregunta[:30]}...")
+             pregunta_existente.origen_datos = origen_datos
+             db.add(pregunta_existente)
+             db.commit()
         return
         
     print(f"       + Pregunta (Redacción): {texto_pregunta[:50]}...")
@@ -184,7 +179,9 @@ def seed_plantillas_data(db: Session):
     print("Iniciando seeding de plantillas, secciones y preguntas...")
     
     try:
-        # --- 1. PLANTILLA: ENCUESTA ALUMNOS (CICLO BÁSICO - ANEXO I) ---
+        # =============================================================================
+        # 1. PLANTILLA: ENCUESTA ALUMNOS (CICLO BÁSICO)
+        # =============================================================================
         
         plantilla_encuesta_basico = find_or_create_plantilla(
             db=db,
@@ -195,32 +192,28 @@ def seed_plantillas_data(db: Session):
             estado=EstadoInstrumento.PUBLICADA
         )
         
-        # --- SECCIÓN A (CICLO BÁSICO) ---
+        # Secciones Encuesta Básico (Sin cambios, MC es correcto aquí)
         seccion_a_basico = find_or_create_seccion(db, plantilla_encuesta_basico, "A: Información General")
         crear_pregunta_mc(db, seccion_a_basico, "¿Cuántas veces te has inscripto para cursar esta asignatura?", opciones_a1)
         crear_pregunta_mc(db, seccion_a_basico, "¿Cuál ha sido aproximadamente tu porcentaje de asistencia a clases teóricas?", opciones_a2_a3)
         crear_pregunta_mc(db, seccion_a_basico, "¿Cuál ha sido aproximadamente tu porcentaje de asistencia a clases prácticas?", opciones_a2_a3)
         crear_pregunta_mc(db, seccion_a_basico, "Los conocimientos previos para comprender los contenidos de la asignatura fueron:", opciones_a4)
 
-        # Sección B: Comunicación (Sí/No/NPO)
         seccion_b_basico = find_or_create_seccion(db, plantilla_encuesta_basico, "B: Comunicación y desarrollo de la asignatura")
         crear_pregunta_mc(db, seccion_b_basico, "¿El profesor brindó al inicio del curso, información referida al desarrollo de la asignatura (programa, cronograma, régimen de cursada y criterios de evaluación.)?", opciones_si_no_npo)
         crear_pregunta_mc(db, seccion_b_basico, "¿La bibliografía propuesta por la cátedra estuvo disponible en la biblioteca o centros de documentación?", opciones_si_no_npo)
         crear_pregunta_mc(db, seccion_b_basico, "¿El profesor ofreció la posibilidad de establecer una buena comunicación en diferentes aspectos de la vida universitaria?", opciones_si_no_npo)
 
-        # Sección C: Metodología (Sí/No/NPO)
         seccion_c_basico = find_or_create_seccion(db, plantilla_encuesta_basico, "C: Metodología")
         crear_pregunta_mc(db, seccion_c_basico, "¿Se propusieron clases de apoyo y consultas?", opciones_si_no_npo)
         crear_pregunta_mc(db, seccion_c_basico, "¿Los contenidos desarrollados en las clases teóricas se correspondieron con los trabajos prácticos?", opciones_si_no_npo)
         crear_pregunta_mc(db, seccion_c_basico, "¿Las clases prácticas de laboratorio te resultaron de utilidad?", opciones_si_no_npo)
 
-        # Sección D: Evaluación (Sí/No/NPO)
         seccion_d_basico = find_or_create_seccion(db, plantilla_encuesta_basico, "D: Evaluación")
         crear_pregunta_mc(db, seccion_d_basico, "¿Hubo relación entre el desarrollo de las clases teóricas y prácticas?", opciones_si_no_npo)
         crear_pregunta_mc(db, seccion_d_basico, "¿Existió relación entre los temas desarrollados en clase y los temas evaluados?", opciones_si_no_npo)
         crear_pregunta_mc(db, seccion_d_basico, "¿Te brindaron posibilidades para comentar y revisar los resultados de los exámenes parciales?", opciones_si_no_npo)
 
-        # Sección E: Actuación Cátedra (TEORÍA) (Sí/No/NPO)
         seccion_e_t_basico = find_or_create_seccion(db, plantilla_encuesta_basico, "E: Actuación de los miembros de la Cátedra (TEORÍA)")
         crear_pregunta_mc(db, seccion_e_t_basico, "TEORÍA: ¿Se respetó la planificación de actividades programadas?", opciones_si_no_npo)
         crear_pregunta_mc(db, seccion_e_t_basico, "TEORÍA: ¿Los profesores asisten con puntualidad en el horario establecido?", opciones_si_no_npo)
@@ -229,7 +222,6 @@ def seed_plantillas_data(db: Session):
         crear_pregunta_mc(db, seccion_e_t_basico, "TEORÍA: ¿Los profesores te ofrecen la posibilidad de plantear tus dudas y dificultades en clase?", opciones_si_no_npo)
         crear_pregunta_mc(db, seccion_e_t_basico, "TEORÍA: ¿Los docentes explican con claridad los temas desarrollados?", opciones_si_no_npo)
 
-        # Sección E: Actuación Cátedra (PRÁCTICA) (Sí/No/NPO)
         seccion_e_p_basico = find_or_create_seccion(db, plantilla_encuesta_basico, "E: Actuación de los miembros de la Cátedra (PRÁCTICA)")
         crear_pregunta_mc(db, seccion_e_p_basico, "PRÁCTICA: ¿Se respetó la planificación de actividades programadas?", opciones_si_no_npo)
         crear_pregunta_mc(db, seccion_e_p_basico, "PRÁCTICA: ¿Los profesores asisten con puntualidad en el horario establecido?", opciones_si_no_npo)
@@ -238,7 +230,6 @@ def seed_plantillas_data(db: Session):
         crear_pregunta_mc(db, seccion_e_p_basico, "PRÁCTICA: ¿Los profesores te ofrecen la posibilidad de plantear tus dudas y dificultades en clase?", opciones_si_no_npo)
         crear_pregunta_mc(db, seccion_e_p_basico, "PRÁCTICA: ¿Los docentes explican con claridad los temas desarrollados?", opciones_si_no_npo)
         
-        # Sección F: Institucional (Sí/No/NPO)
         seccion_f_basico = find_or_create_seccion(db, plantilla_encuesta_basico, "F: Institucional")
         crear_pregunta_mc(db, seccion_f_basico, "¿El personal administrativo de la Facultad respondió a tus requerimientos?", opciones_si_no_npo)
         crear_pregunta_mc(db, seccion_f_basico, "¿El personal administrativo respondió cordialmente las consultas que realizaste?", opciones_si_no_npo)
@@ -247,7 +238,6 @@ def seed_plantillas_data(db: Session):
         crear_pregunta_mc(db, seccion_f_basico, "¿Consideras que son adecuadas las aulas y el equipamiento de los laboratorios?", opciones_si_no_npo)
         crear_pregunta_mc(db, seccion_f_basico, "¿Te parecen suficientes los recursos informáticos que te ofrece la institución (pe, pc con internet, wifi, etc.)?", opciones_si_no_npo)
 
-        # Sección G: Opinión Global (¡Escala 4-1!)
         seccion_g_basico = find_or_create_seccion(db, plantilla_encuesta_basico, "G: Opinión Global")
         crear_pregunta_mc(db, seccion_g_basico, "En general ¿cómo evalúas tu experiencia de aprendizaje en esta asignatura?", opciones_satisfaccion_g1)
         crear_pregunta_redaccion(db, seccion_g_basico, "¿Qué aspectos valoras como positivos del cursado de la asignatura? Menciona los que consideres más importantes.")
@@ -258,7 +248,9 @@ def seed_plantillas_data(db: Session):
         print("   - Plantilla 'Encuesta Alumnos - Ciclo Básico' completada.")
 
 
-        # --- 2. PLANTILLA: ENCUESTA ALUMNOS (CICLO SUPERIOR - ANEXO II) ---
+        # =============================================================================
+        # 2. PLANTILLA: ENCUESTA ALUMNOS (CICLO SUPERIOR)
+        # =============================================================================
         
         plantilla_encuesta_superior = find_or_create_plantilla(
             db=db,
@@ -269,14 +261,13 @@ def seed_plantillas_data(db: Session):
             estado=EstadoInstrumento.PUBLICADA
         )
 
-        # --- SECCIÓN A (CICLO SUPERIOR) ---
+        # Secciones Encuesta Superior (Sin cambios, MC es correcto)
         seccion_a_sup = find_or_create_seccion(db, plantilla_encuesta_superior, "A: Información General")
         crear_pregunta_mc(db, seccion_a_sup, "¿Cuántas veces te has inscripto para cursar esta asignatura?", opciones_a1)
         crear_pregunta_mc(db, seccion_a_sup, "¿Cuál ha sido aproximadamente tu porcentaje de asistencia a clases teóricas?", opciones_a2_a3)
         crear_pregunta_mc(db, seccion_a_sup, "¿Cuál ha sido aproximadamente tu porcentaje de asistencia a clases prácticas?", opciones_a2_a3)
         crear_pregunta_mc(db, seccion_a_sup, "Los conocimientos previos para comprender los contenidos de la asignatura fueron:", opciones_a4)
 
-        # --- SECCIONES B-G (CICLO SUPERIOR - Escala 4-1) ---
         seccion_b_sup = find_or_create_seccion(db, plantilla_encuesta_superior, "B: Comunicación y desarrollo de la asignatura")
         crear_pregunta_mc(db, seccion_b_sup, "El profesor brindó al inicio del curso, información referida al desarrollo de la asignatura (programa, cronograma, régimen de cursada y criterios de evaluación.)", opciones_ciclo_superior)
         crear_pregunta_mc(db, seccion_b_sup, "Se respetó la planificación de las actividades programadas al inicio del cursado y el calendario académico.", opciones_ciclo_superior)
@@ -326,106 +317,86 @@ def seed_plantillas_data(db: Session):
         db.commit()
         print("   - Plantilla 'Encuesta Alumnos - Ciclo Superior' completada.")
 
-# --- 3. PLANTILLA: INFORME DE ACTIVIDAD CURRICULAR (CORREGIDO) ---
+        # =============================================================================
+        # 3. PLANTILLA: INFORME DE ACTIVIDAD CURRICULAR
+        # =============================================================================
 
         plantilla_informe_curricular = find_or_create_plantilla(
-        db=db,
-        titulo="Informe de Actividad Curricular (ANEXO I RCDFI 283/2015)",
-        descripcion="Informe de cátedra a ser completado por el docente responsable al finalizar el ciclo lectivo.",
-        tipo=TipoInstrumento.ACTIVIDAD_CURRICULAR,
-        anexo="Anexo I (RCDFI N° 283/2015)",
-        estado=EstadoInstrumento.PUBLICADA
-    )
+            db=db,
+            titulo="Informe de Actividad Curricular (ANEXO I RCDFI 283/2015)",
+            descripcion="Informe de cátedra a ser completado por el docente responsable al finalizar el ciclo lectivo.",
+            tipo=TipoInstrumento.ACTIVIDAD_CURRICULAR,
+            anexo="Anexo I (RCDFI N° 283/2015)",
+            estado=EstadoInstrumento.PUBLICADA
+        )
 
         seccion_1_inf = find_or_create_seccion(db, plantilla_informe_curricular, "1. Necesidades de Equipamiento y Bibliografía")
         crear_pregunta_redaccion(db, seccion_1_inf, "Indique necesidades de equipamiento e insumos (Verifique si lo solicitado en años anteriores ya se encuentra disponible).")
         crear_pregunta_redaccion(db, seccion_1_inf, "Indique necesidades de actualización de bibliografía (Verifique si lo solicitado en años anteriores ya se encuentra disponible).")
 
         seccion_2_inf = find_or_create_seccion(db, plantilla_informe_curricular, "2. Desarrollo de la Actividad Curricular")
-        crear_pregunta_mc(db, seccion_2_inf, "2. Porcentaje de horas de clases TEÓRICAS dictadas", opciones_porcentaje)
-        crear_pregunta_mc(db, seccion_2_inf, "2. Porcentaje de horas de clases PRÁCTICAS dictadas", opciones_porcentaje)
+        
+        # --- CAMBIO SOLICITADO: Estas preguntas ahora son de REDACCIÓN para permitir inputs numéricos 0-100 ---
+        crear_pregunta_redaccion(db, seccion_2_inf, "2. Porcentaje de horas de clases TEÓRICAS dictadas")
+        crear_pregunta_redaccion(db, seccion_2_inf, "2. Porcentaje de horas de clases PRÁCTICAS dictadas")
+        crear_pregunta_redaccion(db, seccion_2_inf, "2.A. Porcentaje de contenidos planificados alcanzados")
+        # --------------------------------------------------------------------------------------------------
 
-        crear_pregunta_mc(db, seccion_2_inf, "2.A. Porcentaje de contenidos planificados alcanzados", opciones_porcentaje)
-        # --- PREGUNTA 2.B (Correcta) ---
+        # Pregunta 2.B 
         crear_pregunta_redaccion(db, seccion_2_inf, "2.B. Consigne los valores que figuran en el reporte de la Encuesta a alumnos (B, C, D, E) y emita un juicio de valor u observaciones si lo considera oportuno.", origen_datos="resultados_encuesta")
         
-        # --- PREGUNTA 2.C (Corregida, dividida en dos como en el DOC) ---
+        # Pregunta 2.C 
         crear_pregunta_redaccion(db, seccion_2_inf, "2.C. ¿Cuáles fueron los principales aspectos positivos y los obstáculos que se manifestaron durante el desarrollo del espacio curricular? (Centrándose en Proceso Enseñanza, Proceso de aprendizaje y Estrategias a implementar).")
         crear_pregunta_redaccion(db, seccion_2_inf, "2.C. (Continuación) Escriba un resumen de la reflexión sobre la práctica docente que se realizó en la reunión de equipo de cátedra. En caso de corresponder, consigne nuevas estrategias a implementar (cambio de cronograma, modificación del proceso de evaluación, etc.).")
 
 
         seccion_3_inf = find_or_create_seccion(db, plantilla_informe_curricular, "3. Actividades del Equipo de Cátedra")
-        # --- PREGUNTA 3 (Corregida, unificada) ---
         crear_pregunta_redaccion(db, seccion_3_inf, "3. Consigne las actividades de Capacitación, Investigación, Extensión y Gestión desarrolladas por los integrantes de la cátedra (Profesores, JTP y Auxiliares). Explicite las observaciones y comentarios que considere pertinentes.")
         
         seccion_4_inf = find_or_create_seccion(db, plantilla_informe_curricular, "4. Desempeño de Auxiliares")
-        # --- PREGUNTA 4 (Correcta) ---
         crear_pregunta_redaccion(db, seccion_4_inf, "4. Valore el desempeño de los JTP/Auxiliares (E, MB, B, R, I) y justifique (Art. 14 Reglamento Académico).")
         
         db.commit()
         print("   - Plantilla 'Informe de Actividad Curricular' (CORREGIDA) completada.")
         
-# --- 4. PLANTILLA: INFORME SINTÉTICO ---
+        # =============================================================================
+        # 4. PLANTILLA: INFORME SINTÉTICO
+        # =============================================================================
         
         plantilla_informe_sintetico = find_or_create_plantilla(
-        db=db,
-        titulo="Informe Sintético Departamental (ANEXO II RCDFI 283/2015)",
-        descripcion="Informe sintético a ser completado por el Director de Departamento, resumiendo los Informes de Actividad Curricular.",
-        tipo=TipoInstrumento.INFORME_SINTETICO,
-        anexo="Anexo II (RCDFI N° 283/2015)",
-        estado=EstadoInstrumento.PUBLICADA
+            db=db,
+            titulo="Informe Sintético Departamental (ANEXO II RCDFI 283/2015)",
+            descripcion="Informe sintético a ser completado por el Director de Departamento, resumiendo los Informes de Actividad Curricular.",
+            tipo=TipoInstrumento.INFORME_SINTETICO,
+            anexo="Anexo II (RCDFI N° 283/2015)",
+            estado=EstadoInstrumento.PUBLICADA
         )
 
-        # --- Sección 0: Información general ---
-        # Corresponde a la tabla 0 del Anexo II [cite: 97, 98]
         seccion_0_sint = find_or_create_seccion(db, plantilla_informe_sintetico, "0. Información general")
-        crear_pregunta_redaccion(db, seccion_0_sint, 
-            "Informacion General.")
+        crear_pregunta_redaccion(db, seccion_0_sint, "Informacion General.")
 
-        # --- Sección 1: Necesidades de equipamiento y bibliografía ---
-        # Corresponde a la tabla 1 del Anexo II [cite: 100, 103]
         seccion_1_sint = find_or_create_seccion(db, plantilla_informe_sintetico, "1. Necesidades de equipamiento y bibliografía")
-        crear_pregunta_redaccion(db, seccion_1_sint, 
-            "Completar tabla de Necesidades (Equipamiento e Insumos, Bibliografía) para cada actividad curricular.")
+        crear_pregunta_redaccion(db, seccion_1_sint, "Completar tabla de Necesidades (Equipamiento e Insumos, Bibliografía) para cada actividad curricular.")
 
-        # --- Sección 2: Desarrollo de la Actividad Curricular ---
-        # Agrupa 2, 2.A, 2.B y 2.C del Anexo II
         seccion_2_sint = find_or_create_seccion(db, plantilla_informe_sintetico, "2. Desarrollo de la Actividad Curricular")
         
-        # Pregunta para la tabla 2 [cite: 111, 112]
-        crear_pregunta_redaccion(db, seccion_2_sint, 
-            "2. Completar tabla de Porcentaje de horas de clases dictadas y justificación.")
+        crear_pregunta_redaccion(db, seccion_2_sint, "2. Completar tabla de Porcentaje de horas de clases dictadas y justificación.")
         
-        # Pregunta para la tabla 2.A [cite: 113, 115]
-        crear_pregunta_redaccion(db, seccion_2_sint, 
-            "2.A. Completar tabla de Porcentaje de contenidos planificados y estrategias propuestas.")
+        crear_pregunta_redaccion(db, seccion_2_sint, "2.A. Completar tabla de Porcentaje de contenidos planificados y estrategias propuestas.")
         
-        # Pregunta para la tabla 2.B [cite: 116, 122]
-        crear_pregunta_redaccion(db, seccion_2_sint, 
-            "2.B. Completar tabla de valores de Encuesta a Alumnos (B, C, D, E) y Juicio de Valor del responsable.",
-            origen_datos="resumen_encuestas_departamento") # 'origen_datos' es opcional pero recomendado
+        crear_pregunta_redaccion(db, seccion_2_sint, "2.B. Completar tabla de valores de Encuesta a Alumnos (B, C, D, E) y Juicio de Valor del responsable.", origen_datos="resumen_encuestas_departamento") 
         
-        # Pregunta para la tabla 2.C [cite: 123, 125]
-        crear_pregunta_redaccion(db, seccion_2_sint, 
-            "2.C. Completar tabla de Aspectos Positivos, Obstáculos y Estrategias (Proceso Enseñanza/Aprendizaje).")
+        crear_pregunta_redaccion(db, seccion_2_sint, "2.C. Completar tabla de Aspectos Positivos, Obstáculos y Estrategias (Proceso Enseñanza/Aprendizaje).")
 
-        # --- Sección 3: Actividades del Equipo de Cátedra ---
-        # Corresponde a la tabla 3 del Anexo II [cite: 133, 135]
         seccion_3_sint = find_or_create_seccion(db, plantilla_informe_sintetico, "3. Actividades del Equipo de Cátedra")
-        crear_pregunta_redaccion(db, seccion_3_sint, 
-            "Completar tabla de Actividades (Capacitación, Investigación, Extensión, Gestión) de los integrantes de cátedra.")
+        crear_pregunta_redaccion(db, seccion_3_sint, "Completar tabla de Actividades (Capacitación, Investigación, Extensión, Gestión) de los integrantes de cátedra.")
 
-        # --- Sección 4: Desempeño de Auxiliares ---
-        # Corresponde a la tabla 4 del Anexo II [cite: 136, 138]
         seccion_4_sint = find_or_create_seccion(db, plantilla_informe_sintetico, "4. Desempeño de Auxiliares")
-        crear_pregunta_redaccion(db, seccion_4_sint, 
-            "Completar tabla de Valoración del desempeño de auxiliares (E, MB, B, R, I) y justificación.")
+        crear_pregunta_redaccion(db, seccion_4_sint, "Completar tabla de Valoración del desempeño de auxiliares (E, MB, B, R, I) y justificación.")
 
-        # --- Sección 5: Observaciones ---
-        # Corresponde al punto 5 del Anexo II [cite: 139]
         seccion_5_sint = find_or_create_seccion(db, plantilla_informe_sintetico, "5. Observaciones (Comisión Asesora)")
-        crear_pregunta_redaccion(db, seccion_5_sint, 
-            "Observaciones o comentarios que desee expresar la Comisión Asesora en relación al conjunto de actividades desarrolladas por los docentes de los diferentes espacios curriculares.")
+        crear_pregunta_redaccion(db, seccion_5_sint, "Observaciones o comentarios que desee expresar la Comisión Asesora en relación al conjunto de actividades desarrolladas por los docentes de los diferentes espacios curriculares.")
+        
         db.commit()
         print("   - Plantilla 'Informe Sintético Departamental' (ANEXO II) completada.")    
         
@@ -443,14 +414,6 @@ def create_tables():
      print("Verificando/Creando tablas si no existen...")
      try:
         from src.models import ModeloBase
-        from src.enumerados import TipoInstrumento, TipoPregunta, EstadoInstrumento
-        from src.respuesta import models as respuesta_models
-        from src.seccion import models as seccion_models
-        from src.pregunta import models as pregunta_models
-        from src.persona import models as persona_models
-        from src.materia import models as materia_models
-        from src.instrumento import models as instrumento_models
-        from src.encuestas import models as encuestas_models
      except ImportError as e:
          print(f"Error importando módulos de modelos: {e}")
          sys.exit(1)
@@ -461,7 +424,7 @@ def create_tables():
 
 # --- Punto de entrada para ejecutar el script ---
 if __name__ == "__main__":
-    print("Iniciando script de carga de plantillas (Versión corregida)...")
+    print("Iniciando script de carga de plantillas (Versión corregida y ajustada a Redacción)...")
     
     # 1. Asegurarse que las tablas existan
     create_tables()

@@ -10,6 +10,10 @@ from typing import List
 from src.encuestas import services as encuestas_services 
 from src.persona import schemas as persona_schemas       
 from src.materia import schemas as materia_schemas
+from src.encuestas.schemas import GenerarSinteticoResponse
+import collections
+from src.encuestas.schemas import DashboardDepartamentoStats 
+
 
 
 router = APIRouter(
@@ -20,7 +24,7 @@ router = APIRouter(
 
 @router.post(
     "/informes-sinteticos/generar", 
-    response_model=schemas.InstrumentoPlantilla, # Deberíamos crear un schema para InformeSinteticoInstancia
+    response_model=GenerarSinteticoResponse, 
     status_code=status.HTTP_201_CREATED
 )
 def generar_nuevo_informe_sintetico(
@@ -42,7 +46,11 @@ def generar_nuevo_informe_sintetico(
         # (Necesitaríamos un schema de 'InformeSinteticoInstancia' en 'instrumento/schemas.py')
         
         # Por ahora, devolvemos la plantilla base que usó:
-        return nuevo_informe.informe_sintetico 
+        return GenerarSinteticoResponse(
+        instancia_id=nuevo_informe.id,
+        departamento_id=nuevo_informe.departamento_id or 0,
+        cantidad_informes=len(nuevo_informe.actividades_curriculares_instancia)
+    )
         
     except (NotFound, BadRequest) as e:
         raise HTTPException(status_code=e.STATUS_CODE, detail=e.DETAIL)
@@ -53,16 +61,6 @@ def generar_nuevo_informe_sintetico(
             detail="Ocurrió un error interno al generar el informe."
         )
 
-# --- A FUTURO ---
-# @router.get("/informes-sinteticos")
-# def listar_informes_sinteticos_generados( ... ):
-#     # Aquí irá la lógica para listar los informes ya creados
-#     pass
-
-# @router.get("/informes-sinteticos/{informe_id}/estadisticas")
-# def obtener_estadisticas_agregadas( ... ):
-#     # Aquí irá la lógica para consultar y agregar los datos
-#     pass
 
 
 @router.get(
@@ -194,3 +192,50 @@ def get_estadisticas_por_materia(
     except Exception as e:
         print(f"Error inesperado al obtener stats por materia: {e}")
         raise HTTPException(status_code=500, detail="Error al obtener estadísticas.")
+    
+
+@router.get(
+    "/instancia/{instancia_id}/autocompletar",
+    response_model=schemas.ResumenResponse
+)
+def autocompletar_seccion(
+    instancia_id: int,
+    seccion_prefijo: str, # Ej: "1.", "2.A", "3."
+    db: Session = Depends(get_db),
+    admin: AdminDepartamento = Depends(get_current_admin_departamento)
+):
+    """
+    Endpoint usado por el botón 'Traer Respuestas'.
+    Agrega las respuestas de los informes base para una sección dada.
+    """
+    
+    try:
+        texto = services.generar_resumen_por_seccion(db, instancia_id, seccion_prefijo)
+        return {"texto_resumen": texto}
+    except (NotFound, BadRequest) as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        print(f"Error autocompletando: {e}")
+        raise HTTPException(status_code=500, detail="Error interno generando el resumen.")
+    
+
+
+@router.get(
+    "/estadisticas-generales",
+    response_model=DashboardDepartamentoStats
+)
+def get_dashboard_general_departamento(
+    db: Session = Depends(get_db),
+    admin: AdminDepartamento = Depends(get_current_admin_departamento)
+):
+    """
+    Devuelve indicadores clave de gestión para el dashboard del departamento:
+    - Cumplimiento de entrega de informes.
+    - Gráfico de cobertura curricular (Planificación vs Realidad).
+    - Últimas necesidades de equipamiento reportadas.
+    """
+    try:
+        return services.obtener_dashboard_departamento(db, admin)
+    except Exception as e:
+        print(f"Error generando dashboard: {e}")
+        raise HTTPException(status_code=500, detail="Error al calcular estadísticas del departamento.")

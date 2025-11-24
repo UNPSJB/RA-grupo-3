@@ -12,6 +12,10 @@ from src.instrumento import schemas as instrumento_schemas
 from src.instrumento import models as instrumento_models
 from src.materia import models as materia_models 
 from src.persona import models as persona_models
+from src.respuesta.schemas import RespuestaSetCreate
+from src.exceptions import BadRequest, PermissionDenied
+from src.respuesta import services as respuesta_services
+
 
 router = APIRouter(
     prefix="/departamento", 
@@ -61,39 +65,36 @@ def get_detalles_instancia_sintetico(
         # 1. Usamos la función existente para obtener la plantilla
         plantilla = instrumento_services.get_plantilla_para_instancia_sintetico(db, instancia_id, departamento_id)
         
-        # 2. Buscamos la instancia sintética con los JOINS, usando los alias de modelos correctos
+        # 2. Buscamos la instancia sintética con los JOINS
         instancia_sintetica = db.query(instrumento_models.InformeSinteticoInstancia).options(
-            # Cargamos Actividades Curriculares
             joinedload(instrumento_models.InformeSinteticoInstancia.actividades_curriculares_instancia)
-            # Cargamos Cursada (materia_models.Cursada, pero como está ya dentro de la relación, usamos el modelo de la relación)
             .joinedload(instrumento_models.ActividadCurricularInstancia.cursada) 
-            # Cargamos Materia (a través de Cursada)
-            .joinedload(materia_models.Cursada.materia), # <--- ACCESO CLARO a la relación Cursada.materia
+            .joinedload(materia_models.Cursada.materia), 
             
-            # Cargamos Profesor (a través de ActividadCurricularInstancia)
             joinedload(instrumento_models.InformeSinteticoInstancia.actividades_curriculares_instancia)
-            .joinedload(instrumento_models.ActividadCurricularInstancia.profesor) 
+            .joinedload(instrumento_models.ActividadCurricularInstancia.profesor),
+
+            # Agregamos carga de cuatrimestre para evitar problemas
+            joinedload(instrumento_models.InformeSinteticoInstancia.actividades_curriculares_instancia)
+            .joinedload(instrumento_models.ActividadCurricularInstancia.cursada)
+            .joinedload(materia_models.Cursada.cuatrimestre)
         ).filter(instrumento_models.InformeSinteticoInstancia.id == instancia_id).first()
 
-        # 3. Mapeamos los datos para el schema simple
+        # 3. Mapeamos los datos
         lista_informes = []
         if instancia_sintetica and instancia_sintetica.actividades_curriculares_instancia:
             for ac in instancia_sintetica.actividades_curriculares_instancia:
-                # Acceso a Materia
                 mat_nom = ac.cursada.materia.nombre if ac.cursada and ac.cursada.materia else "Desconocida"
-                
-                # Acceso a Profesor (El modelo Profesor tiene el campo 'nombre')
-                # Asumimos que quieres 'nombre' o que la combinación de nombre/apellido es el campo 'nombre'.
-                # Si usas un campo combinado como 'nombre_completo', ajusta aquí.
                 prof_nom = ac.profesor.nombre if ac.profesor else "Desconocido"
                 
-                # Acceso a Cuatrimestre
-                # El campo cuatrimestre_id se relaciona con Cuatrimestre. El dato es el año y el periodo.
-                # Asumimos que tienes una propiedad calculada o un campo que combina año y periodo. 
-                # Si el campo existe en el ORM Cursada:
-                # cuatri = ac.cursada.cuatrimestre_info if ac.cursada and hasattr(ac.cursada, 'cuatrimestre_info') else "N/A"
-                # Si el campo se construye a partir de la relación Cuatrimestre:
-                cuatri = f"{ac.cursada.cuatrimestre.anio} - {ac.cursada.cuatrimestre.periodo.value}" if ac.cursada and ac.cursada.cuatrimestre else "N/A"
+                # Construcción segura del cuatrimestre
+                cuatri = "N/A"
+                if ac.cursada and ac.cursada.cuatrimestre:
+                    anio = ac.cursada.cuatrimestre.anio
+                    # Manejo seguro del Enum
+                    periodo = ac.cursada.cuatrimestre.periodo
+                    periodo_str = periodo.value if hasattr(periodo, 'value') else str(periodo)
+                    cuatri = f"{anio} - {periodo_str}"
 
 
                 lista_informes.append({
@@ -101,20 +102,53 @@ def get_detalles_instancia_sintetico(
                     "materia_nombre": mat_nom,
                     "profesor_nombre": prof_nom,
                     "cuatrimestre_info": str(cuatri),
-                    "equipamiento": getattr(ac, 'equipamiento', None),
-                    "bibliografia": getattr(ac, 'bibliografia', None),
+                    "equipamiento": "", # Se enviará vacío para no romper
+                    "bibliografia": "", # Se enviará vacío para no romper
                     "estado": ac.estado
                 })
 
-        # 4. Combinar y devolver la respuesta
+        # 4. Retorno
         respuesta = instrumento_schemas.InstrumentoCompleto.model_validate(plantilla)
         respuesta.informes_curriculares_asociados = lista_informes
         
         return respuesta
 
-    except HTTPException as e:
-        raise e
     except Exception as e:
-        # Imprime el error detallado para facilitar la depuración
-        print(f"Error detallado: {e}")
-        raise HTTPException(status_code=500, detail=f"Error obteniendo detalles: {str(e)}")
+        print(f"Error detallado al obtener detalles: {e}")
+        raise HTTPException(status_code=500, detail=f"Error interno: {str(e)}")
+    
+@router.post(
+    "/instancia/{instancia_id}/responder",
+    status_code=status.HTTP_201_CREATED
+)
+def responder_informe_sintetico(
+    instancia_id: int,
+    respuestas_data: RespuestaSetCreate,
+    db: Session = Depends(get_db),
+    current_user: AdminDepartamento = Depends(get_current_admin_departamento)
+):
+    
+    # Validar que el usuario tenga un departamento asignado (por seguridad)
+    if not current_user.departamento_id:
+        raise HTTPException(status_code=403, detail="El usuario no tiene un departamento asignado.")
+
+    try:
+        # Llamamos al servicio pasando el ID del departamento del usuario
+        respuesta_services.crear_submission_departamento(
+            db=db,
+            instancia_id=instancia_id,
+            departamento_id=current_user.departamento_id, 
+            respuestas_data=respuestas_data
+        )
+        return {"message": "Informe Sintético completado exitosamente."}
+        
+    except (BadRequest, NotFound, PermissionDenied) as e: # Capturar excepciones de servicio
+        status_code = getattr(e, "status_code", 400) # Fallback a 400
+        if isinstance(e, NotFound): status_code = 404
+        if isinstance(e, PermissionDenied): status_code = 403
+        
+        raise HTTPException(status_code=status_code, detail=str(e))
+        
+    except Exception as e:
+        print(f"Error: {e}")
+        raise HTTPException(status_code=500, detail="Error interno al procesar el informe.")

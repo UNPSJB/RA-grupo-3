@@ -164,3 +164,20 @@ class CerrarEncuestaBody(BaseModel):
 class GenerarSinteticoRequest(BaseModel):
     departamento_id: int
     fecha_fin_informe: Optional[datetime] = None 
+
+#estadisticas del informe
+class StatDato(BaseModel):
+    label: str
+    value: int
+
+class DashboardDepartamentoStats(BaseModel):
+    # Gráfico 1: Semáforo de cumplimiento (Donut Chart)
+    informes_total: int
+    informes_pendientes: int
+    informes_completados: int
+    
+    # Gráfico 2: Cobertura de Contenidos (Bar Chart - Sección 2.A)
+    cobertura_contenidos: List[StatDato]
+    
+    # Listado: Últimas necesidades detectadas (Sección 1)
+    necesidades_recientes: List[str]

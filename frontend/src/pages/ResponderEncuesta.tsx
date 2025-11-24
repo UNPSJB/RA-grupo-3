@@ -1,9 +1,15 @@
-import React, { useEffect, useState, useMemo } from "react";
-import { useParams, useNavigate, useLocation } from "react-router-dom";
-import { useAuth } from "../auth/AuthContext.tsx";
-import BarraProgreso from "../components/estadisticas/BarraProgreso.tsx";
+import React, { useState, useEffect, useMemo } from "react";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
+import { jsPDF } from "jspdf";
+import autoTable from "jspdf-autotable";
+import ResumenEncuesta from "../components/estadisticas/ResumenEncuesta";
+import { useAuth } from "../auth/AuthContext";
+import BarraProgreso from "../components/estadisticas/BarraProgreso";
+
+const API_BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
 
 // --- Interfaces ---
+
 interface Opcion {
   id: number;
   texto: string;
@@ -12,8 +18,9 @@ interface Opcion {
 interface Pregunta {
   id: number;
   texto: string;
-  tipo: string;
-  opciones: Opcion[];
+  tipo: "REDACCION" | "MULTIPLE_CHOICE";
+  opciones?: Opcion[];
+  origen_datos?: string;
 }
 
 interface Seccion {
@@ -22,96 +29,87 @@ interface Seccion {
   preguntas: Pregunta[];
 }
 
-interface PlantillaEncuesta {
+interface PlantillaReporte {
   id: number;
   titulo: string;
-  descripcion?: string;
+  descripcion: string;
   secciones: Seccion[];
+  materia_nombre: string;
+  comision_nombre: string;
+  anio: number;
 }
 
-const API_BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
+interface ResultadoOpcion {
+  opcion_id: number;
+  opcion_texto: string;
+  cantidad: number;
+}
+interface ResultadoPregunta {
+  pregunta_id: number;
+  pregunta_texto: string;
+  pregunta_tipo: "MULTIPLE_CHOICE" | "REDACCION";
+  resultados_opciones: ResultadoOpcion[] | null;
+  respuestas_texto: { texto: string }[] | null;
+}
+interface ResultadoSeccion {
+  seccion_nombre: string;
+  resultados_por_pregunta: ResultadoPregunta[];
+}
 
-const ResponderEncuesta: React.FC = () => {
+const ResponderReportes: React.FC = () => {
   const { instanciaId } = useParams<{ instanciaId: string }>();
   const navigate = useNavigate();
   const location = useLocation();
   const { token, logout } = useAuth();
 
-  const { materiaNombre, profesorNombre } = (location.state as {
-    materiaNombre?: string;
-    profesorNombre?: string;
-  }) || { materiaNombre: "Encuesta", profesorNombre: undefined };
-
-  const [plantilla, setPlantilla] = useState<PlantillaEncuesta | null>(null);
+  // --- Estados de Datos ---
+  const [plantilla, setPlantilla] = useState<PlantillaReporte | null>(null);
   const [respuestas, setRespuestas] = useState<{
-    [preguntaId: number]: string | number;
+    [key: number]: string | number;
   }>({});
+  const [resultadosEncuesta, setResultadosEncuesta] = useState<
+    ResultadoSeccion[] | null
+  >(null);
 
+  // --- Estados de UI ---
   const [loading, setLoading] = useState(true);
   const [mensaje, setMensaje] = useState<string | null>(null);
-  const [encuestaCompletada, setEncuestaCompletada] = useState(false);
+  const [reporteCompletado, setReporteCompletado] = useState(false);
   const [cargandoEnvio, setCargandoEnvio] = useState(false);
-
   const [activeTab, setActiveTab] = useState(0);
   const [errorPreguntaId, setErrorPreguntaId] = useState<number | null>(null);
+  const [resumenParaCopiar, setResumenParaCopiar] = useState<string>("");
 
-  const totalPreguntas = useMemo(() => {
-    if (!plantilla) return 0;
-    return plantilla.secciones.reduce(
-      (acc, seccion) => acc + seccion.preguntas.length,
-      0
-    );
-  }, [plantilla]);
+  // --- Datos de Cursada (Header) ---
+  const stateData = location.state as {
+    materiaNombre?: string;
+    profesorNombre?: string;
+    anio?: number;
+  } | null;
 
-  const respuestasCount = useMemo(() => {
-    return Object.values(respuestas).filter(
-      (v) => v !== "" && v !== undefined && v !== null
-    ).length;
-  }, [respuestas]);
-
-  const isSeccionActualCompleta = useMemo(() => {
-    if (!plantilla || !plantilla.secciones[activeTab]) return false;
-    const seccionActual = plantilla.secciones[activeTab];
-    //Filtramos las preguntas que son obligatorias
-    const preguntasObligatorias = seccionActual.preguntas.filter(
-      (p) => p.tipo === "MULTIPLE_CHOICE"
-    );
-    //Veo si hay valor en el estado de respuestas
-    return preguntasObligatorias.every((p) => {
-      const valor = respuestas[p.id];
-      return valor !== undefined && valor !== null && valor !== "";
-    });
-  }, [plantilla, activeTab, respuestas]);
-
+  // --- Carga del Reporte (API Real) ---
   useEffect(() => {
-    let isMounted = true;
-
     if (!token) {
-      setLoading(false);
-      setMensaje("Necesitas iniciar sesión para responder la encuesta.");
+      console.error("No hay token, no se puede cargar el reporte.");
       return;
     }
-
-    const fetchPlantillaParaInstancia = async () => {
+    let isMounted = true;
+    const fetchReporte = async () => {
       setLoading(true);
       setMensaje(null);
       setPlantilla(null);
       setErrorPreguntaId(null);
-      setActiveTab(0);
 
-      if (!instanciaId || isNaN(Number(instanciaId))) {
-        setMensaje("ID de instancia inválido en la URL.");
+      if (!instanciaId) {
+        setMensaje("No se proporcionó ID de instancia");
         setLoading(false);
         return;
       }
-
       try {
         const response = await fetch(
-          `${API_BASE_URL}/encuestas-abiertas/instancia/${instanciaId}/detalles`,
+          `${API_BASE_URL}/encuestas-abiertas/reporte/instancia/${instanciaId}/detalles`,
           {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
+            headers: { Authorization: `Bearer ${token}` },
           }
         );
 
@@ -120,30 +118,24 @@ const ResponderEncuesta: React.FC = () => {
             logout();
             return;
           }
-          let errorDetail = `Error ${response.status}: ${response.statusText}`;
-          try {
-            const errorData = await response.json();
-            errorDetail = errorData.detail || errorDetail;
-          } catch (e) {}
+          const errData = await response.json();
           if (response.status === 404) {
-            setMensaje(
-              "La encuesta solicitada no se encontró o ya no está activa."
-            );
+            setMensaje("El reporte no se encontró o ya no está activo.");
           } else {
-            setMensaje(errorDetail);
+            setMensaje(errData.detail || `Error ${response.status}`);
           }
-          throw new Error(errorDetail);
+          throw new Error(errData.detail || `Error ${response.status}`);
         }
-        const plantillaData: PlantillaEncuesta = await response.json();
 
+        const data = await response.json();
         if (isMounted) {
-          setPlantilla(plantillaData);
+          setPlantilla(data);
         }
       } catch (error) {
-        console.error("Error al obtener la plantilla:", error);
+        console.error("Error fetching report: ", error);
         if (isMounted && !mensaje) {
           setMensaje(
-            `Error al cargar la encuesta: ${
+            `Error al cargar el reporte: ${
               error instanceof Error ? error.message : "Error desconocido"
             }`
           );
@@ -154,102 +146,176 @@ const ResponderEncuesta: React.FC = () => {
         }
       }
     };
-
-    fetchPlantillaParaInstancia();
+    fetchReporte();
 
     return () => {
       isMounted = false;
     };
   }, [instanciaId, token, logout]);
 
-  const manejarCambio = (preguntaId: number, valor: string | number) => {
-    setRespuestas((prev) => ({ ...prev, [preguntaId]: valor }));
+  // --- Carga de Resultados de Encuesta (API Real) ---
+  useEffect(() => {
+    if (!token) return;
+    const fetchResultados = async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/profesor/mis-resultados`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) {
+          if (res.status === 401 || res.status === 403) {
+            logout();
+          }
+          throw new Error("Error al obtener resultados de encuesta");
+        }
+        const json = await res.json();
+        const first = Array.isArray(json) && json.length > 0 ? json[0] : null;
+        setResultadosEncuesta(first ? first.resultados_por_seccion : []);
+      } catch (err) {
+        console.error("Error cargando resultados encuesta:", err);
+      }
+    };
+    fetchResultados();
+  }, [token, logout]);
+
+  // --- Lógica de Validación ---
+
+  // Verifica si una sección específica está completa (todas las obligatorias respondidas)
+  const isStepComplete = (index: number) => {
+    if (!plantilla) return false;
+    const seccion = plantilla.secciones[index];
+    if (!seccion) return false;
+
+    // Filtramos las preguntas obligatorias (En este caso, las MULTIPLE_CHOICE)
+    const obligatorias = seccion.preguntas.filter(
+      (p) => p.tipo === "MULTIPLE_CHOICE"
+    );
+
+    return obligatorias.every((p) => {
+      const val = respuestas[p.id];
+      return val !== undefined && val !== "" && val !== null;
+    });
+  };
+
+  // Verifica si se permite navegar a una pestaña destino
+  const canNavigateToStep = (targetIndex: number) => {
+    // Siempre se puede ir al inicio o volver atrás
+    if (targetIndex <= activeTab) return true;
+
+    // Para avanzar, todas las secciones anteriores a la destino deben estar completas
+    for (let i = 0; i < targetIndex; i++) {
+      if (!isStepComplete(i)) return false;
+    }
+    return true;
+  };
+
+  // --- Handlers ---
+
+  const handleChange = (preguntaId: number, value: string | number) => {
+    setRespuestas((prev) => ({ ...prev, [preguntaId]: value }));
     if (errorPreguntaId === preguntaId) {
       setErrorPreguntaId(null);
       setMensaje(null);
     }
   };
 
-  // Nuevos Handlers de Navegación
-  const irSiguiente = () => {
-    if (plantilla && activeTab < plantilla.secciones.length - 1) {
-      setActiveTab(activeTab + 1);
-      window.scrollTo(0, 0); // Subir al inicio al cambiar de página
+  const handleCopyResumen = (preguntaId: number) => {
+    if (resumenParaCopiar) {
+      handleChange(preguntaId, resumenParaCopiar);
     }
   };
 
-  const irAnterior = () => {
-    if (activeTab > 0) {
-      setActiveTab(activeTab - 1);
+  const handleNext = () => {
+    // Validar sección actual antes de avanzar
+    if (!isStepComplete(activeTab)) {
+      setMensaje(
+        "Por favor, complete todas las preguntas obligatorias (*) de esta sección."
+      );
+      window.scrollTo(0, 0);
+      return;
+    }
+
+    if (plantilla && activeTab < plantilla.secciones.length - 1) {
+      setActiveTab((prev) => prev + 1);
+      setMensaje(null);
       window.scrollTo(0, 0);
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handlePrev = () => {
+    if (activeTab > 0) {
+      setActiveTab((prev) => prev - 1);
+      setMensaje(null);
+      window.scrollTo(0, 0);
+    }
+  };
+
+  const handleSubmit = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
 
     if (!token) {
-      setMensaje("Tu sesión expiró. Por favor, inicia sesión de nuevo.");
+      alert("Tu sesión expiró. Por favor, inicia sesión de nuevo.");
       logout();
       return;
     }
-
     if (!instanciaId || !plantilla) return;
 
-    setErrorPreguntaId(null);
-    setMensaje(null);
-
-    // Validación global de obligatorias antes de enviar
+    // Validación Final Global
     const preguntasObligatorias = plantilla.secciones
       .flatMap((s) => s.preguntas)
       .filter((p) => p.tipo === "MULTIPLE_CHOICE");
 
-    const primeraPreguntaSinRespuesta = preguntasObligatorias.find(
+    const primeraFaltante = preguntasObligatorias.find(
       (p) => !respuestas[p.id]
     );
 
-    if (primeraPreguntaSinRespuesta) {
-      // Encontrar en qué sección está la pregunta que falta
-      let tabIndex = -1;
-      for (let i = 0; i < plantilla.secciones.length; i++) {
-        if (
-          plantilla.secciones[i].preguntas.some(
-            (p) => p.id === primeraPreguntaSinRespuesta.id
-          )
-        ) {
-          tabIndex = i;
-          break;
-        }
-      }
-
-      // Si la pregunta está en otra sección, llevamos al usuario ahí
-      if (tabIndex !== -1 && tabIndex !== activeTab) {
-        setActiveTab(tabIndex);
-      }
-
-      setErrorPreguntaId(primeraPreguntaSinRespuesta.id);
-      setMensaje(
-        "Faltan preguntas obligatorias (*). Hemos resaltado la que falta."
+    if (primeraFaltante) {
+      const indexSeccion = plantilla.secciones.findIndex((s) =>
+        s.preguntas.some((p) => p.id === primeraFaltante.id)
       );
+      if (indexSeccion !== -1) setActiveTab(indexSeccion);
 
-      // Pequeño scroll hacia el mensaje de error o la pregunta
-      window.scrollTo(0, 200);
+      setErrorPreguntaId(primeraFaltante.id);
+      setMensaje("Faltan preguntas obligatorias (*).");
+      window.scrollTo(0, 0);
       return;
     }
 
+    if (
+      !confirm(
+        "¿Estás seguro de enviar el reporte? No podrás editarlo después."
+      )
+    )
+      return;
+
     setCargandoEnvio(true);
 
-    const payload = {
-      respuestas: Object.entries(respuestas).map(([preguntaId, valor]) => ({
-        pregunta_id: Number(preguntaId),
-        opcion_id: typeof valor === "number" ? valor : undefined,
-        texto: typeof valor === "string" ? valor : undefined,
-      })),
-    };
+    // Armar payload
+    const allPreguntas = plantilla.secciones.flatMap(
+      (seccion) => seccion.preguntas
+    );
+    const payloadRespuestas = Object.entries(respuestas)
+      .map(([preguntaId, valor]) => {
+        const pregunta = allPreguntas.find(
+          (p) => p.id === parseInt(preguntaId)
+        );
+        if (!pregunta) return null;
+
+        if (pregunta.tipo === "MULTIPLE_CHOICE") {
+          return {
+            pregunta_id: parseInt(preguntaId),
+            opcion_id: valor as number,
+          };
+        } else {
+          return { pregunta_id: parseInt(preguntaId), texto: String(valor) };
+        }
+      })
+      .filter(Boolean);
+
+    const payload = { respuestas: payloadRespuestas };
 
     try {
       const response = await fetch(
-        `${API_BASE_URL}/encuestas-abiertas/instancia/${instanciaId}/responder`,
+        `${API_BASE_URL}/reportes-abiertas/instancia/${instanciaId}/responder`,
         {
           method: "POST",
           headers: {
@@ -260,25 +326,23 @@ const ResponderEncuesta: React.FC = () => {
         }
       );
 
-      if (!response.ok) {
+      if (response.ok) {
+        setReporteCompletado(true);
+        setMensaje("¡Reporte enviado correctamente!");
+      } else {
         if (response.status === 401 || response.status === 403) {
           logout();
           return;
         }
-        let errorDetail = `Error ${response.status}`;
-        try {
-          const errorData = await response.json();
-          errorDetail = errorData.detail || errorDetail;
-        } catch (e) {}
-        throw new Error(errorDetail);
+        const errorData = await response.json();
+        throw new Error(
+          errorData.detail || "Error al enviar. Intente de nuevo."
+        );
       }
-
-      setMensaje("¡Respuestas enviadas correctamente!");
-      setEncuestaCompletada(true);
     } catch (error) {
-      console.error("Error al enviar:", error);
+      console.error("Error de red o al enviar el reporte:", error);
       setMensaje(
-        `Error al enviar respuestas: ${
+        `Error al enviar el reporte: ${
           error instanceof Error ? error.message : "Error desconocido"
         }`
       );
@@ -287,37 +351,102 @@ const ResponderEncuesta: React.FC = () => {
     }
   };
 
+  // --- PDF Export ---
+  const handleDescargarPDF = () => {
+    if (!plantilla) return;
+    const doc = new jsPDF();
+    doc.setFontSize(16);
+    doc.text(
+      plantilla.materia_nombre || "Informe de Actividad Curricular",
+      14,
+      22
+    );
+    doc.setFontSize(12);
+    doc.text(
+      `${plantilla.comision_nombre || ""} - Año ${plantilla.anio || ""}`,
+      14,
+      29
+    );
+    doc.setFontSize(10);
+    doc.setTextColor(100);
+    doc.text(plantilla.titulo || "", 14, 36);
+
+    const bodyData: any[] = [];
+    plantilla.secciones.forEach((seccion) => {
+      bodyData.push([
+        {
+          content: seccion.nombre,
+          colSpan: 2,
+          styles: {
+            fontStyle: "bold",
+            fillColor: [240, 240, 240],
+            textColor: [15, 23, 42],
+          },
+        },
+      ]);
+      seccion.preguntas.forEach((pregunta) => {
+        let respuestaTexto = "No respondida";
+        const respuesta = respuestas[pregunta.id];
+        if (pregunta.tipo === "MULTIPLE_CHOICE") {
+          const opcion = pregunta.opciones?.find((o) => o.id === respuesta);
+          respuestaTexto = opcion?.texto ?? "No respondida";
+        } else {
+          respuestaTexto = respuesta ? String(respuesta) : "No respondida";
+        }
+        bodyData.push([pregunta.texto, respuestaTexto]);
+      });
+    });
+
+    autoTable(doc, {
+      startY: 45,
+      head: [["Pregunta", "Respuesta"]],
+      body: bodyData,
+      theme: "grid",
+      headStyles: { fillColor: [51, 65, 85] },
+    });
+
+    const nombreArchivo = (
+      plantilla.materia_nombre ||
+      plantilla.titulo ||
+      "Reporte"
+    ).replace(/\s+/g, "_");
+    doc.save(`Reporte_${nombreArchivo}.pdf`);
+  };
+
+  // --- Renderizado ---
+
   if (loading)
     return (
-      <p className="text-center mt-8 animate-pulse text-gray-500">
-        Cargando encuesta...
-      </p>
+      <div className="p-10 text-center text-gray-500 animate-pulse">
+        Cargando reporte...
+      </div>
     );
 
   if (mensaje && mensaje.toLowerCase().includes("error") && !plantilla) {
     return (
       <p className="text-center mt-8 text-red-600 bg-red-100 p-4 rounded border border-red-300">
-        Error: {mensaje}
+        {mensaje}
       </p>
     );
   }
+
   if (!plantilla)
     return (
       <p className="text-center mt-8 text-orange-600">
-        No se encontró la información de la encuesta.
+        No se encontró la información del reporte.
       </p>
     );
 
-  if (encuestaCompletada) {
+  if (reporteCompletado) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[70vh] space-y-6 text-center">
-        <div className="bg-white p-8 rounded-lg shadow-md max-w-md">
+      <div className="flex flex-col items-center justify-center min-h-[70vh] space-y-6 text-center animate-fadeIn">
+        <div className="bg-white p-8 rounded-lg shadow-md max-w-md border border-gray-200">
           <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <svg
               className="w-8 h-8 text-green-600"
               fill="none"
               stroke="currentColor"
-              viewBox="0 0 24"
+              viewBox="0 0 24 24"
             >
               <path
                 strokeLinecap="round"
@@ -328,21 +457,21 @@ const ResponderEncuesta: React.FC = () => {
             </svg>
           </div>
           <h3 className="text-xl font-bold text-gray-800 mb-2">
-            ¡Respuestas enviadas correctamente!
+            ¡Reporte enviado correctamente!
           </h3>
           <p className="text-gray-600 mb-4">
-            Gracias por completar la encuesta.
+            Gracias por completar el informe.
           </p>
-          <div className="flex justify-center space-x-4">
+          <div className="flex flex-col gap-3">
             <button
-              onClick={() => navigate("/alumno/encuestas")}
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
+              onClick={handleDescargarPDF}
+              className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition w-full"
             >
-              Ver mis encuestas
+              Descargar PDF
             </button>
             <button
-              onClick={() => navigate("/")}
-              className="bg-gray-300 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-400 transition"
+              onClick={() => navigate("/profesores")}
+              className="bg-gray-200 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-300 transition w-full"
             >
               Volver al inicio
             </button>
@@ -352,184 +481,239 @@ const ResponderEncuesta: React.FC = () => {
     );
   }
 
+  // Datos para el header (state o API)
+  const materiaMostrar =
+    plantilla.materia_nombre || stateData?.materiaNombre || "Materia";
+  const anioMostrar =
+    plantilla.anio || stateData?.anio || new Date().getFullYear();
+
   return (
-    <div className="max-w-6xl mx-auto bg-white p-6 sm:p-8 rounded-lg shadow-md mt-6 mb-8 border border-gray-200">
-      <div className="pb-4 mb-4 border-b border-gray-200">
-        <h1 className="text-2xl font-bold text-center text-indigo-800">
-          {materiaNombre || "Encuesta"}
-        </h1>
-        {profesorNombre && (
-          <p className="text-sm text-gray-600 text-center mt-1">
-            Profesor: {profesorNombre}
+    <div className="max-w-4xl mx-auto bg-white p-6 sm:p-8 rounded-lg shadow-md mt-6 mb-8 border border-gray-200">
+      {/* --- Encabezado --- */}
+      <div className="pb-4 mb-4 border-b border-gray-200 text-center">
+        <h1 className="text-2xl font-bold text-indigo-800">{materiaMostrar}</h1>
+        <p className="text-lg text-gray-700 mt-1">
+          Ciclo Lectivo {anioMostrar}
+        </p>
+        <p className="text-sm text-gray-500 mt-2 uppercase tracking-wide">
+          {plantilla.titulo}
+        </p>
+        {plantilla.descripcion && (
+          <p className="text-sm text-gray-600 mt-1 italic max-w-2xl mx-auto">
+            {plantilla.descripcion}
           </p>
         )}
       </div>
 
-      <BarraProgreso actual={respuestasCount} total={totalPreguntas} />
+      {/* --- Barra de Progreso --- */}
+      {plantilla.secciones.length > 0 && (
+        <div className="mb-6">
+          <div className="flex justify-between text-xs font-medium text-gray-500 mb-1">
+            <span>Progreso</span>
+            <span>
+              {Math.round((activeTab / plantilla.secciones.length) * 100)}%
+            </span>
+          </div>
+          <BarraProgreso
+            actual={activeTab}
+            total={plantilla.secciones.length}
+          />
+        </div>
+      )}
 
-      {/* --- Pestañas: Solo visuales (No clickeables) --- */}
-      <div className="flex border-b border-gray-300 mb-6 -mx-6 sm:-mx-8 px-6 sm:px-8 overflow-x-auto">
-        {plantilla.secciones?.map((seccion, index) => (
-          <button
+      {/* --- Pestañas / Pasos (Validación Aplicada) --- */}
+      <div className="flex border-b border-gray-200 mb-6 overflow-x-auto no-scrollbar">
+        {plantilla.secciones.map((seccion, index) => {
+          const isActive = activeTab === index;
+          const isCompleted = index < activeTab;
+          // Solo habilitamos si es la actual, anterior, o si las previas están listas
+          const isNavigable = canNavigateToStep(index);
+
+          return (
+            <button
+              key={seccion.id}
+              type="button"
+              disabled={!isNavigable}
+              onClick={() => {
+                if (isNavigable) {
+                  setActiveTab(index);
+                  setMensaje(null);
+                }
+              }}
+              className={`
+                py-3 px-5 font-medium text-sm whitespace-nowrap transition-colors duration-150 focus:outline-none border-b-2 flex items-center gap-2
+                ${
+                  isActive
+                    ? "border-indigo-600 text-indigo-600"
+                    : isNavigable
+                    ? "border-transparent text-gray-500 hover:text-indigo-600 hover:bg-gray-50"
+                    : "border-transparent text-gray-300 cursor-not-allowed opacity-60" // Estilo deshabilitado
+                }
+              `}
+            >
+              {isCompleted && <span className="text-green-500 text-xs">✓</span>}
+              {seccion.nombre.includes(":")
+                ? seccion.nombre.split(":")[0]
+                : `Paso ${index + 1}`}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* --- Formulario --- */}
+      <div className="space-y-6 min-h-[300px]">
+        {plantilla.secciones.map((seccion, index) => (
+          <div
             key={seccion.id}
-            type="button"
-            disabled
-            className={`py-3 px-5 font-medium text-sm whitespace-nowrap transition-colors duration-150 cursor-default ${
-              activeTab === index
-                ? "border-b-2 border-indigo-600 text-indigo-600 font-bold"
-                : "text-gray-400"
-            }`}
-            title={seccion.nombre}
+            className={
+              activeTab === index ? "block space-y-6 animate-fadeIn" : "hidden"
+            }
           >
-            {seccion.nombre.includes(":")
-              ? seccion.nombre.split(":")[0]
-              : `Parte ${index + 1}`}
-          </button>
+            <h3 className="text-lg font-bold text-gray-800 border-b pb-2">
+              {seccion.nombre}
+            </h3>
+
+            {seccion.preguntas.map((pregunta) => {
+              const tipo = pregunta.tipo;
+              const hasError = errorPreguntaId === pregunta.id;
+
+              return (
+                <div
+                  key={pregunta.id}
+                  className={`p-5 bg-gray-50 rounded-lg border ${
+                    hasError
+                      ? "border-red-400 ring-1 ring-red-200"
+                      : "border-gray-200"
+                  } transition-all`}
+                >
+                  <p className="font-medium mb-3 text-gray-800 text-base">
+                    {pregunta.texto}
+                    {tipo === "MULTIPLE_CHOICE" && (
+                      <span className="text-red-500 ml-1" title="Obligatorio">
+                        *
+                      </span>
+                    )}
+                  </p>
+
+                  {tipo === "REDACCION" ? (
+                    <>
+                      {pregunta.origen_datos === "resultados_encuesta" && (
+                        <div className="mb-3">
+                          <ResumenEncuesta
+                            resultadosEncuesta={resultadosEncuesta}
+                            onGenerarResumen={setResumenParaCopiar}
+                          />
+                          {resumenParaCopiar && (
+                            <button
+                              type="button"
+                              onClick={() => handleCopyResumen(pregunta.id)}
+                              className="mt-2 text-xs bg-blue-100 text-blue-700 px-3 py-1 rounded hover:bg-blue-200"
+                            >
+                              Pegar resumen generado
+                            </button>
+                          )}
+                        </div>
+                      )}
+                      <textarea
+                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                        placeholder="Escriba su respuesta..."
+                        rows={5}
+                        value={(respuestas[pregunta.id] as string) || ""}
+                        onChange={(e) =>
+                          handleChange(pregunta.id, e.target.value)
+                        }
+                      />
+                    </>
+                  ) : tipo === "MULTIPLE_CHOICE" ? (
+                    <div className="space-y-2 mt-2">
+                      {pregunta.opciones?.map((opcion) => (
+                        <label
+                          key={opcion.id}
+                          className={`flex items-center space-x-3 cursor-pointer p-3 rounded-md border transition-colors ${
+                            Number(respuestas[pregunta.id]) === opcion.id
+                              ? "bg-indigo-50 border-indigo-200"
+                              : "bg-white border-gray-200 hover:bg-gray-100"
+                          }`}
+                        >
+                          <input
+                            type="radio"
+                            name={`pregunta-${pregunta.id}`}
+                            value={opcion.id}
+                            checked={
+                              Number(respuestas[pregunta.id]) === opcion.id
+                            }
+                            onChange={() =>
+                              handleChange(pregunta.id, opcion.id)
+                            }
+                            className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300"
+                          />
+                          <span className="text-gray-700">{opcion.texto}</span>
+                        </label>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+              );
+            })}
+          </div>
         ))}
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
-        {/* --- Contenido de la Sección Activa --- */}
-        <div>
-          {plantilla.secciones?.map((seccion, index) => (
-            <div
-              key={seccion.id}
-              className={
-                activeTab === index
-                  ? "block space-y-5 animate-fadeIn"
-                  : "hidden"
-              }
-            >
-              {/* Título de la sección para contexto */}
-              <h3 className="text-lg font-semibold text-gray-700 border-b pb-2 mb-4">
-                {seccion.nombre}
-              </h3>
-
-              {seccion.preguntas.map((pregunta) => {
-                const tipo = pregunta.tipo;
-                const esRedaccion = tipo === "REDACCION";
-                const esMultipleChoice = tipo === "MULTIPLE_CHOICE";
-                const hasError = errorPreguntaId === pregunta.id;
-
-                return (
-                  <div
-                    key={pregunta.id}
-                    className={`p-4 bg-gray-50 rounded-md border ${
-                      hasError
-                        ? "border-red-400 ring-2 ring-red-100"
-                        : "border-gray-100"
-                    } transition-all`}
-                  >
-                    <p className="font-medium mb-3 text-gray-800">
-                      {pregunta.texto}
-                      {esMultipleChoice && (
-                        <span className="text-red-500 ml-1">*</span>
-                      )}
-                    </p>
-
-                    {esRedaccion ? (
-                      <textarea
-                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition duration-150 ease-in-out"
-                        placeholder="Escribe tu respuesta..."
-                        rows={4}
-                        value={String(respuestas[pregunta.id] ?? "")}
-                        onChange={(e) =>
-                          manejarCambio(pregunta.id, e.target.value)
-                        }
-                      />
-                    ) : esMultipleChoice ? (
-                      <div className="space-y-2">
-                        {pregunta.opciones.map((opcion) => (
-                          <label
-                            key={opcion.id}
-                            className="flex items-center space-x-3 cursor-pointer p-3 rounded hover:bg-indigo-50 transition-colors"
-                          >
-                            <input
-                              type="radio"
-                              name={`pregunta-${pregunta.id}`}
-                              value={opcion.id}
-                              checked={
-                                Number(respuestas[pregunta.id]) === opcion.id
-                              }
-                              onChange={() =>
-                                manejarCambio(pregunta.id, opcion.id)
-                              }
-                              className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300"
-                            />
-                            <span className="text-gray-700">
-                              {opcion.texto}
-                            </span>
-                          </label>
-                        ))}
-                      </div>
-                    ) : null}
-                  </div>
-                );
-              })}
-            </div>
-          ))}
+      {/* --- Mensajes de Estado --- */}
+      {mensaje && (
+        <div
+          className={`mt-6 text-center font-medium p-3 rounded border ${
+            mensaje.toLowerCase().includes("error") ||
+            mensaje.includes("Faltan") ||
+            mensaje.includes("complete")
+              ? "text-red-700 bg-red-50 border-red-200"
+              : "text-green-700 bg-green-50 border-green-200"
+          }`}
+        >
+          {mensaje}
         </div>
+      )}
 
-        {mensaje && (
-          <div
-            className={`text-center font-medium p-4 rounded border ${
-              mensaje.toLowerCase().includes("error") ||
-              mensaje.includes("Faltan")
-                ? "text-red-700 bg-red-100 border-red-300"
-                : "text-green-700 bg-green-100 border-green-300"
-            }`}
-          >
-            {mensaje}
-          </div>
-        )}
+      {/* --- Botonera de Navegación Inferior --- */}
+      <div className="flex justify-between items-center pt-8 mt-8 border-t border-gray-200">
+        <button
+          type="button"
+          onClick={handlePrev}
+          disabled={activeTab === 0}
+          className={`px-6 py-2.5 rounded-lg font-medium transition-colors border ${
+            activeTab === 0
+              ? "text-gray-300 border-gray-200 cursor-not-allowed bg-gray-50"
+              : "text-gray-700 border-gray-300 hover:bg-gray-100 bg-white"
+          }`}
+        >
+          ← Anterior
+        </button>
 
-        {/* --- Botonera de Navegación --- */}
-        <div className="flex justify-between items-center pt-6 mt-8 border-t border-gray-200">
-          {/* Botón Anterior */}
+        {activeTab < (plantilla?.secciones.length || 0) - 1 ? (
           <button
             type="button"
-            onClick={irAnterior}
-            disabled={activeTab === 0}
-            className={`px-6 py-2 rounded-lg font-medium transition-colors border ${
-              activeTab === 0
-                ? "text-gray-300 border-gray-200 cursor-not-allowed bg-gray-50"
-                : "text-gray-700 border-gray-300 hover:bg-gray-100 hover:text-gray-900"
+            onClick={handleNext}
+            className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded-lg font-semibold shadow-md transition-all transform hover:-translate-y-0.5"
+          >
+            Siguiente Paso →
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={() => handleSubmit()}
+            disabled={cargandoEnvio}
+            className={`px-8 py-2.5 rounded-lg font-bold text-white shadow-md transition-all ${
+              cargandoEnvio
+                ? "bg-green-400 cursor-wait"
+                : "bg-green-600 hover:bg-green-700 transform hover:-translate-y-0.5"
             }`}
           >
-            ← Anterior
+            {cargandoEnvio ? "Enviando..." : "Finalizar y Enviar"}
           </button>
-
-          {/* Botón Siguiente o Finalizar */}
-          {activeTab < (plantilla.secciones.length || 0) - 1 ? (
-            <button
-              type="button"
-              onClick={irSiguiente}
-              disabled={!isSeccionActualCompleta}
-              className={`px-6 py-2.5 rounded-lg font-semibold transition duration-150 ease-in-out shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 ${
-                !isSeccionActualCompleta
-                  ? "bg-indigo-300 text-white cursor-not-allowed" // Estilo deshabilitado
-                  : "bg-indigo-600 text-white hover:bg-indigo-700 hover:shadow focus:ring-indigo-500" // Estilo habilitado
-              }`}
-            >
-              Siguiente →
-            </button>
-          ) : (
-            <button
-              type="submit"
-              disabled={cargandoEnvio || !isSeccionActualCompleta}
-              className={`px-8 py-2.5 rounded-lg font-semibold transition duration-150 ease-in-out shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 ${
-                cargandoEnvio || !isSeccionActualCompleta
-                  ? "bg-green-300 text-white cursor-not-allowed" // Estilo deshabilitado
-                  : "bg-green-600 text-white hover:bg-green-700 hover:shadow-lg focus:ring-green-500" // Estilo habilitado
-              }`}
-            >
-              {cargandoEnvio ? "Enviando..." : "Finalizar y Enviar"}
-            </button>
-          )}
-        </div>
-      </form>
+        )}
+      </div>
     </div>
   );
 };
 
-export default ResponderEncuesta;
+export default ResponderReportes;

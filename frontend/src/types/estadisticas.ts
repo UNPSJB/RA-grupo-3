@@ -39,8 +39,8 @@ export interface PlantillaBase {
   id: number;
   titulo: string;
   descripcion: string;
-  tipo: string; 
-  estado: string; 
+  tipo: string;
+  estado: string;
   anexo?: string | null;
 }
 
@@ -60,4 +60,18 @@ export interface InformeSinteticoResultado {
   fecha_generacion: string; // Las fechas llegan como strings ISO
   cantidad_total_reportes: number;
   resultados_por_seccion: ResultadoSeccion[];
+}
+
+//para el dpto
+export interface StatDato {
+  label: string;
+  value: number;
+}
+
+export interface DashboardDepartamentoStats {
+  informes_total: number;
+  informes_pendientes: number;
+  informes_completados: number;
+  cobertura_contenidos: StatDato[];
+  necesidades_recientes: string[];
 }

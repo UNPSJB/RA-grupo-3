@@ -5,7 +5,7 @@ from typing import Optional, List
 from src.seccion.schemas import Seccion
 from datetime import datetime
 
-# --- CLASES EXISTENTES (NO TOCAR) ---
+
 class InstrumentoPlantillaCreate(BaseModel):
     titulo: str
     descripcion: str
@@ -23,7 +23,7 @@ class InstrumentoPlantillaUpdate(BaseModel):
     titulo: Optional[str] = None
     descripcion: Optional[str] = None
 
-# --- AGREGADO: Estructura simple para el informe curricular hijo ---
+
 class InformeCurricularSimple(BaseModel):
     id: int
     materia_nombre: str
@@ -36,13 +36,12 @@ class InformeCurricularSimple(BaseModel):
     class Config:
         from_attributes = True
 
-# --- MODIFICADO: Agregamos la lista a InstrumentoCompleto ---
+
 class InstrumentoCompleto(InstrumentoPlantilla):
     secciones: List[Seccion] = []
-    # Campo nuevo:
     informes_curriculares_asociados: List[InformeCurricularSimple] = [] 
 
-# --- CLASES EXISTENTES (NO TOCAR) ---
+
 class InformeSinteticoInstanciaBase(BaseModel):
     id: int
     fecha_inicio: datetime
@@ -55,3 +54,7 @@ class InformeSinteticoInstanciaList(InformeSinteticoInstanciaBase):
     plantilla: InstrumentoPlantilla
     departamento_id: int
     cantidad_reportes: int = 0
+
+
+class ResumenResponse(BaseModel):
+    texto_resumen: str

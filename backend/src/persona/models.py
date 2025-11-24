@@ -77,7 +77,7 @@ class Alumno(Persona):
         cascade="all, delete-orphan",
     )
 
-# --- AÑADIR ESTAS CLASES ---
+
 class AdminDepartamento(Persona):
     __tablename__ = "admin_departamento"
     
