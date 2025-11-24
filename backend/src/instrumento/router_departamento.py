@@ -239,3 +239,23 @@ def get_dashboard_general_departamento(
     except Exception as e:
         print(f"Error generando dashboard: {e}")
         raise HTTPException(status_code=500, detail="Error al calcular estadísticas del departamento.")
+    
+@router.get(
+    "/informes-sinteticos/{informe_id}/exportar-completo",
+    response_model=schemas.InformeRespondido
+)
+def descargar_informe_completo(
+    informe_id: int,
+    db: Session = Depends(get_db),
+    admin: AdminDepartamento = Depends(get_current_admin_departamento)
+):
+    """
+    Devuelve el contenido textual completo del informe para generar PDF.
+    """
+    try:
+        return services.obtener_informe_sintetico_respondido(db, informe_id, admin)
+    except (NotFound, BadRequest) as e:
+        raise HTTPException(status_code=e.STATUS_CODE, detail=e.DETAIL)
+    except Exception as e:
+        print(f"Error exportando informe: {e}")
+        raise HTTPException(status_code=500, detail="Error al exportar el informe.")

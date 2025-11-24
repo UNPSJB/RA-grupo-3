@@ -72,3 +72,18 @@ class InstrumentoCompleto(InstrumentoPlantilla):
     
 
     cantidad_inscriptos: Optional[int] = 0
+
+#Para el pdf del informe sintetico
+class PreguntaRespondida(BaseModel):
+    pregunta_texto: str
+    respuesta_texto: str
+
+class SeccionRespondida(BaseModel):
+    seccion_nombre: str
+    preguntas: List[PreguntaRespondida]
+
+class InformeRespondido(BaseModel):
+    titulo: str
+    departamento: str
+    fecha: datetime
+    secciones: List[SeccionRespondida]

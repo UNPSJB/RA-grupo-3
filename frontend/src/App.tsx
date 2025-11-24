@@ -23,11 +23,11 @@ import withLoading from "./components/withLoading.tsx";
 import LoginPage from "./pages/LoginPage.tsx";
 import ProtectedRoute from "./auth/ProtectedRoute.tsx";
 import RedirectHome from "./auth/RedirectHome.tsx";
-import DepartamentoEstadisticas from "./pages/DepartamentoEstadisticas.tsx";
+import DetalleInformeCompleto from "./pages/DetalleInformeCompletado.tsx";
 import DepartamentoEstadisticasCursadas from "./pages/DepartamentoEstadisticasCursadas.tsx";
 import DepartamentoInformesPage from "./pages/DepartamentoInformesPage.tsx";
 import HistorialEncuestas from "./pages/HistorialEncuestas";
-import ResponderInforme from "./pages/ResponderInforme"; 
+import ResponderInforme from "./pages/ResponderInforme";
 
 const MainLayout: React.FC = () => {
   const location = useLocation();
@@ -68,9 +68,7 @@ const ProfesoresHomeWithLoading = withLoading(ProfesoresHome);
 const ResultadosProfesorPageWithLoading = withLoading(ResultadosProfesorPage);
 const ResponderReportesWithLoading = withLoading(ResponderReportes);
 const LoginPageWithLoading = withLoading(LoginPage);
-const DepartamentoEstadisticasWithLoading = withLoading(
-  DepartamentoEstadisticas
-);
+const DetalleInformeCompletoWithLoading = withLoading(DetalleInformeCompleto);
 const DepartamentoEstadisticasCursadasWithLoading = withLoading(
   DepartamentoEstadisticasCursadas
 );
@@ -170,7 +168,7 @@ const App: React.FC = () => {
             {/* ESTADÍSTICAS / INFORMES */}
             <Route
               path="estadisticas"
-              element={<DepartamentoEstadisticasWithLoading />}
+              element={<DetalleInformeCompletoWithLoading />}
             />
             <Route
               path="estadisticas-cursadas"
