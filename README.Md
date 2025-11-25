@@ -41,9 +41,7 @@ Crea un arvhico llamado `.env` dentro de la carpeta `/backend` este archivo es e
 ### 3. Ejecución del Servidor
 Para iniciar el servidor de desarrollo FastAPI:
 
-    # Asegúrate de estar en el directorio /backend y 
-    con el entorno virtual activado.
-    
+    # Asegúrate de estar en el directorio /backend y con el entorno virtual activado.    
     uvicorn src.main:app --reload
 El backend estará corriendo en http://localhost:8000
 La documentación interactiva de la API se puede ver en http://localhost:8000/docs
