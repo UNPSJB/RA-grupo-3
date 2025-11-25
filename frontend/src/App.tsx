@@ -28,6 +28,8 @@ import DepartamentoInformesPage from "./pages/DepartamentoInformesPage.tsx";
 import HistorialEncuestas from "./pages/HistorialEncuestas";
 import ResponderInforme from "./pages/ResponderInforme";
 import ListaReportesProfesor from "./pages/ListaReportesProfesor.tsx";
+import VerReporteProfesor from "./pages/VerReporteProfesor";
+
 
 const MainLayout: React.FC = () => {
   const location = useLocation();
@@ -54,6 +56,7 @@ const MainLayout: React.FC = () => {
   );
 };
 
+const VerReporteProfesorWithLoading = withLoading(VerReporteProfesor);
 const PoliticasPrivacidadWithLoading = withLoading(PoliticasPrivacidad);
 const GestionCicloVidaWithLoading = withLoading(GestionCicloVida);
 const PanelAdminWithLoading = withLoading(PanelAdmin);
@@ -134,15 +137,18 @@ const App: React.FC = () => {
         <Route element={<ProtectedRoute allowedRoles={["DOCENTE"]} />}>
           <Route path="profesores" element={<Outlet />}>
             <Route index element={<ProfesoresHomeWithLoading />} />
-            <Route path="reportes" element={<Outlet />}>
+            <Route path="reportes" element={<Outlet />}> {/* <--- EL PADRE DEBE SER UN OUTLET */}
+              {/* La lista es el index */}
               <Route index element={<ListaReportesProfesorWithLoading />} />
+              {/* Ruta para editar */}
               <Route
                 path="instancia/:instanciaId/responder"
                 element={<ResponderReportesWithLoading />}
               />
+              {/* Ruta para ver (HISTÓRICO) */}
               <Route
                 path="instancia/:instanciaId/ver"
-                element={<ResponderReportesWithLoading readOnly={true} />}
+                element={<VerReporteProfesorWithLoading />}
               />
             </Route>
             <Route
