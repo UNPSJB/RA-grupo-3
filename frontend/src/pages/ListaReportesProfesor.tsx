@@ -79,15 +79,7 @@ const ListaReportesProfesores: React.FC = () => {
 
   return (
     <div className="max-w-6xl mx-auto p-6 space-y-6">
-      <header className="border-b border-gray-200 pb-4">
-        <h1 className="text-3xl font-bold text-gray-800">
-          Gestión de Informes
-        </h1>
-        <p className="text-gray-500 mt-1">
-          Administra tus informes de actividad curricular.
-        </p>
-      </header>
-
+      
       {/* Pestañas de Navegación */}
       <div className="flex space-x-4 border-b border-gray-200">
         <button
