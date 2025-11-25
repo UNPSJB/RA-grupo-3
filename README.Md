@@ -33,13 +33,10 @@ Navega a la carpeta del backend, crea un entorno virtual y activarlo:
 Crea un arvhico llamado `.env` dentro de la carpeta `/backend` este archivo es esencial para la configuración de la base de datos.
 **Contenido de `/backend/.env`:**
 
-    # Configuracion de Base de Datos 
-    (SQLite para desarrollo local)
-    
+    # Configuracion de Base de Datos (SQLite para desarrollo local)
     DB_URL=///./sql_app.db
     
     # Configuración del entorno (Opcional)
-    
     ENV=dev
 ### 3. Ejecución del Servidor
 Para iniciar el servidor de desarrollo FastAPI:
