@@ -3,7 +3,6 @@ import { Outlet, Route, Routes, Navigate, useLocation } from "react-router-dom";
 import Navbar from "./components/Navbar.tsx";
 import Footer from "./components/Footer.tsx";
 import EncuestasPage from "./pages/EncuestasPage.tsx";
-import CuentaPage from "./pages/CuentaPage.tsx";
 import ResponderEncuesta from "./pages/ResponderEncuesta.tsx";
 import CrearPlantilla from "./pages/CrearPlantilla.tsx";
 import PanelAdmin from "./pages/panelAdmin.tsx";
@@ -28,6 +27,7 @@ import DepartamentoEstadisticasCursadas from "./pages/DepartamentoEstadisticasCu
 import DepartamentoInformesPage from "./pages/DepartamentoInformesPage.tsx";
 import HistorialEncuestas from "./pages/HistorialEncuestas";
 import ResponderInforme from "./pages/ResponderInforme";
+import ListaReportesProfesores from "./pages/ListaReportesProfesores.tsx";
 
 const MainLayout: React.FC = () => {
   const location = useLocation();
@@ -56,7 +56,6 @@ const MainLayout: React.FC = () => {
 
 const PoliticasPrivacidadWithLoading = withLoading(PoliticasPrivacidad);
 const GestionCicloVidaWithLoading = withLoading(GestionCicloVida);
-const CuentaPageWithLoading = withLoading(GestionCuentas);
 const PanelAdminWithLoading = withLoading(PanelAdmin);
 const EncuestasPageWithLoading = withLoading(EncuestasPage);
 const CrearPlantillaWithLoading = withLoading(CrearPlantilla);
@@ -69,13 +68,10 @@ const ResultadosProfesorPageWithLoading = withLoading(ResultadosProfesorPage);
 const ResponderReportesWithLoading = withLoading(ResponderReportes);
 const LoginPageWithLoading = withLoading(LoginPage);
 const DetalleInformeCompletoWithLoading = withLoading(DetalleInformeCompleto);
-const DepartamentoEstadisticasCursadasWithLoading = withLoading(
-  DepartamentoEstadisticasCursadas
-);
-const DepartamentoInformesPageWithLoading = withLoading(
-  DepartamentoInformesPage
-);
+const DepartamentoEstadisticasCursadasWithLoading = withLoading(DepartamentoEstadisticasCursadas);
+const DepartamentoInformesPageWithLoading = withLoading(DepartamentoInformesPage);
 const HistorialEncuestasWithLoading = withLoading(HistorialEncuestas);
+const ListaReportesProfesoresWithLoading = withLoading(ListaReportesProfesores);
 
 const App: React.FC = () => {
   return (
@@ -138,7 +134,7 @@ const App: React.FC = () => {
         <Route element={<ProtectedRoute allowedRoles={["DOCENTE"]} />}>
           <Route path="profesores" element={<Outlet />}>
             <Route index element={<ProfesoresHomeWithLoading />} />
-            <Route path="reportes" element={<Outlet />}>
+            <Route path="reportes" element={<ListaReportesProfesoresWithLoading />}>
               <Route
                 path="instancia/:instanciaId/responder"
                 element={<ResponderReportesWithLoading />}
