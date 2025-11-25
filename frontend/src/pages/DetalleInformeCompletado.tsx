@@ -24,7 +24,7 @@ import {
 import Spinner from "../components/Spinner";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
-
+import { useNavigate } from "react-router-dom";
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
 
 // --- COLORES ---
@@ -445,7 +445,7 @@ const DetalleInformeCompleto: React.FC = () => {
   );
   const [informeLectura, setInformeLectura] =
     useState<InformeCompletoLectura | null>(null);
-
+  const navigate = useNavigate();
   // Carga Inicial
   useEffect(() => {
     if (!token) return;
@@ -603,18 +603,41 @@ const DetalleInformeCompleto: React.FC = () => {
                           {inf.cantidad_reportes} materias
                         </span>
                       </td>
+
+                      {/* COLUMNA ESTADO */}
                       <td className="px-6 py-4">
-                        <span className="text-yellow-600 text-xs font-bold bg-yellow-100 px-2 py-1 rounded">
-                          Pendiente
-                        </span>
+                        {inf.estado === "pendiente" ? (
+                          <span className="text-yellow-700 text-xs font-bold bg-yellow-100 px-2 py-1 rounded">
+                            Pendiente
+                          </span>
+                        ) : (
+                          <span className="text-green-700 text-xs font-bold bg-green-100 px-2 py-1 rounded">
+                            Completado
+                          </span>
+                        )}
                       </td>
+
+                      {/* COLUMNA ACCIÓN */}
                       <td className="px-6 py-4 text-right">
-                        <button
-                          onClick={() => setSelectedInformeId(inf.id)}
-                          className="text-indigo-600 hover:underline text-sm font-semibold"
-                        >
-                          Ver Detalle
-                        </button>
+                        {inf.estado === "pendiente" ? (
+                          <button
+                            onClick={() =>
+                              navigate(
+                                `/departamento/informe-sintetico/${inf.id}`
+                              )
+                            }
+                            className="bg-indigo-600 text-white text-xs px-3 py-1.5 rounded hover:bg-indigo-700 font-medium shadow-sm transition-colors"
+                          >
+                            Completar Informe
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => setSelectedInformeId(inf.id)}
+                            className="text-indigo-600 hover:underline text-sm font-semibold"
+                          >
+                            Ver Detalle
+                          </button>
+                        )}
                       </td>
                     </tr>
                   ))

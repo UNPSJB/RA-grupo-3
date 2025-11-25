@@ -46,9 +46,10 @@ export interface PlantillaBase {
 
 export interface InformeSinteticoList {
   id: number;
-  fecha_inicio: string; // Las fechas llegan como strings ISO
+  fecha_inicio: string;
   fecha_fin?: string | null;
   tipo: string;
+  estado: string;
   plantilla: PlantillaBase;
   departamento_id: number;
   cantidad_reportes: number;
@@ -74,4 +75,21 @@ export interface DashboardDepartamentoStats {
   informes_completados: number;
   cobertura_contenidos: StatDato[];
   necesidades_recientes: string[];
+}
+
+export interface PreguntaRespondida {
+  pregunta_texto: string;
+  respuesta_texto: string;
+}
+
+export interface SeccionRespondida {
+  seccion_nombre: string;
+  preguntas: PreguntaRespondida[];
+}
+
+export interface InformeCompletoLectura {
+  titulo: string;
+  departamento: string;
+  fecha: string;
+  secciones: SeccionRespondida[];
 }

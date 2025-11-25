@@ -81,7 +81,8 @@ def listar_informes_sinteticos_generados(
         raise HTTPException(status_code=e.STATUS_CODE, detail=e.DETAIL)
     except Exception as e:
         print(f"Error inesperado al listar informes: {e}")
-        raise HTTPException(status_code=5.00, detail="Error al listar informes.")
+        # --- CORREGIR AQUÍ (Quitar el punto decimal) ---
+        raise HTTPException(status_code=500, detail="Error al listar informes.")
 
 
 @router.get(
@@ -200,20 +201,17 @@ def get_estadisticas_por_materia(
 )
 def autocompletar_seccion(
     instancia_id: int,
-    seccion_prefijo: str, # Ej: "1.", "2.A", "3."
+    seccion_prefijo: str,
+    materia_id: int | None = None, 
     db: Session = Depends(get_db),
     admin: AdminDepartamento = Depends(get_current_admin_departamento)
 ):
-    """
-    Endpoint usado por el botón 'Traer Respuestas'.
-    Agrega las respuestas de los informes base para una sección dada.
-    """
-    
     try:
-        texto = services.generar_resumen_por_seccion(db, instancia_id, seccion_prefijo)
+        # Pasamos el materia_id al servicio
+        texto = services.generar_resumen_por_seccion(db, instancia_id, seccion_prefijo, materia_id)
         return {"texto_resumen": texto}
     except (NotFound, BadRequest) as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        raise HTTPException(status_code=e.STATUS_CODE, detail=e.DETAIL)
     except Exception as e:
         print(f"Error autocompletando: {e}")
         raise HTTPException(status_code=500, detail="Error interno generando el resumen.")

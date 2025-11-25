@@ -47,6 +47,7 @@ class InformeSinteticoInstanciaBase(BaseModel):
     fecha_inicio: datetime
     fecha_fin: Optional[datetime] = None
     tipo: TipoInstrumento
+    estado: EstadoInforme 
     
     model_config = {"from_attributes": True}
 
@@ -87,3 +88,4 @@ class InformeRespondido(BaseModel):
     departamento: str
     fecha: datetime
     secciones: List[SeccionRespondida]
+

@@ -22,7 +22,6 @@ def get_informes_curriculares_por_departamento(
     db: Session, departamento_id: int
 ) -> List[schemas.InformeCurricularStatus]:
     
-    # Obtener el año actual
     anio_actual = datetime.now().year
 
     stmt = (
@@ -33,9 +32,14 @@ def get_informes_curriculares_por_departamento(
         .join(Cursada.cuatrimestre) 
         
         .where(Carrera.departamento_id == departamento_id)
-        .where(ActividadCurricularInstancia.estado == EstadoInforme.COMPLETADO)
         
-        # Filtro por Año Actual
+
+        .where(ActividadCurricularInstancia.estado.in_([
+            EstadoInforme.COMPLETADO, 
+            EstadoInforme.RESUMIDO
+        ]))
+        # ---------------------------------------------------
+        
         .where(Cuatrimestre.anio == anio_actual)
 
         .options(
@@ -67,3 +71,4 @@ def get_informes_curriculares_por_departamento(
         )
     
     return resultados
+
