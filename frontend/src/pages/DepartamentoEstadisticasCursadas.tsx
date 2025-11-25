@@ -432,6 +432,7 @@ const DepartamentoEstadisticasCursadas: React.FC = () => {
           </div>
         )}
 
+        {/* ESTADO VACÍO */}
         {!loading &&
           !error &&
           filteredResults.length === 0 &&
@@ -463,6 +464,22 @@ const DepartamentoEstadisticasCursadas: React.FC = () => {
               </p>
             </div>
           )}
+
+        {/* LISTA DE RESULTADOS (ESTO ES LO QUE FALTABA) */}
+        {!loading && !error && filteredResults.length > 0 && (
+          <div className="space-y-4 mt-6">
+            {filteredResults.map((resultado) => (
+              <CursadaAccordionItem
+                key={resultado.cursada_id}
+                resultado={resultado}
+                isSelected={selectedIds.includes(resultado.cursada_id)}
+                onToggleSelection={toggleSelection}
+                isOpen={openItems.includes(resultado.cursada_id)}
+                onToggleOpen={() => toggleAccordion(resultado.cursada_id)}
+              />
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

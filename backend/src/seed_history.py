@@ -10,6 +10,7 @@ if backend_root not in sys.path:
     sys.path.insert(0, backend_root)
 
 from sqlalchemy.orm import selectinload
+from sqlalchemy import select
 from src.database import SessionLocal
 from src.enumerados import TipoCuatrimestre, EstadoInstancia, TipoInstrumento, EstadoInstrumento, TipoPregunta, EstadoInforme
 from src.materia.models import Materia, Cuatrimestre, Cursada
@@ -22,55 +23,51 @@ from src.respuesta.models import RespuestaSet, RespuestaMultipleChoice, Respuest
 
 # --- BANCO DE DATOS "REALISTAS" ---
 FRASES_ACADEMICAS = [
-    "El nivel académico del grupo fue heterogéneo, con dificultades en conceptos base.",
-    "Se cumplió con el cronograma previsto. Alumnos muy participativos.",
+    "El nivel académico fue heterogéneo, se reforzaron conceptos base.",
+    "Grupo muy participativo, se cumplió el cronograma.",
     "Rendimiento superior al promedio histórico.",
-    "Fue necesario reforzar temas de la unidad 2.",
+    "Dificultades en la unidad 3, se agregaron clases de consulta.",
     "Excelente grupo humano, muy proactivo.",
 ]
 
 FRASES_INFRAESTRUCTURA = [
-    "El proyector del aula funcionó intermitentemente.",
-    "Las computadoras del laboratorio necesitan actualización.",
-    "Aula cómoda y adecuada para la cantidad de alumnos.",
-    "Problemas de conectividad WiFi en el pabellón.",
-]
-
-FRASES_CORTAS = [
-    "Sin observaciones.",
-    "Desarrollo normal.",
-    "Todo correcto.",
-    "Acorde a lo planificado."
+    "El proyector funcionó intermitentemente.",
+    "Faltan licencias de software en el laboratorio.",
+    "Aula cómoda y adecuada.",
+    "Problemas de WiFi en el pabellón.",
 ]
 
 def obtener_respuesta_smart(texto_pregunta: str) -> str:
-    """Selecciona una respuesta coherente."""
+    """Selecciona una respuesta coherente según el tema."""
     texto = texto_pregunta.lower()
     if "infraestructura" in texto or "equipamiento" in texto:
         return random.choice(FRASES_INFRAESTRUCTURA)
     if "alumno" in texto or "rendimiento" in texto:
         return random.choice(FRASES_ACADEMICAS)
-    return random.choice(FRASES_CORTAS)
+    return "Sin observaciones particulares."
 
 def seed_history(db):
-    print("\n🌱 Generando Historial 'Smart' con Porcentajes (2022-2024)...")
+    print("\n🌱 Reparando/Generando Historial (2022-2024)...")
 
     profesores = db.query(Profesor).all()
     alumnos = db.query(Alumno).all()
     
     plantilla_encuesta = db.query(Encuesta).options(
-        selectinload(Encuesta.secciones).selectinload(Seccion.preguntas.of_type(PreguntaMultipleChoice)).selectinload(PreguntaMultipleChoice.opciones)
+        selectinload(Encuesta.secciones)
+        .selectinload(Seccion.preguntas.of_type(PreguntaMultipleChoice))
+        .selectinload(PreguntaMultipleChoice.opciones)
     ).filter(Encuesta.estado == EstadoInstrumento.PUBLICADA).first()
 
     plantilla_informe = db.query(ActividadCurricular).options(
-        selectinload(ActividadCurricular.secciones).selectinload(Seccion.preguntas.of_type(PreguntaMultipleChoice)).selectinload(PreguntaMultipleChoice.opciones)
+        selectinload(ActividadCurricular.secciones)
+        .selectinload(Seccion.preguntas.of_type(PreguntaMultipleChoice))
+        .selectinload(PreguntaMultipleChoice.opciones)
     ).filter(ActividadCurricular.tipo == TipoInstrumento.ACTIVIDAD_CURRICULAR).first()
 
-    if not profesores or not plantilla_informe:
-        print("❌ Faltan datos base. Corre seed_data.py primero.")
+    if not profesores or not plantilla_informe or not plantilla_encuesta:
+        print("❌ Faltan datos base. Corre seed_data.py y seed_plantilla.py primero.")
         return
 
-    # Asignación fija de materias para consistencia
     materias_asignadas = {
         profesores[0].id: ["Programación I", "Bases de Datos I"],
         profesores[1].id: ["Álgebra Lineal"] if len(profesores) > 1 else [],
@@ -78,10 +75,10 @@ def seed_history(db):
     }
 
     anios = [2022, 2023, 2024]
-    informes_creados = 0
+    encuestas_reparadas = 0
 
     for anio in anios:
-        print(f"   📅 Año {anio}...")
+        print(f"   📅 Procesando Año {anio}...")
         cuatri = db.query(Cuatrimestre).filter_by(anio=anio, periodo=TipoCuatrimestre.PRIMERO).first()
         if not cuatri:
             cuatri = Cuatrimestre(anio=anio, periodo=TipoCuatrimestre.PRIMERO)
@@ -95,7 +92,7 @@ def seed_history(db):
                 materia = db.query(Materia).filter_by(nombre=nombre_mat).first()
                 if not materia: continue
 
-                # 1. Cursada
+                # 1. Asegurar Cursada
                 cursada = db.query(Cursada).filter_by(
                     materia_id=materia.id, cuatrimestre_id=cuatri.id, profesor_id=profe.id
                 ).first()
@@ -105,11 +102,13 @@ def seed_history(db):
                     db.add(cursada)
                     db.commit()
                     db.refresh(cursada)
-                    # Inscribir alumnos dummy
-                    for alumno in alumnos[:10]:
-                         db.add(Inscripcion(alumno_id=alumno.id, cursada_id=cursada.id, ha_respondido=True))
+                    # Inscribir alumnos
+                    for alumno in alumnos[:15]: 
+                         if not db.query(Inscripcion).filter_by(alumno_id=alumno.id, cursada_id=cursada.id).first():
+                            db.add(Inscripcion(alumno_id=alumno.id, cursada_id=cursada.id, ha_respondido=True))
+                    db.commit()
 
-                # 2. Encuesta (Cerrada)
+                # 2. Asegurar Encuesta (Cerrada)
                 instancia_encuesta = db.query(EncuestaInstancia).filter_by(cursada_id=cursada.id).first()
                 if not instancia_encuesta:
                     instancia_encuesta = EncuestaInstancia(
@@ -119,8 +118,36 @@ def seed_history(db):
                     )
                     db.add(instancia_encuesta)
                     db.commit()
+                    db.refresh(instancia_encuesta)
 
-                # 3. Informe Profesor
+                # --- REPARACIÓN DE RESPUESTAS ---
+                # Verificamos si tiene respuestas. Si tiene 0, las generamos.
+                cant_respuestas = db.query(RespuestaSet).filter_by(instrumento_instancia_id=instancia_encuesta.id).count()
+                
+                if cant_respuestas == 0:
+                    print(f"      🔧 Inyectando respuestas para {materia.nombre} ({anio})...")
+                    cantidad_a_generar = random.randint(10, 15)
+                    preguntas_encuesta = [p for s in plantilla_encuesta.secciones for p in s.preguntas]
+                    
+                    for _ in range(cantidad_a_generar):
+                        rset_alumno = RespuestaSet(instrumento_instancia_id=instancia_encuesta.id, created_at=datetime(anio, 6, random.randint(1, 28)))
+                        db.add(rset_alumno)
+                        db.flush() 
+                        
+                        for preg in preguntas_encuesta:
+                            if preg.tipo == TipoPregunta.MULTIPLE_CHOICE and preg.opciones:
+                                # Tendencia positiva
+                                opcion = random.choice(preg.opciones)
+                                db.add(RespuestaMultipleChoice(
+                                    pregunta_id=preg.id,
+                                    respuesta_set_id=rset_alumno.id,
+                                    tipo=TipoPregunta.MULTIPLE_CHOICE,
+                                    opcion_id=opcion.id
+                                ))
+                    encuestas_reparadas += 1
+                    db.commit()
+
+                # 3. Asegurar Informe Profesor
                 existe_informe = db.query(ActividadCurricularInstancia).filter_by(cursada_id=cursada.id).first()
                 if not existe_informe:
                     informe = ActividadCurricularInstancia(
@@ -134,51 +161,32 @@ def seed_history(db):
                     db.commit()
                     db.refresh(informe)
 
-                    # --- RESPUESTAS ---
-                    rset = RespuestaSet(instrumento_instancia_id=informe.id, created_at=informe.fecha_fin)
-                    db.add(rset)
-                    db.commit()
+                    # Respuestas del profe
+                    rset_profe = RespuestaSet(instrumento_instancia_id=informe.id, created_at=informe.fecha_fin)
+                    db.add(rset_profe)
+                    db.flush()
 
                     for seccion in plantilla_informe.secciones:
                         for pregunta in seccion.preguntas:
                             if pregunta.tipo == TipoPregunta.REDACCION:
-                                texto_pregunta = pregunta.texto
-                                texto_respuesta = ""
-
-                                # --- AQUÍ ESTÁ LA MAGIA PARA LOS PORCENTAJES ---
-                                if "Porcentaje" in texto_pregunta:
-                                    # Formato: "VALOR ||| JUSTIFICACIÓN"
-                                    valor = f"{random.choice([75, 80, 85, 90, 95, 100])}%"
-                                    justif = obtener_respuesta_smart("rendimiento")
-                                    texto_respuesta = f"{valor} ||| {justif}"
-                                
-                                elif texto_pregunta.startswith("4."): # Desempeño auxiliares
-                                    valor = random.choice(["Excelente (E)", "Muy Bueno (MB)"])
-                                    justif = "Gran compromiso con la cátedra."
-                                    texto_respuesta = f"{valor} ||| {justif}"
-                                
-                                elif "cantidad" in texto_pregunta.lower():
-                                     texto_respuesta = str(random.randint(15, 40))
-                                     
+                                texto_resp = ""
+                                if "Porcentaje" in pregunta.texto:
+                                    texto_resp = f"{random.choice([80, 85, 90, 95, 100])}% ||| {obtener_respuesta_smart('rendimiento')}"
+                                elif pregunta.texto.startswith("4."):
+                                    texto_resp = f"Muy Bueno (MB) ||| Compromiso alto."
+                                elif "cantidad" in pregunta.texto.lower():
+                                    texto_resp = str(random.randint(20, 40))
                                 else:
-                                    texto_respuesta = obtener_respuesta_smart(texto_pregunta)
-
-                                db.add(RespuestaRedaccion(
-                                    pregunta_id=pregunta.id, respuesta_set_id=rset.id,
-                                    tipo=TipoPregunta.REDACCION, texto=texto_respuesta
-                                ))
-
+                                    texto_resp = obtener_respuesta_smart(pregunta.texto)
+                                
+                                db.add(RespuestaRedaccion(pregunta_id=pregunta.id, respuesta_set_id=rset_profe.id, tipo=TipoPregunta.REDACCION, texto=texto_resp))
+                            
                             elif pregunta.tipo == TipoPregunta.MULTIPLE_CHOICE and pregunta.opciones:
-                                db.add(RespuestaMultipleChoice(
-                                    pregunta_id=pregunta.id, respuesta_set_id=rset.id,
-                                    tipo=TipoPregunta.MULTIPLE_CHOICE,
-                                    opcion_id=random.choice(pregunta.opciones).id
-                                ))
+                                db.add(RespuestaMultipleChoice(pregunta_id=pregunta.id, respuesta_set_id=rset_profe.id, tipo=TipoPregunta.MULTIPLE_CHOICE, opcion_id=random.choice(pregunta.opciones).id))
                     
-                    informes_creados += 1
-        db.commit()
+                    db.commit()
 
-    print(f"✅ {informes_creados} informes históricos generados correctamente.")
+    print(f"✅ Finalizado. Se repararon/llenaron {encuestas_reparadas} encuestas con datos de alumnos.")
 
 if __name__ == "__main__":
     db = SessionLocal()
