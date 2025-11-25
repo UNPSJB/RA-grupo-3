@@ -6,7 +6,7 @@ El proyecto se enmarca en el desarrollo de un sistema de reportes académicos pa
 * Augusto Coria
 * Emiliano Necul
 
-## Requisitos Precvios
+## Requisitos Previos
 * **Python** (v3.10 o superior) 
 *  **Node.js** (v18 o superior) y **npm** 
 *  **Git**
