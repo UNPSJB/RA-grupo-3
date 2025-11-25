@@ -165,3 +165,30 @@ def crear_submission_departamento(
     db.commit()
     db.refresh(nuevo_set)
     return nuevo_set
+
+
+def obtener_respuestas_por_instancia(db: Session, instancia_id: int) -> dict:
+    """
+    Recupera las respuestas de la última versión (RespuestaSet) guardada para una instancia.
+    Devuelve un diccionario: { pregunta_id: valor }
+    Donde valor es 'texto' (str) o 'opcion_id' (int).
+    """
+    # 1. Buscar el último set de respuestas
+    respuesta_set = db.query(respuesta_models.RespuestaSet).filter(
+        respuesta_models.RespuestaSet.instrumento_instancia_id == instancia_id
+    ).order_by(respuesta_models.RespuestaSet.created_at.desc()).first()
+
+    if not respuesta_set:
+        return {}
+
+    # 2. Mapear respuestas
+    respuestas_dict = {}
+    for r in respuesta_set.respuestas:
+        if r.tipo == TipoPregunta.REDACCION:
+            # Casteamos a RespuestaRedaccion para acceder a .texto
+            respuestas_dict[r.pregunta_id] = r.texto
+        elif r.tipo == TipoPregunta.MULTIPLE_CHOICE:
+            # Casteamos a RespuestaMultipleChoice para acceder a .opcion_id
+            respuestas_dict[r.pregunta_id] = r.opcion_id
+    
+    return respuestas_dict

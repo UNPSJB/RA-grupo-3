@@ -7,8 +7,22 @@ from src.persona.models import Profesor
 from src.dependencies import get_current_profesor
 from src.instrumento import services as services_instrumento
 from src.instrumento import schemas as schemas_instrumento
+from src.respuesta import services as respuesta_services
+
 
 router_profesores = APIRouter(prefix="/encuestas-abiertas", tags=["Encuestas Profesores"])
+
+@router_profesores.get("/reporte/instancia/{instancia_id}/respuestas")
+def obtener_respuestas_guardadas(
+    instancia_id: int,
+    db: Session = Depends(get_db),
+    profesor_actual: Profesor = Depends(get_current_profesor)
+):
+    try:
+        return respuesta_services.obtener_respuestas_por_instancia(db, instancia_id)
+    except Exception as e:
+        print(f"Error obteniendo respuestas: {e}")
+        raise HTTPException(status_code=500, detail="Error al cargar las respuestas.")
 
 @router_profesores.get(
     "/mis-instancias-activas-profesor",

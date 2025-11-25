@@ -134,10 +134,15 @@ const App: React.FC = () => {
         <Route element={<ProtectedRoute allowedRoles={["DOCENTE"]} />}>
           <Route path="profesores" element={<Outlet />}>
             <Route index element={<ProfesoresHomeWithLoading />} />
-            <Route path="reportes" element={<ListaReportesProfesorWithLoading />}>
+            <Route path="reportes" element={<Outlet />}>
+              <Route index element={<ListaReportesProfesorWithLoading />} />
               <Route
                 path="instancia/:instanciaId/responder"
                 element={<ResponderReportesWithLoading />}
+              />
+              <Route
+                path="instancia/:instanciaId/ver"
+                element={<ResponderReportesWithLoading readOnly={true} />}
               />
             </Route>
             <Route

@@ -23,7 +23,7 @@ from src.materia.models import (
     Carrera, 
     Departamento, 
     carrera_materia_association,
-    Cuatrimestre # <--- ¡ESTE FALTABA!
+    Cuatrimestre
 )
 from src.persona.models import AdminDepartamento
 from src.pregunta.models import Pregunta, PreguntaMultipleChoice
@@ -194,8 +194,10 @@ def get_plantilla_para_instancia_reporte(
     if instancia.profesor_id != profesor_id:
         raise HTTPException(status_code=403, detail="No tienes permiso para este reporte.")
     
-    if instancia.estado != EstadoInforme.PENDIENTE:
-        raise HTTPException(status_code=400, detail="El reporte no está pendiente.")
+    # --- CORRECCIÓN: Eliminamos esta validación para permitir ver historial ---
+    # if instancia.estado != EstadoInforme.PENDIENTE:
+    #    raise HTTPException(status_code=400, detail="El reporte no está pendiente.")
+    # ------------------------------------------------------------------------
 
     # Lógica de Sedes
     sedes_set = set()
@@ -518,7 +520,7 @@ def obtener_estadisticas_informe_sintetico(
         if preguntas_seccion:
             resultados_secciones.append(encuestas_schemas.ResultadoSeccion(
                 seccion_nombre=seccion.nombre,
-                resultados_por_pregunta=preguntas_seccion
+                resultados_por_pregunta=preguntas_de_esta_seccion
             ))
 
     return encuestas_schemas.InformeSinteticoResultado(
