@@ -184,7 +184,7 @@ const NavigationMenuDepartamento: React.FC<NavigationMenuProps> = () => {
             </DesktopDropdown>
 
             {/* 3. CUENTA/GESTIÓN */}
-            <DesktopDropdown title="Cuenta">
+            {/* <DesktopDropdown title="Cuenta">
               <DropdownItem to="/departamento/gestion">
                 Gestión de Cuenta
               </DropdownItem>
@@ -195,7 +195,7 @@ const NavigationMenuDepartamento: React.FC<NavigationMenuProps> = () => {
               >
                 Cerrar Sesión
               </button>
-            </DesktopDropdown>
+            </DesktopDropdown> */}
           </div>
           {/* --- FIN MENÚ DESKTOP --- */}
         </div>

@@ -6,7 +6,7 @@ El proyecto se enmarca en el desarrollo de un sistema de reportes académicos pa
 * Augusto Coria
 * Emiliano Necul
 
-## Requisitos Previos
+## Requisitos Precvios
 * **Python** (v3.10 o superior) 
 *  **Node.js** (v18 o superior) y **npm** 
 *  **Git**
@@ -33,15 +33,20 @@ Navega a la carpeta del backend, crea un entorno virtual y activarlo:
 Crea un arvhico llamado `.env` dentro de la carpeta `/backend` este archivo es esencial para la configuración de la base de datos.
 **Contenido de `/backend/.env`:**
 
-    # Configuracion de Base de Datos (SQLite para desarrollo local)
+    # Configuracion de Base de Datos 
+    (SQLite para desarrollo local)
+    
     DB_URL=///./sql_app.db
     
     # Configuración del entorno (Opcional)
+    
     ENV=dev
 ### 3. Ejecución del Servidor
 Para iniciar el servidor de desarrollo FastAPI:
 
-    # Asegúrate de estar en el directorio /backend y con el entorno virtual activado.    
+    # Asegúrate de estar en el directorio /backend y 
+    con el entorno virtual activado.
+    
     uvicorn src.main:app --reload
 El backend estará corriendo en http://localhost:8000
 La documentación interactiva de la API se puede ver en http://localhost:8000/docs
@@ -98,6 +103,5 @@ Los scripts de carga eneran los siguientes usuarios por defecto,
 | Profesor | profesor1 | Profesor de Informática |
 | Profesor | profesor2 | Profesor de Matemáticas |
 | Profesor | profesor3 | Profesor de Sistemas |
-|  Admin Dpto  |  departamento  | Jefe del departamento de Informática  |
+|  Admin Dpto  |  departamento  | Jefeoo del departamento de Informática  |
 | Secretaría  |  admin_sec  |  Personal de Secretaría Acarémica  |
-

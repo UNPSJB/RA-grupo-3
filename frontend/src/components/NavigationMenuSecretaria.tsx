@@ -149,7 +149,7 @@ const NavigationMenuSecretaria: React.FC<NavigationMenuProps> = () => {
               </DropdownItem>
             </DesktopDropdown>
 
-            <DesktopDropdown title="Cuenta">
+            {/* <DesktopDropdown title="Cuenta">
               <DropdownItem to="/secretaria/gestion">Gestión</DropdownItem>
               <button
                 onClick={logout}
@@ -158,7 +158,7 @@ const NavigationMenuSecretaria: React.FC<NavigationMenuProps> = () => {
               >
                 Cerrar Sesión
               </button>
-            </DesktopDropdown>
+            </DesktopDropdown> */}
           </div>
         </div>
       </div>
