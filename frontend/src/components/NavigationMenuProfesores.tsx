@@ -201,7 +201,7 @@ const NavigationMenuProfesores: React.FC<NavigationMenuProps> = () => {
             </Link>
 
             {/* Menú de Cuenta*/}
-            <DesktopDropdown title="Cuenta">
+            {/* <DesktopDropdown title="Cuenta">
               <DropdownItem to="/profesores/gestion">Gestión</DropdownItem>
               <button
                 onClick={logout}
@@ -210,7 +210,7 @@ const NavigationMenuProfesores: React.FC<NavigationMenuProps> = () => {
               >
                 Cerrar Sesión
               </button>
-            </DesktopDropdown>
+            </DesktopDropdown> */}
           </div>
         </div>
       </div>

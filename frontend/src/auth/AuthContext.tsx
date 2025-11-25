@@ -7,6 +7,7 @@ const API_BASE_URL = import.meta.env.VITE_API_URL;
 interface UserData {
   sub: string;
   role: "ALUMNO" | "DOCENTE" | "ADMIN_SECRETARIA" | "ADMIN_DEPARTAMENTO";
+  name: string;
   exp: number;
 }
 
@@ -14,6 +15,7 @@ interface AuthContextType {
   token: string | null;
   role: UserData["role"] | null;
   username: string | null;
+  fullName: string | null;
   login: (username: string, password: string) => Promise<void>;
   logout: () => void;
   isLoading: boolean;
@@ -31,6 +33,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   const [username, setUsername] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
+  const [fullName, setFullName] = useState<string | null>(null);
 
   useEffect(() => {
     if (token) {
@@ -42,6 +45,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         if (userData.exp * 1000 > Date.now()) {
           setRole(userData.role);
           setUsername(userData.sub);
+          setFullName(userData.name);
           localStorage.setItem("token", token);
         } else {
           logout();
@@ -54,6 +58,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       localStorage.removeItem("token");
       setRole(null);
       setUsername(null);
+      setFullName(null);
     }
   }, [token]);
 
@@ -90,6 +95,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       setToken(new_token);
       setRole(userData.role);
       setUsername(userData.sub);
+      setFullName(userData.name);
 
       // Redirección según rol
       switch (userData.role) {
@@ -118,13 +124,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     setToken(null);
     setRole(null);
     setUsername(null);
+    setFullName(null);
     localStorage.removeItem("token");
     navigate("/login");
   };
 
   return (
     <AuthContext.Provider
-      value={{ token, role, username, login, logout, isLoading }}
+      value={{ token, role, username,fullName, login, logout, isLoading }}
     >
       {children}
     </AuthContext.Provider>
