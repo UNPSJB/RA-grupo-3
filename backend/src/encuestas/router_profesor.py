@@ -71,3 +71,25 @@ def get_dashboard_stats(
     except Exception as e:
         print(f"Error al obtener dashboard: {e}")
         raise HTTPException(status_code=500, detail="Error al cargar el dashboard.")
+
+
+
+@router_profesores.get(
+    "/mis-informes-historicos",
+    response_model=list[encuestas_schemas.InformeHistoricoResponse]
+)
+def listar_historial_informes_profesor(
+    db: Session = Depends(get_db),
+    profesor_actual: Profesor = Depends(get_current_profesor)
+):
+    """
+    Retorna el historial de informes de actividad curricular completados por el docente.
+    """
+    try:
+        return services_encuestas.obtener_informes_historicos_profesor(db, profesor_id=profesor_actual.id)
+    except Exception as e:
+        print(f"Error al listar historial de informes: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error al obtener el historial de informes."
+        )

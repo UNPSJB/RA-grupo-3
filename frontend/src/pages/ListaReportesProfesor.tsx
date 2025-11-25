@@ -16,7 +16,7 @@ interface ReporteItem {
 
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
 
-const ListaReportesProfesores: React.FC = () => {
+const ListaReportesProfesor: React.FC = () => {
   const { token, logout } = useAuth();
   const [activeTab, setActiveTab] = useState<"pendientes" | "historial">("pendientes");
   
@@ -188,4 +188,4 @@ const ListaReportesProfesores: React.FC = () => {
   );
 };
 
-export default ListaReportesProfesores;
+export default ListaReportesProfesor;

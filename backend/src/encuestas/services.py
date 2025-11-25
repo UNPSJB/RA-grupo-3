@@ -189,6 +189,56 @@ def obtener_instancias_activas_profesor(db: Session, profesor_id: int) -> List[D
         
     return response_list
 
+
+def obtener_informes_historicos_profesor(db: Session, profesor_id: int) -> List[Dict[str, Any]]:
+    """
+    Devuelve los informes de actividad curricular que ya han sido completados
+    por el profesor (Estados: COMPLETADO o RESUMIDO).
+    """
+    stmt = (
+        select(instrumento_models.ActividadCurricularInstancia)
+        .join(Cursada, instrumento_models.ActividadCurricularInstancia.cursada_id == Cursada.id)
+        .join(Cuatrimestre, Cursada.cuatrimestre_id == Cuatrimestre.id)
+        .where(
+            instrumento_models.ActividadCurricularInstancia.profesor_id == profesor_id,
+            instrumento_models.ActividadCurricularInstancia.estado.in_([
+                EstadoInforme.COMPLETADO, 
+                EstadoInforme.RESUMIDO
+            ])
+        )
+        .options(
+            joinedload(instrumento_models.ActividadCurricularInstancia.cursada)
+            .joinedload(Cursada.materia),
+            joinedload(instrumento_models.ActividadCurricularInstancia.cursada)
+            .joinedload(Cursada.cuatrimestre)
+        )
+        .order_by(Cuatrimestre.anio.desc(), Cuatrimestre.periodo.desc())
+    )
+
+    results = db.execute(stmt).scalars().all()
+
+    response_list = []
+    for instancia in results:
+        # Construir info de cuatrimestre
+        cuatri_str = "N/A"
+        if instancia.cursada and instancia.cursada.cuatrimestre:
+            c = instancia.cursada.cuatrimestre
+            cuatri_str = f"{c.anio} - {c.periodo.value}" if c.periodo else str(c.anio)
+
+        # Usamos la fecha de fin (si existe) o la de inicio como referencia de envío
+        fecha_ref = instancia.fecha_fin or instancia.fecha_inicio
+
+        response_list.append({
+            "instancia_id": instancia.id,
+            "materia_nombre": instancia.cursada.materia.nombre if instancia.cursada and instancia.cursada.materia else "Desconocida",
+            "cuatrimestre_info": cuatri_str,
+            "profesor_nombre": None, # No necesario para la vista del propio profe
+            "fecha_envio": fecha_ref,
+            "estado": instancia.estado.value
+        })
+        
+    return response_list
+
 def obtener_instancia_activa_por_cursada(db: Session, cursada_id: int) -> models.EncuestaInstancia:
     now = datetime.now()
     stmt = (

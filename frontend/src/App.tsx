@@ -27,7 +27,7 @@ import DepartamentoEstadisticasCursadas from "./pages/DepartamentoEstadisticasCu
 import DepartamentoInformesPage from "./pages/DepartamentoInformesPage.tsx";
 import HistorialEncuestas from "./pages/HistorialEncuestas";
 import ResponderInforme from "./pages/ResponderInforme";
-import ListaReportesTerminadosProfesores from "./pages/ListaReportesTerminadosProfesor.tsx";
+import ListaReportesProfesor from "./pages/ListaReportesProfesor.tsx";
 
 const MainLayout: React.FC = () => {
   const location = useLocation();
@@ -71,7 +71,7 @@ const DetalleInformeCompletoWithLoading = withLoading(DetalleInformeCompleto);
 const DepartamentoEstadisticasCursadasWithLoading = withLoading(DepartamentoEstadisticasCursadas);
 const DepartamentoInformesPageWithLoading = withLoading(DepartamentoInformesPage);
 const HistorialEncuestasWithLoading = withLoading(HistorialEncuestas);
-const ListaReportesTerminadosProfesoresWithLoading = withLoading(ListaReportesTerminadosProfesores);
+const ListaReportesProfesorWithLoading = withLoading(ListaReportesProfesor);
 
 const App: React.FC = () => {
   return (
@@ -134,7 +134,7 @@ const App: React.FC = () => {
         <Route element={<ProtectedRoute allowedRoles={["DOCENTE"]} />}>
           <Route path="profesores" element={<Outlet />}>
             <Route index element={<ProfesoresHomeWithLoading />} />
-            <Route path="reportes" element={<ListaReportesTerminadosProfesoresWithLoading />}>
+            <Route path="reportes" element={<ListaReportesProfesorWithLoading />}>
               <Route
                 path="instancia/:instanciaId/responder"
                 element={<ResponderReportesWithLoading />}

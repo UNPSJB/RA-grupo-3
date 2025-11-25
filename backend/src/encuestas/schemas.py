@@ -181,3 +181,13 @@ class DashboardDepartamentoStats(BaseModel):
     
     # Listado: Últimas necesidades detectadas (Sección 1)
     necesidades_recientes: List[str]
+
+class InformeHistoricoResponse(BaseModel):
+    instancia_id: int
+    materia_nombre: str
+    cuatrimestre_info: str
+    profesor_nombre: Optional[str] = None
+    fecha_envio: Optional[datetime] = None
+    estado: str
+
+    model_config = {"from_attributes": True}
