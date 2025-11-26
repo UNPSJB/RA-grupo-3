@@ -29,7 +29,7 @@ import HistorialEncuestas from "./pages/HistorialEncuestas";
 import ResponderInforme from "./pages/ResponderInforme";
 import ListaReportesProfesor from "./pages/ListaReportesProfesor.tsx";
 import VerReporteProfesor from "./pages/VerReporteProfesor";
-
+import CicloVida from "./pages/CicloVida.tsx";
 
 const MainLayout: React.FC = () => {
   const location = useLocation();
@@ -75,6 +75,7 @@ const DepartamentoEstadisticasCursadasWithLoading = withLoading(DepartamentoEsta
 const DepartamentoInformesPageWithLoading = withLoading(DepartamentoInformesPage);
 const HistorialEncuestasWithLoading = withLoading(HistorialEncuestas);
 const ListaReportesProfesorWithLoading = withLoading(ListaReportesProfesor);
+const CicloVidaWithLoading = withLoading(CicloVida);
 
 const App: React.FC = () => {
   return (
@@ -98,7 +99,7 @@ const App: React.FC = () => {
               <Route path="publicadas" element={<EncuestasPageWithLoading />} />
               <Route path="crear" element={<CrearPlantillaWithLoading />} />
             </Route>
-
+            <Route path="cicloVida" element={<CicloVidaWithLoading />}/>
             {/* ESTADÍSTICAS Y CUENTA */}
             <Route
               path="estadisticas"

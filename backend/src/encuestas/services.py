@@ -9,7 +9,7 @@ from src.persona.models import Inscripcion, Profesor
 from src.materia.models import Cursada, Cuatrimestre, Materia, Carrera
 from datetime import datetime
 from src.pregunta.models import Pregunta, PreguntaMultipleChoice
-from src.enumerados import EstadoInstancia, TipoPregunta,EstadoInstrumento, EstadoInforme, TipoInstrumento
+from src.enumerados import EstadoInstancia, TipoPregunta,EstadoInstrumento, EstadoInforme, TipoInstrumento, CicloMateria
 from src.respuesta.models import Respuesta, RespuestaMultipleChoice, RespuestaRedaccion, RespuestaSet
 from src.instrumento import models as instrumento_models
 from src.materia.models import Departamento, Sede
@@ -947,9 +947,11 @@ def listar_cursadas_sin_encuesta(db: Session) -> List[Dict[str, Any]]:
     
     resultado = []
     for c in cursadas:
+        ciclo_val = c.materia.ciclo if c.materia.ciclo else CicloMateria.BASICO
         resultado.append({
             "id": c.id,
             "materia_nombre": c.materia.nombre,
+            "materia_ciclo": ciclo_val,
             "profesor_nombre": c.profesor.nombre,
             "anio": c.cuatrimestre.anio,
             "periodo": c.cuatrimestre.periodo.value if c.cuatrimestre.periodo else "-"

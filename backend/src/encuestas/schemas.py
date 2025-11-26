@@ -4,7 +4,7 @@ from pydantic import BaseModel, Field
 
 from src.seccion.schemas import Seccion
 
-from src.enumerados import EstadoInstancia,TipoPregunta,TipoInstrumento
+from src.enumerados import EstadoInstancia,TipoPregunta,TipoInstrumento, CicloMateria
 
 
 
@@ -138,6 +138,7 @@ class GenerarSinteticoResponse(BaseModel):
 class CursadaAdminList(BaseModel):
     id: int
     materia_nombre: str
+    materia_ciclo: CicloMateria
     profesor_nombre: str
     anio: int
     periodo: str

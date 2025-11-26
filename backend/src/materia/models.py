@@ -8,7 +8,7 @@ from sqlalchemy import Enum as SQLEnum
 from sqlalchemy.sql import func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from src.models import ModeloBase
-from src.enumerados import TipoCuatrimestre
+from src.enumerados import TipoCuatrimestre, CicloMateria
 
 # Mover imports conflictivos aquí dentro
 if TYPE_CHECKING:
@@ -33,6 +33,13 @@ class Materia(ModeloBase):
 
     nombre: Mapped[str] = mapped_column(String, index=True)
     descripcion: Mapped[str] = mapped_column(String, index=True)
+    
+    ciclo: Mapped[CicloMateria] = mapped_column(
+        SQLEnum(CicloMateria, name="ciclo_materia_enum"),
+        default=CicloMateria.BASICO,
+        nullable=False
+    )
+    
     created_at: Mapped[datetime] = mapped_column(
  
        DateTime(timezone=True), server_default=func.now(), nullable=False
