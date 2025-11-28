@@ -335,19 +335,22 @@ def generar_resumen_por_seccion(
     db: Session, 
     instancia_sintetico_id: int, 
     numero_seccion: str,
-    materia_id: Optional[int] = None # <--- NUEVO PARÁMETRO
+    materia_id: Optional[int] = None
 ) -> str:
     """
     Recorre los informes curriculares asociados al sintético.
     Busca respuestas de texto en la sección que comienza con 'numero_seccion'.
-    Si se pasa materia_id, filtra solo para esa materia.
     """
+    # --- CORRECCIÓN IMPORTANTE AQUÍ ---
     instancia = db.query(models.InformeSinteticoInstancia).options(
         selectinload(models.InformeSinteticoInstancia.actividades_curriculares_instancia)
-        .selectinload(models.ActividadCurricularInstancia.cursada)
-        .selectinload(Cursada.materia)
-        .selectinload(Cursada.profesor) # Cargar profesor para mostrar nombre
+        .options(
+            # Cargamos la Cursada y sus relaciones en paralelo (separado por coma)
+            selectinload(models.ActividadCurricularInstancia.cursada).selectinload(Cursada.materia),
+            selectinload(models.ActividadCurricularInstancia.cursada).selectinload(Cursada.profesor)
+        )
     ).filter_by(id=instancia_sintetico_id).first()
+    # ----------------------------------
 
     if not instancia:
         raise NotFound(detail="Instancia de informe sintético no encontrada")
@@ -355,17 +358,18 @@ def generar_resumen_por_seccion(
     resumen_total = ""
     contador = 0
 
+    # 2. Recorrer cada informe de profesor (ACI) asociado
     for aci in instancia.actividades_curriculares_instancia:
         if not aci.cursada or not aci.cursada.materia:
             continue
             
-        # --- FILTRO NUEVO ---
+        # Filtro por materia (si se solicita)
         if materia_id and aci.cursada.materia.id != materia_id:
             continue
-        # --------------------
             
         profesor_nombre = aci.profesor.nombre if aci.profesor else "Docente"
         
+        # 3. Buscar el RespuestaSet del ACI (el último creado)
         respuesta_set = db.query(RespuestaSet).filter_by(
             instrumento_instancia_id=aci.id
         ).order_by(RespuestaSet.created_at.desc()).first()
@@ -373,6 +377,7 @@ def generar_resumen_por_seccion(
         if not respuesta_set:
             continue
 
+        # 4. Buscar Respuestas de Redacción
         respuestas_texto = db.query(RespuestaRedaccion).join(Pregunta).join(Seccion)\
             .filter(
                 RespuestaRedaccion.respuesta_set_id == respuesta_set.id,
@@ -381,23 +386,20 @@ def generar_resumen_por_seccion(
 
         if respuestas_texto:
             contador += 1
-            # Si pedimos una materia específica, no hace falta poner el encabezado con el nombre de la materia
+            # Si no filtramos por materia, mostramos el título para distinguir
             if not materia_id:
                 resumen_total += f"--- {aci.cursada.materia.nombre} ({profesor_nombre}) ---\n"
             
             for resp in respuestas_texto:
                 texto_limpio = resp.texto.strip()
-                # Filtramos textos vacios o genericos del seed si es necesario
                 if texto_limpio:
                     resumen_total += f"{texto_limpio}\n"
             
             if not materia_id:
-                 resumen_total += "\n"
+                resumen_total += "\n"
 
-    if contador == 0:
-        return "" # Retornamos vacío para que el frontend decida qué mostrar
-        
     return resumen_total.strip()
+
 #Funciones que no estaban 
 def listar_informes_sinteticos_por_departamento(
     db: Session, 
