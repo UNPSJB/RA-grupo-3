@@ -5,6 +5,7 @@ from src.enumerados import CicloMateria
 
 class MateriaBase(BaseModel):
     nombre: str
+    codigo: str
     descripcion: str 
     ciclo: CicloMateria
 

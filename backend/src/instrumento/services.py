@@ -218,7 +218,7 @@ def get_plantilla_para_instancia_reporte(
     resultado.materia_nombre = instancia.cursada.materia.nombre if instancia.cursada else "Desconocida"
     resultado.sede = sede_str
     resultado.anio = instancia.cursada.cuatrimestre.anio if instancia.cursada and instancia.cursada.cuatrimestre else datetime.now().year
-    resultado.codigo = str(instancia.cursada.materia.id) if instancia.cursada else "-"
+    resultado.codigo = instancia.cursada.materia.codigo if instancia.cursada and instancia.cursada.materia else "-"
     resultado.docente_responsable = instancia.profesor.nombre if instancia.profesor else "-"
     
     resultado.cantidad_inscriptos = cant_alumnos

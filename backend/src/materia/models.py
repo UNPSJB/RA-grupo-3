@@ -31,6 +31,8 @@ class Materia(ModeloBase):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
 
+    codigo: Mapped[str] = mapped_column(String(10), unique=True, index=True, nullable=False)
+
     nombre: Mapped[str] = mapped_column(String, index=True)
     descripcion: Mapped[str] = mapped_column(String, index=True)
     

@@ -112,11 +112,12 @@ const GestionCicloVida: React.FC = () => {
     setLoading(true);
     setMessage(null);
 
-    // CAMBIO 2: Lógica para usar la fecha del input O la fecha actual si está vacío
-    let fechaInicioEnvio = new Date().toISOString(); // Por defecto HOY
+    let fechaInicioEnvio = fechaInicio;
 
-    if (fechaInicio) {
-      fechaInicioEnvio = new Date(fechaInicio).toISOString();
+    if (!fechaInicioEnvio) {
+        const now = new Date();
+        now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+        fechaInicioEnvio = now.toISOString().slice(0, 16); // "2025-11-29T16:45"
     }
 
     try {
@@ -131,8 +132,8 @@ const GestionCicloVida: React.FC = () => {
           body: JSON.stringify({
             cursada_id: parseInt(selectedCursada),
             plantilla_id: parseInt(selectedPlantilla),
-            fecha_inicio: fechaInicioEnvio,
-            fecha_fin: fechaFin ? new Date(fechaFin).toISOString() : null,
+            fecha_inicio: fechaInicioEnvio, 
+            fecha_fin: fechaFin ? fechaFin : null, 
             estado: "activa",
           }),
         }
@@ -165,9 +166,7 @@ const GestionCicloVida: React.FC = () => {
     setLoading(true);
     try {
       const payload = {
-        fecha_fin_informe: fechaFinInforme
-          ? new Date(fechaFinInforme).toISOString()
-          : null,
+        fecha_fin_informe: fechaFinInforme ? fechaFinInforme : null,
       };
 
       const res = await fetch(
@@ -199,12 +198,9 @@ const GestionCicloVida: React.FC = () => {
   const handleSintetico = async () => {
     setLoading(true);
     try {
-      // Preparamos el payload con la fecha
       const payload = {
         departamento_id: parseInt(selectedDepto),
-        fecha_fin_informe: fechaFinSintetico
-          ? new Date(fechaFinSintetico).toISOString()
-          : null,
+        fecha_fin_informe: fechaFinSintetico ? fechaFinSintetico : null,
       };
 
       const res = await fetch(
