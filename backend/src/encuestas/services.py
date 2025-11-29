@@ -76,6 +76,10 @@ def eliminar_plantilla(db: Session, plantilla_id: int) -> models.Encuesta:
     return db_plantilla
 
 
+# ... imports previos ...
+# Asegúrate de tener datetime importado
+from datetime import datetime
+
 def activar_encuesta_para_cursada(db: Session, data: schemas.EncuestaInstanciaCreate) -> models.EncuestaInstancia:
     cursada = db.get(Cursada, data.cursada_id)
     if not cursada:
@@ -89,14 +93,22 @@ def activar_encuesta_para_cursada(db: Session, data: schemas.EncuestaInstanciaCr
     stmt_existente = select(models.EncuestaInstancia).where(models.EncuestaInstancia.cursada_id == data.cursada_id)
     instancia_existente = db.execute(stmt_existente).scalar_one_or_none()
     if instancia_existente:
-        raise BadRequest(detail=f"Ya existe una instancia de encuesta (ID: {instancia_existente.id}) para la cursada {data.cursada_id}.")
+        raise BadRequest(detail=f"Ya existe una instancia de encuesta para la cursada {data.cursada_id}.")
     
+    estado_inicial = data.estado
+
+    if data.fecha_inicio and data.fecha_inicio > datetime.now(data.fecha_inicio.tzinfo):
+        estado_inicial = EstadoInstancia.PENDIENTE
+        print(f"🕒 Planificando encuesta diferida para: {data.fecha_inicio}")
+    else:
+        estado_inicial = EstadoInstancia.ACTIVA
+
     nueva_instancia = models.EncuestaInstancia(
         cursada_id=data.cursada_id,
         plantilla_id=data.plantilla_id,
         fecha_inicio=data.fecha_inicio,
         fecha_fin=data.fecha_fin,
-        estado=data.estado 
+        estado=estado_inicial 
     )
     db.add(nueva_instancia)
     try:
@@ -105,7 +117,7 @@ def activar_encuesta_para_cursada(db: Session, data: schemas.EncuestaInstanciaCr
     except Exception as e:
         db.rollback()
         print(f"ERROR en commit al activar instancia: {e}")
-        raise BadRequest(detail=f"Error al guardar la instancia en la base de datos: {e}")
+        raise BadRequest(detail=f"Error al guardar la instancia: {e}")
 
     return nueva_instancia
 

@@ -14,7 +14,7 @@ class AlumnoUser(HttpUser):
     host = "http://localhost:8000"
 
     # --- CONFIGURACIÓN DE PROBABILIDAD ---
-    PROBABILIDAD_INACTIVO = 0.3  # El 30% de los alumnos no hará nada
+    PROBABILIDAD_INACTIVO = 0.08  # El 10% de los alumnos no hará nada
 
     def on_start(self):
         """

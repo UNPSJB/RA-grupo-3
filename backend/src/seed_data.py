@@ -105,7 +105,7 @@ def seed_initial_data(db: Session):
     
     # Alumnos (200)
     alumnos = []
-    for i in range(1, 101): 
+    for i in range(1, 201): 
         username = f"alumno{i}"
         a = db.query(Alumno).filter_by(username=username).first()
         if not a:

@@ -22,18 +22,9 @@ interface Cursada {
   profesor_nombre: string;
   anio: number;
   periodo: string;
+  materia_ciclo: string;
 }
 
-// --- Heurística para diferenciar ciclos (Provisional hasta tener dato en backend) ---
-const esCicloBasico = (nombreMateria: string): boolean => {
-  const keywordsBasicas = [
-    "matemática", "fisica", "física", "álgebra", "algebra", 
-    "química", "quimica", "inglés", "ingles", "introducción", 
-    "programación i", "sistemas de representación", "análisis matemático"
-  ];
-  const nombreLower = nombreMateria.toLowerCase();
-  return keywordsBasicas.some(k => nombreLower.includes(k));
-};
 
 // --- Componente Visual del Nodo de Tiempo ---
 interface TimelineNodeProps {
@@ -128,8 +119,8 @@ const GestionCicloVida: React.FC = () => {
 
   // --- Cálculo de Impacto ---
   const resumenImpacto = useMemo(() => {
-    const basico = cursadas.filter(c => esCicloBasico(c.materia_nombre));
-    const superior = cursadas.filter(c => !esCicloBasico(c.materia_nombre));
+    const basico = cursadas.filter(c => c.materia_ciclo === "basico");
+    const superior = cursadas.filter(c => c.materia_ciclo === "superior");
     return { basico, superior };
   }, [cursadas]);
 
@@ -209,8 +200,8 @@ const GestionCicloVida: React.FC = () => {
     const payload = {
         cursada_id: cursadaId,
         plantilla_id: plantillaId,
-        fecha_inicio: new Date(fechaInicioEncuesta).toISOString(),
-        fecha_fin: fechaFinEncuesta ? new Date(fechaFinEncuesta).toISOString() : null,
+        fecha_inicio: fechaInicioEncuesta, 
+        fecha_fin: fechaFinEncuesta ? fechaFinEncuesta : null,
         estado: "activa",
     };
 

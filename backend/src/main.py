@@ -21,7 +21,27 @@ from src.departamento.router import router as depto_router
 from fastapi.middleware.cors import CORSMiddleware
 from src.instrumento.router_departamento import router as instrumento_departamento_router
 from src.system.router import router as system_router
+from apscheduler.schedulers.background import BackgroundScheduler
+from src.encuestas.scheduler import check_ciclo_vida_encuestas
 
+@asynccontextmanager
+async def db_creation_lifespan(app: FastAPI):
+    # 1. Crear tablas (lo que ya tenías)
+    ModeloBase.metadata.create_all(bind=engine)
+    
+    # 2. Iniciar el Scheduler
+    scheduler = BackgroundScheduler()
+    
+    # Configurar la tarea: Ejecutar cada 1 minuto (o cada hora según prefieras)
+    scheduler.add_job(check_ciclo_vida_encuestas, 'interval', minutes=1)
+    
+    scheduler.start()
+    print("⏰ Scheduler de Ciclo de Vida iniciado (Revisión cada 1 min).")
+    
+    yield
+    
+    # 3. Apagar el scheduler al detener la app
+    scheduler.shutdown()
 
 
 load_dotenv()
@@ -62,3 +82,4 @@ app.include_router(auth_router)
 app.include_router(account_router)
 app.include_router(system_router)
 app.include_router(depto_router)
+
