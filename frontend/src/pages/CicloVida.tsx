@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import { useAuth } from "../auth/AuthContext";
 import Spinner from "../components/Spinner";
 import { 
-  CheckIcon, // <--- Agregado aquí
+  CheckIcon, 
   ProfileIcon, 
   ClipboardListIcon, 
   ChartLineIcon 
@@ -24,7 +24,6 @@ interface Cursada {
   periodo: string;
   materia_ciclo: string;
 }
-
 
 // --- Componente Visual del Nodo de Tiempo ---
 interface TimelineNodeProps {
@@ -130,10 +129,10 @@ const GestionCicloVida: React.FC = () => {
     return prevDate.split("T")[0]; 
   };
 
-  // --- Submit Masivo ---
+  // --- Submit Masivo (LÓGICA ACTUALIZADA) ---
   const handleGuardarPlanificacion = async () => {
-    if (!plantillaBasico || !plantillaSuperior || !fechaInicioEncuesta) {
-      setMessage({ type: "error", text: "Por favor selecciona las plantillas para ambos ciclos y la fecha de inicio." });
+    if (!plantillaBasico || !plantillaSuperior || !fechaInicioEncuesta || !fechaFinEncuesta) {
+      setMessage({ type: "error", text: "Por favor completa las fechas de inicio/fin y selecciona las plantillas." });
       return;
     }
 
@@ -146,35 +145,45 @@ const GestionCicloVida: React.FC = () => {
     setMessage(null);
 
     try {
-      // Preparamos las promesas de activación
-      const activaciones = [];
+      // Preparamos el payload único para el periodo
+      const payload = {
+          nombre_periodo: `Ciclo ${new Date().getFullYear()}`,
+          
+          // Fechas Globales (Se envían una sola vez al periodo)
+          fecha_inicio_encuesta: fechaInicioEncuesta,
+          fecha_fin_encuesta: fechaFinEncuesta,
+          fecha_limite_informe: fechaFinInforme ? fechaFinInforme : null,
+          fecha_limite_sintetico: fechaFinSintetico ? fechaFinSintetico : null,
+          
+          // Configuración Básico
+          plantilla_basico_id: parseInt(plantillaBasico),
+          cursadas_basico_ids: resumenImpacto.basico.map(c => c.id),
+          
+          // Configuración Superior
+          plantilla_superior_id: parseInt(plantillaSuperior),
+          cursadas_superior_ids: resumenImpacto.superior.map(c => c.id)
+      };
 
-      // 1. Activar Ciclo Básico
-      for (const cursada of resumenImpacto.basico) {
-        activaciones.push(
-            activarEncuestaIndividual(cursada.id, parseInt(plantillaBasico))
-        );
-      }
-
-      // 2. Activar Ciclo Superior
-      for (const cursada of resumenImpacto.superior) {
-        activaciones.push(
-            activarEncuestaIndividual(cursada.id, parseInt(plantillaSuperior))
-        );
-      }
-
-      // Ejecutar todo (En un caso real idealmente esto sería un solo endpoint batch en backend)
-      await Promise.all(activaciones);
-
-      // Simulación de guardado de fechas futuras (informes)
-      console.log("Fechas futuras configuradas:", {
-          cierre_informe_profesor: fechaFinInforme,
-          cierre_informe_sintetico: fechaFinSintetico
+      // Llamada al nuevo endpoint masivo
+      const res = await fetch(`${API_BASE_URL}/admin/gestion-encuestas/activar-masivo`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(payload),
       });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.detail || "Error en el servidor");
+      }
+
+      const dataResponse = await res.json();
 
       setMessage({ 
           type: "success", 
-          text: `¡Calendario Activado! Se generaron ${activaciones.length} encuestas (Básico: ${resumenImpacto.basico.length}, Superior: ${resumenImpacto.superior.length}).` 
+          text: `¡Periodo Activado! Se han generado ${dataResponse.cantidad_encuestas || (resumenImpacto.basico.length + resumenImpacto.superior.length)} encuestas.` 
       });
       
       // Recargar cursadas (deberían desaparecer de disponibles)
@@ -190,31 +199,10 @@ const GestionCicloVida: React.FC = () => {
 
     } catch (err: any) {
       console.error(err);
-      setMessage({ type: "error", text: "Hubo un error al procesar algunas activaciones." });
+      setMessage({ type: "error", text: err.message || "Hubo un error al procesar la activación." });
     } finally {
       setProcessing(false);
     }
-  };
-
-  const activarEncuestaIndividual = async (cursadaId: number, plantillaId: number) => {
-    const payload = {
-        cursada_id: cursadaId,
-        plantilla_id: plantillaId,
-        fecha_inicio: fechaInicioEncuesta, 
-        fecha_fin: fechaFinEncuesta ? fechaFinEncuesta : null,
-        estado: "activa",
-    };
-
-    const res = await fetch(`${API_BASE_URL}/admin/gestion-encuestas/activar`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(payload),
-    });
-    if (!res.ok) throw new Error(`Fallo cursada ${cursadaId}`);
-    return res.json();
   };
 
   if (loading) return <Spinner />;
@@ -222,7 +210,6 @@ const GestionCicloVida: React.FC = () => {
   return (
     <div className="max-w-7xl mx-auto p-6 pb-20">
       
-
       {message && (
         <div className={`p-4 mb-8 rounded-lg text-center font-medium shadow-sm ${message.type === 'success' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
           {message.text}
@@ -374,10 +361,10 @@ const GestionCicloVida: React.FC = () => {
       <div className="flex justify-center pt-6 border-t border-gray-200 bg-gray-50/50 p-6 rounded-xl">
         <button
           onClick={handleGuardarPlanificacion}
-          disabled={processing || !fechaInicioEncuesta || !plantillaBasico || !plantillaSuperior}
+          disabled={processing || !fechaInicioEncuesta || !fechaFinEncuesta || !plantillaBasico || !plantillaSuperior}
           className={`
             px-10 py-4 rounded-full font-bold text-lg shadow-lg transform transition-all flex items-center gap-3
-            ${processing || !fechaInicioEncuesta 
+            ${processing || !fechaInicioEncuesta || !fechaFinEncuesta
               ? "bg-gray-300 text-gray-500 cursor-not-allowed" 
               : "bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:scale-105 hover:shadow-xl hover:ring-4 hover:ring-blue-200"}
           `}

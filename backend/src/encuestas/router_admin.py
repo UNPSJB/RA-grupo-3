@@ -131,3 +131,15 @@ def get_encuestas_activas_admin(db: Session = Depends(get_db)):
 )
 def get_lista_departamentos(db: Session = Depends(get_db)):
     return services.listar_todos_departamentos(db)
+
+
+@router_gestion.post("/activar-masivo", status_code=status.HTTP_201_CREATED)
+def activar_encuestas_masivo(
+    data: schemas.ActivacionMasivaRequest,
+    db: Session = Depends(get_db)
+):
+    try:
+        return services.activar_periodo_masivo(db, data)
+    except Exception as e:
+        print(f"Error activando masivo: {e}")
+        raise HTTPException(status_code=500, detail=str(e))

@@ -108,7 +108,9 @@ def activar_encuesta_para_cursada(db: Session, data: schemas.EncuestaInstanciaCr
         plantilla_id=data.plantilla_id,
         fecha_inicio=data.fecha_inicio,
         fecha_fin=data.fecha_fin,
-        estado=estado_inicial 
+        estado=estado_inicial,
+        fecha_limite_informe=data.fecha_fin_informe,
+        fecha_limite_sintetico=data.fecha_fin_sintetico
     )
     db.add(nueva_instancia)
     try:
@@ -993,3 +995,91 @@ def listar_todas_instancias_activas(db: Session) -> List[Dict[str, Any]]:
 def listar_todos_departamentos(db: Session) -> List[Departamento]:
     """Lista simple de departamentos para el selector."""
     return db.scalars(select(Departamento)).all()
+
+def crear_periodo_y_activar_encuestas(
+    db: Session, 
+    data: schemas.PeriodoEvaluacionCreate
+):
+    nuevo_periodo = models.PeriodoEvaluacion(
+        nombre=data.nombre,
+        fecha_inicio_encuesta=data.fecha_inicio_encuesta,
+        fecha_fin_encuesta=data.fecha_fin_encuesta,
+        fecha_limite_informe=data.fecha_limite_informe,
+        fecha_limite_sintetico=data.fecha_limite_sintetico
+    )
+    db.add(nuevo_periodo)
+    db.flush() 
+
+    now = datetime.now(data.fecha_inicio_encuesta.tzinfo)
+    estado_inicial = EstadoInstancia.ACTIVA
+    if data.fecha_inicio_encuesta > now:
+        estado_inicial = EstadoInstancia.PENDIENTE
+    
+    instancias_creadas = []
+    for cursada_id in data.cursadas_ids:
+        
+        nueva_instancia = models.EncuestaInstancia(
+            cursada_id=cursada_id,
+            plantilla_id=data.plantilla_id,
+            periodo_evaluacion_id=nuevo_periodo.id, 
+            estado=estado_inicial,
+            fecha_inicio=data.fecha_inicio_encuesta, 
+            fecha_fin=data.fecha_fin_encuesta
+        )
+        db.add(nueva_instancia)
+        instancias_creadas.append(nueva_instancia)
+
+    db.commit()
+    return {
+        "periodo_id": nuevo_periodo.id,
+        "cantidad_encuestas": len(instancias_creadas),
+        "estado_inicial": estado_inicial
+    }
+
+def activar_periodo_masivo(db: Session, data: schemas.ActivacionMasivaRequest):
+    nuevo_periodo = models.PeriodoEvaluacion(
+        nombre=data.nombre_periodo,
+        fecha_inicio_encuesta=data.fecha_inicio_encuesta,
+        fecha_fin_encuesta=data.fecha_fin_encuesta,
+        fecha_limite_informe=data.fecha_limite_informe,
+        fecha_limite_sintetico=data.fecha_limite_sintetico
+    )
+    db.add(nuevo_periodo)
+    db.flush() 
+
+    estado_inicial = EstadoInstancia.ACTIVA
+    if data.fecha_inicio_encuesta:
+        inicio = data.fecha_inicio_encuesta.replace(tzinfo=None) if data.fecha_inicio_encuesta.tzinfo else data.fecha_inicio_encuesta
+        if inicio > datetime.now():
+            estado_inicial = EstadoInstancia.PENDIENTE
+            print(f"🕒 Periodo diferido. Inicio: {inicio}")
+
+    instancias_creadas = 0
+
+    def crear_instancias(ids_cursadas, plantilla_id):
+        count = 0
+        for cursada_id in ids_cursadas:
+            existe = db.query(models.EncuestaInstancia).filter_by(cursada_id=cursada_id).first()
+            if existe: continue 
+
+            nueva = models.EncuestaInstancia(
+                cursada_id=cursada_id,
+                plantilla_id=plantilla_id,
+                periodo_evaluacion_id=nuevo_periodo.id,
+                estado=estado_inicial,
+                fecha_inicio=data.fecha_inicio_encuesta, 
+                fecha_fin=data.fecha_fin_encuesta
+            )
+            db.add(nueva)
+            count += 1
+        return count
+
+    instancias_creadas += crear_instancias(data.cursadas_basico_ids, data.plantilla_basico_id)
+    instancias_creadas += crear_instancias(data.cursadas_superior_ids, data.plantilla_superior_id)
+
+    try:
+        db.commit()
+        return {"message": f"Periodo creado con {instancias_creadas} encuestas.", "periodo_id": nuevo_periodo.id}
+    except Exception as e:
+        db.rollback()
+        raise e

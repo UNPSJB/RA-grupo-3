@@ -52,6 +52,8 @@ class PlantillaInfo(BaseModel):
 class EncuestaInstanciaBase(BaseModel):
     fecha_inicio: datetime
     fecha_fin: Optional[datetime] = None
+    fecha_limite_informe: Optional[datetime] = None
+    fecha_limite_sintetico: Optional[datetime] = None
     estado: EstadoInstancia = Field(default = EstadoInstancia.PENDIENTE)
 
 class EncuestaInstanciaCreate(EncuestaInstanciaBase):
@@ -192,3 +194,27 @@ class InformeHistoricoResponse(BaseModel):
     estado: str
 
     model_config = {"from_attributes": True}
+
+class PeriodoEvaluacionCreate(BaseModel):
+    nombre: str
+    fecha_inicio_encuesta: datetime
+    fecha_fin_encuesta: datetime
+    fecha_limite_informe: Optional[datetime] = None
+    fecha_limite_sintetico: Optional[datetime] = None
+    
+    plantilla_id: int
+    cursadas_ids: List[int]
+
+class ActivacionMasivaRequest(BaseModel):
+    nombre_periodo: str = "Nuevo Periodo"
+    
+    fecha_inicio_encuesta: datetime
+    fecha_fin_encuesta: datetime
+    fecha_limite_informe: Optional[datetime] = None
+    fecha_limite_sintetico: Optional[datetime] = None
+    
+    plantilla_basico_id: int
+    cursadas_basico_ids: List[int]
+    
+    plantilla_superior_id: int
+    cursadas_superior_ids: List[int]
