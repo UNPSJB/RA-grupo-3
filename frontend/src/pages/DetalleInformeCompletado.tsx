@@ -1,12 +1,15 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { useAuth } from "../auth/AuthContext";
-import type {
-  InformeSinteticoList,
-  InformeCompletoLectura,
-  DashboardDepartamentoStats,
-} from "../types/estadisticas";
+import { useNavigate } from "react-router-dom";
+import Spinner from "../components/Spinner";
 
-// Gráficos para el Dashboard General
+// IMPORTAMOS TU NUEVO COMPONENTE
+import {
+  VisualizadorInforme,
+  DatosInforme,
+} from "../components/VisualizadorInforme.tsx";
+
+// Gráficos
 import {
   PieChart,
   Pie,
@@ -21,10 +24,12 @@ import {
   CartesianGrid,
 } from "recharts";
 
-import Spinner from "../components/Spinner";
-import { jsPDF } from "jspdf";
-import autoTable from "jspdf-autotable";
-import { useNavigate } from "react-router-dom";
+import type {
+  InformeSinteticoList,
+  InformeCompletoLectura,
+  DashboardDepartamentoStats,
+} from "../types/estadisticas";
+
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
 
 // --- COLORES ---
@@ -162,304 +167,44 @@ const DashboardGeneral: React.FC<{ stats: DashboardDepartamentoStats }> = ({
   );
 };
 
-// --- COMPONENTE 2: VISOR DE INFORME TEXTUAL (NUEVO) ---
-const InformeLectura: React.FC<{
-  informe: InformeCompletoLectura;
-  onVolver: () => void;
-}> = ({ informe, onVolver }) => {
-  const handleExportPDF = () => {
-    const doc = new jsPDF();
-    let yPos = 20;
-
-    // Encabezado PDF más prolijo
-    doc.setFillColor(41, 128, 185); // Azul
-    doc.rect(0, 0, 210, 15, "F"); // Barra superior decorativa
-
-    doc.setFontSize(18);
-    doc.setTextColor(0, 0, 0);
-    doc.text(informe.titulo, 14, 30);
-    yPos = 40;
-
-    doc.setFontSize(10);
-    doc.setTextColor(100);
-    doc.text(`Departamento: ${informe.departamento}`, 14, yPos);
-    doc.text(
-      `Fecha de emisión: ${new Date(informe.fecha).toLocaleDateString()}`,
-      14,
-      yPos + 5
-    );
-    yPos += 15;
-
-    informe.secciones.forEach((seccion) => {
-      if (yPos > 270) {
-        doc.addPage();
-        yPos = 20;
-      }
-
-      // Título de Sección resaltado
-      doc.setFillColor(240, 240, 240);
-      doc.rect(14, yPos - 5, 182, 8, "F"); // Fondo gris suave para título
-      doc.setFontSize(11);
-      doc.setFont("helvetica", "bold");
-      doc.setTextColor(0);
-      doc.text(seccion.seccion_nombre, 16, yPos);
-      yPos += 8;
-
-      const bodyData = seccion.preguntas.map((p) => [
-        p.pregunta_texto,
-        p.respuesta_texto === "Sin respuesta registrada."
-          ? "-"
-          : p.respuesta_texto,
-      ]);
-
-      autoTable(doc, {
-        startY: yPos,
-        head: [["Ítem", "Detalle / Respuesta"]],
-        body: bodyData,
-        theme: "grid",
-        headStyles: {
-          fillColor: [255, 255, 255],
-          textColor: [80, 80, 80],
-          lineColor: [200, 200, 200],
-          lineWidth: 0.1,
-        },
-        styles: {
-          fontSize: 9,
-          cellPadding: 3,
-          textColor: [50, 50, 50],
-          lineColor: [200, 200, 200],
-        },
-        columnStyles: {
-          0: { cellWidth: 70, fontStyle: "bold" }, // Pregunta en negrita
-          1: { cellWidth: "auto" },
-        },
-        didDrawPage: (d) => {
-          yPos = d.cursor ? d.cursor.y + 10 : 20;
-        },
-        margin: { top: 20 },
-      });
-
-      // @ts-ignore
-      if (doc.lastAutoTable) yPos = doc.lastAutoTable.finalY + 10;
-    });
-    doc.save(`Informe_Sintetico_${new Date().toISOString().split("T")[0]}.pdf`);
-  };
-
-  return (
-    <div className="space-y-6 animate-fadeIn pb-20 max-w-5xl mx-auto">
-      {/* Barra de Herramientas Superior */}
-      <div className="sticky top-0 z-10 bg-[#f1f5f9]/90 backdrop-blur-sm py-4 flex justify-between items-center border-b border-gray-200/50">
-        <button
-          onClick={onVolver}
-          className="flex items-center gap-2 text-gray-600 hover:text-indigo-600 transition-colors font-medium px-2 py-1 rounded-md hover:bg-white/50"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="h-5 w-5"
-            viewBox="0 0 20 20"
-            fill="currentColor"
-          >
-            <path
-              fillRule="evenodd"
-              d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z"
-              clipRule="evenodd"
-            />
-          </svg>
-          Volver
-        </button>
-        <button
-          onClick={handleExportPDF}
-          className="flex items-center gap-2 bg-white border border-gray-200 text-gray-700 px-4 py-2 rounded-lg shadow-sm hover:bg-gray-50 hover:text-indigo-600 transition-all hover:border-indigo-200"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="h-5 w-5"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
-            />
-          </svg>
-          Descargar PDF
-        </button>
-      </div>
-
-      {/* Documento Visual */}
-      <div className="bg-white shadow-lg rounded-none sm:rounded-lg border border-gray-200 overflow-hidden min-h-[800px]">
-        {/* Encabezado del Documento */}
-        <div className="bg-slate-50 px-8 py-10 border-b border-gray-200 text-center relative">
-          <div className="absolute top-0 left-0 w-full h-1 bg-indigo-600"></div>
-          <div className="inline-block p-3 rounded-full bg-indigo-50 mb-4">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-8 w-8 text-indigo-600"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-              />
-            </svg>
-          </div>
-          <h1 className="text-2xl md:text-3xl font-serif font-bold text-gray-800 mb-2">
-            {informe.titulo}
-          </h1>
-          <div className="flex flex-wrap justify-center gap-4 text-sm text-gray-500 mt-4">
-            <span className="flex items-center gap-1">
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
-                />
-              </svg>
-              {informe.departamento}
-            </span>
-            <span className="hidden sm:inline text-gray-300">|</span>
-            <span className="flex items-center gap-1">
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                />
-              </svg>
-              {new Date(informe.fecha).toLocaleDateString("es-AR", {
-                day: "numeric",
-                month: "long",
-                year: "numeric",
-              })}
-            </span>
-          </div>
-        </div>
-
-        {/* Cuerpo del Informe */}
-        <div className="px-6 py-8 sm:px-10 sm:py-10 space-y-10">
-          {informe.secciones.map((seccion, index) => (
-            <section key={index} className="relative">
-              {/* Línea conectora vertical */}
-              {index !== informe.secciones.length - 1 && (
-                <div className="absolute left-[11px] top-8 bottom-[-40px] w-px bg-gray-200 hidden md:block"></div>
-              )}
-
-              <div className="flex gap-4">
-                {/* Número de Sección (Decorativo) */}
-                <div className="flex-shrink-0 hidden md:flex items-center justify-center w-6 h-6 rounded-full bg-indigo-100 text-indigo-700 text-xs font-bold border-2 border-white ring-1 ring-gray-200 mt-1">
-                  {index}
-                </div>
-
-                <div className="flex-grow">
-                  <h3 className="text-lg font-bold text-gray-800 mb-5 pb-2 border-b border-gray-100 flex items-center gap-2">
-                    {seccion.seccion_nombre}
-                  </h3>
-
-                  <div className="grid gap-6">
-                    {seccion.preguntas.map((preg, idx) => {
-                      const isEmpty =
-                        preg.respuesta_texto === "Sin respuesta registrada." ||
-                        !preg.respuesta_texto;
-                      return (
-                        <div
-                          key={idx}
-                          className={`group ${
-                            isEmpty
-                              ? "opacity-60 hover:opacity-100 transition-opacity"
-                              : ""
-                          }`}
-                        >
-                          <h4 className="text-sm font-semibold text-gray-700 mb-2 flex items-start gap-2">
-                            <span className="text-indigo-400 mt-1 text-[10px]">
-                              ●
-                            </span>
-                            {preg.pregunta_texto}
-                          </h4>
-
-                          {isEmpty ? (
-                            <div className="ml-4 text-sm text-gray-400 italic bg-gray-50/50 px-3 py-2 rounded border border-dashed border-gray-200">
-                              — Sin respuesta registrada —
-                            </div>
-                          ) : (
-                            <div className="ml-4 text-sm text-gray-800 bg-slate-50 px-4 py-3 rounded-lg border border-slate-100 leading-relaxed shadow-sm group-hover:border-indigo-100 group-hover:shadow-md transition-all">
-                              {preg.respuesta_texto}
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-            </section>
-          ))}
-        </div>
-
-        {/* Pie del Documento */}
-        <div className="bg-gray-50 border-t border-gray-200 p-6 text-center">
-          <p className="text-xs text-gray-400">
-            Documento generado por el Sistema de Gestión Académica - Facultad de
-            Ingeniería
-          </p>
-        </div>
-      </div>
-    </div>
-  );
-};
 // --- PÁGINA PRINCIPAL ---
 const DetalleInformeCompleto: React.FC = () => {
   const { token } = useAuth();
+  const navigate = useNavigate();
   const currentYear = new Date().getFullYear();
+
+  // Estados
   const [selectedYear, setSelectedYear] = useState<string>(
     currentYear.toString()
   );
-
   const [dashboardStats, setDashboardStats] =
     useState<DashboardDepartamentoStats | null>(null);
   const [informesList, setInformesList] = useState<InformeSinteticoList[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Estado para ver el detalle (AHORA USA EL TIPO TEXTUAL)
+  // Estados para el Visualizador
   const [selectedInformeId, setSelectedInformeId] = useState<number | null>(
     null
   );
   const [informeLectura, setInformeLectura] =
     useState<InformeCompletoLectura | null>(null);
-  const navigate = useNavigate();
-  // Carga Inicial
+
+  // Carga Inicial del Dashboard
   useEffect(() => {
     if (!token) return;
     const loadAll = async () => {
       setLoading(true);
       try {
-        const resStats = await fetch(
-          `${API_BASE_URL}/departamento/estadisticas-generales`,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-        const resList = await fetch(
-          `${API_BASE_URL}/departamento/informes-sinteticos`,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
+        const [resStats, resList] = await Promise.all([
+          fetch(`${API_BASE_URL}/departamento/estadisticas-generales`, {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+          fetch(`${API_BASE_URL}/departamento/informes-sinteticos`, {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+        ]);
+
         if (resStats.ok) setDashboardStats(await resStats.json());
         if (resList.ok) setInformesList(await resList.json());
       } catch (err) {
@@ -471,23 +216,24 @@ const DetalleInformeCompleto: React.FC = () => {
     loadAll();
   }, [token]);
 
-  // CAMBIO CLAVE: Cargar el texto completo en lugar de estadísticas
+  // Carga del Detalle (Cuando se selecciona un informe)
   useEffect(() => {
     if (!selectedInformeId || !token) {
       setInformeLectura(null);
       return;
     }
-    setLoading(true); // Mostrar spinner mientras carga el detalle
+    setLoading(true);
     fetch(
-      `${API_BASE_URL}/departamento/informes-sinteticos/${selectedInformeId}/exportar-completo`, // Usamos el endpoint de texto
+      `${API_BASE_URL}/departamento/informes-sinteticos/${selectedInformeId}/exportar-completo`,
       { headers: { Authorization: `Bearer ${token}` } }
     )
       .then((res) => res.json())
       .then((data) => setInformeLectura(data))
+      .catch((e) => console.error(e))
       .finally(() => setLoading(false));
   }, [selectedInformeId, token]);
 
-  // Filtro
+  // Filtro por Año
   const informesFiltrados = useMemo(() => {
     let filtrados = informesList;
     if (selectedYear) {
@@ -499,11 +245,36 @@ const DetalleInformeCompleto: React.FC = () => {
     return filtrados;
   }, [informesList, selectedYear]);
 
-  // --- RENDERIZADO DEL DETALLE ---
+  // --- TRANSICIÓN AL VISUALIZADOR ---
+  // Aquí convertimos los datos de tu API al formato genérico del componente
   if (selectedInformeId && informeLectura) {
+    // Mapeo de datos para el componente genérico
+    const datosParaVisualizar: DatosInforme = {
+      titulo: informeLectura.titulo,
+      subtitulo: `Departamento: ${informeLectura.departamento}`,
+      metadata: [
+        {
+          label: "Fecha",
+          value: new Date(informeLectura.fecha).toLocaleDateString(),
+        },
+        { label: "ID Informe", value: selectedInformeId },
+        { label: "Estado", value: "Finalizado" },
+      ],
+      secciones: informeLectura.secciones.map((sec) => ({
+        nombre: sec.seccion_nombre,
+        preguntas: sec.preguntas.map((preg) => ({
+          texto: preg.pregunta_texto,
+          respuesta:
+            preg.respuesta_texto === "Sin respuesta registrada."
+              ? "-"
+              : preg.respuesta_texto,
+        })),
+      })),
+    };
+
     return (
-      <InformeLectura
-        informe={informeLectura}
+      <VisualizadorInforme
+        datos={datosParaVisualizar}
         onVolver={() => setSelectedInformeId(null)}
       />
     );
@@ -603,8 +374,6 @@ const DetalleInformeCompleto: React.FC = () => {
                           {inf.cantidad_reportes} materias
                         </span>
                       </td>
-
-                      {/* COLUMNA ESTADO */}
                       <td className="px-6 py-4">
                         {inf.estado === "pendiente" ? (
                           <span className="text-yellow-700 text-xs font-bold bg-yellow-100 px-2 py-1 rounded">
@@ -616,8 +385,6 @@ const DetalleInformeCompleto: React.FC = () => {
                           </span>
                         )}
                       </td>
-
-                      {/* COLUMNA ACCIÓN */}
                       <td className="px-6 py-4 text-right">
                         {inf.estado === "pendiente" ? (
                           <button
@@ -626,9 +393,9 @@ const DetalleInformeCompleto: React.FC = () => {
                                 `/departamento/informe-sintetico/${inf.id}`
                               )
                             }
-                            className="bg-indigo-600 text-white text-xs px-3 py-1.5 rounded hover:bg-indigo-700 font-medium shadow-sm transition-colors"
+                            className="bg-indigo-600 text-white text-xs px-3 py-1.5 rounded hover:bg-indigo-700 font-medium shadow-sm"
                           >
-                            Completar Informe
+                            Completar
                           </button>
                         ) : (
                           <button

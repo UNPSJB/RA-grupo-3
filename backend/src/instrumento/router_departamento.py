@@ -257,3 +257,24 @@ def descargar_informe_completo(
     except Exception as e:
         print(f"Error exportando informe: {e}")
         raise HTTPException(status_code=500, detail="Error al exportar el informe.")
+    
+@router.get(
+    "/informes-sinteticos/{instancia_id}/detalle-completo",
+    response_model=schemas.InformeSinteticoCompletoRead
+)
+def get_detalle_completo_sintetico(
+    instancia_id: int,
+    db: Session = Depends(get_db),
+    admin: AdminDepartamento = Depends(get_current_admin_departamento)
+):
+    """
+    Obtiene la instancia del informe sintético junto con TODOS los informes
+    de asignaturas vinculados y sus respuestas, para visualizar en pestañas.
+    """
+    try:
+        return services.obtener_informe_sintetico_con_detalles(db, instancia_id)
+    except (NotFound, BadRequest) as e:
+        raise HTTPException(status_code=e.STATUS_CODE, detail=e.DETAIL)
+    except Exception as e:
+        print(f"Error obteniendo detalle completo: {e}")
+        raise HTTPException(status_code=500, detail="Error interno del servidor")

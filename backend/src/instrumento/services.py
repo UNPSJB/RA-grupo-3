@@ -49,7 +49,7 @@ from src.encuestas.schemas import (
     DashboardDepartamentoStats,
     StatDato
 )
-from src.materia.models import Cursada
+
 
 
 def get_instrumento_completo(db: Session, instrumento_id: int) -> models.InstrumentoBase:
@@ -194,10 +194,7 @@ def get_plantilla_para_instancia_reporte(
     if instancia.profesor_id != profesor_id:
         raise HTTPException(status_code=403, detail="No tienes permiso para este reporte.")
     
-    # --- CORRECCIÓN: Eliminamos esta validación para permitir ver historial ---
-    # if instancia.estado != EstadoInforme.PENDIENTE:
-    #    raise HTTPException(status_code=400, detail="El reporte no está pendiente.")
-    # ------------------------------------------------------------------------
+   
 
     # Lógica de Sedes
     sedes_set = set()
@@ -682,3 +679,79 @@ def obtener_informe_sintetico_respondido(
         fecha=instancia.fecha_inicio,
         secciones=secciones_res
     )
+
+def obtener_informe_sintetico_con_detalles(db: Session, instancia_id: int) -> dict:
+
+    instancia_sintetico = db.query(models.InformeSinteticoInstancia).options(
+        joinedload(models.InformeSinteticoInstancia.departamento).joinedload(Departamento.sede)
+    ).filter(models.InformeSinteticoInstancia.id == instancia_id).first()
+
+    if not instancia_sintetico:
+        raise NotFound(detail="Informe sintético no encontrado")
+
+    plantilla = instancia_sintetico.informe_sintetico
+    
+
+    nombre_departamento = instancia_sintetico.departamento.nombre if instancia_sintetico.departamento else "Sin Departamento"
+    
+    # CAMBIO: .sede.localidad
+    nombre_sede = instancia_sintetico.departamento.sede.localidad if (instancia_sintetico.departamento and instancia_sintetico.departamento.sede) else "Sede Central"
+    anio_ciclo = instancia_sintetico.fecha_inicio.year
+
+    lista_asignaturas = []
+    
+
+    informes_hijos = db.query(ActividadCurricularInstancia).options(
+        joinedload(ActividadCurricularInstancia.cursada).joinedload(Cursada.materia),
+        joinedload(ActividadCurricularInstancia.profesor),
+        selectinload(ActividadCurricularInstancia.respuesta_sets)
+        .selectinload(RespuestaSet.respuestas)
+    ).filter(
+        ActividadCurricularInstancia.informe_sintetico_instancia_id == instancia_id
+    ).all()
+
+    for informe in informes_hijos:
+        ultimo_set = sorted(informe.respuesta_sets, key=lambda x: x.id)[-1] if informe.respuesta_sets else None
+        
+        respuestas_procesadas = []
+        if ultimo_set:
+            for r in ultimo_set.respuestas:
+                # 1. Obtener texto (si es redacción)
+                texto = getattr(r, 'texto', None)
+                
+                # 2. Obtener opción (si es multiple choice) - ¡ESTO FALTABA!
+                opcion_texto = None
+                if hasattr(r, 'opcion') and r.opcion:
+                     opcion_texto = r.opcion.texto
+
+                # 3. Obtener el texto de la pregunta (CRÍTICO PARA EL FRONTEND)
+                pregunta_texto = ""
+                if r.pregunta:
+                    pregunta_texto = r.pregunta.texto  
+                
+                # 4. Agregamos todo al diccionario
+                respuestas_procesadas.append({
+                    "pregunta_id": r.pregunta_id,
+                    "pregunta_texto": pregunta_texto, 
+                    "texto": texto,
+                    "opcion_texto": opcion_texto 
+                })
+
+        lista_asignaturas.append({
+            "id": informe.id,
+            "materia_nombre": informe.cursada.materia.nombre if informe.cursada else "Desconocida",
+            "docente_nombre": informe.profesor.nombre if informe.profesor else "Sin docente",
+            "respuestas": respuestas_procesadas
+        })
+
+    return {
+        "id": instancia_sintetico.id,
+        "titulo": plantilla.titulo if plantilla else "Informe Sintético",
+        "descripcion": plantilla.descripcion if plantilla else "",
+
+        "sede": nombre_sede,
+        "anio": anio_ciclo,
+        "departamento": nombre_departamento,
+
+        "informes_asignaturas": lista_asignaturas
+    }
