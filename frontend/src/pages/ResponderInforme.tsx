@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 
@@ -48,12 +48,92 @@ interface PlantillaInforme {
   secciones: Seccion[];
 }
 
+// --- MODAL SIMPLE ---
+const ModalConfirmacion: React.FC<{
+  isOpen: boolean;
+  type: "success" | "confirm";
+  title: string;
+  message: string;
+  onClose: () => void;
+  onConfirm?: () => void;
+}> = ({ isOpen, type, title, message, onClose, onConfirm }) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-fadeIn">
+      <div className="bg-white rounded-xl shadow-xl max-w-sm w-full p-6 text-center transform transition-all scale-100 border border-gray-100">
+        <div
+          className={`mx-auto flex items-center justify-center h-12 w-12 rounded-full mb-4 ${
+            type === "success" ? "bg-green-100" : "bg-blue-100"
+          }`}
+        >
+          {type === "success" ? (
+            <svg
+              className="h-6 w-6 text-green-600"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M5 13l4 4L19 7"
+              />
+            </svg>
+          ) : (
+            <svg
+              className="h-6 w-6 text-blue-600"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+          )}
+        </div>
+        <h3 className="text-lg font-bold text-gray-900 mb-2">{title}</h3>
+        <p className="text-sm text-gray-500 mb-6">{message}</p>
+        <div className="flex justify-center gap-3">
+          {type === "confirm" ? (
+            <>
+              <button
+                onClick={onClose}
+                className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 text-sm font-medium hover:bg-gray-50 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={onConfirm}
+                className="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 shadow-sm transition-transform active:scale-95"
+              >
+                Confirmar
+              </button>
+            </>
+          ) : (
+            <button
+              onClick={onClose}
+              className="w-full py-2 rounded-lg bg-green-600 text-white text-sm font-medium hover:bg-green-700 shadow-sm"
+            >
+              Aceptar
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const ResponderInforme: React.FC = () => {
   const { instanciaId } = useParams<{ instanciaId: string }>();
   const navigate = useNavigate();
   const { token } = useAuth();
 
-  // Estados
   const [datosInsumos, setDatosInsumos] =
     useState<InformeSinteticoCompleto | null>(null);
   const [plantilla, setPlantilla] = useState<PlantillaInforme | null>(null);
@@ -61,13 +141,26 @@ const ResponderInforme: React.FC = () => {
   const [respuestasUsuario, setRespuestasUsuario] = useState<{
     [key: string]: string;
   }>({});
+
   const [loading, setLoading] = useState(true);
   const [enviando, setEnviando] = useState(false);
+  const [errorValidacion, setErrorValidacion] = useState(false);
+  const [modal, setModal] = useState<{
+    open: boolean;
+    type: "success" | "confirm";
+    title: string;
+    message: string;
+    onConfirm?: () => void;
+  }>({
+    open: false,
+    type: "success",
+    title: "",
+    message: "",
+  });
 
   // 1. CARGA DE DATOS
   useEffect(() => {
     if (!token || !instanciaId) return;
-
     const cargarDatos = async () => {
       setLoading(true);
       try {
@@ -81,11 +174,10 @@ const ResponderInforme: React.FC = () => {
             { headers: { Authorization: `Bearer ${token}` } }
           ),
         ]);
-
         if (resInsumos.ok) setDatosInsumos(await resInsumos.json());
         if (resPlantilla.ok) setPlantilla(await resPlantilla.json());
       } catch (error) {
-        console.error("Error cargando datos:", error);
+        console.error(error);
       } finally {
         setLoading(false);
       }
@@ -93,48 +185,159 @@ const ResponderInforme: React.FC = () => {
     cargarDatos();
   }, [instanciaId, token]);
 
-  // 2. LOGICA DE FILTRADO ESTRICTO (SOLUCIÓN A TU PROBLEMA)
-  const esSeccionOculta = (nombreSeccion: string) => {
-    const s = nombreSeccion.toLowerCase();
-    // Ocultamos secciones 1, 2, 3, 4 (Técnicas)
-    // Mostramos solo si parece ser la Sección 5 o de Cierre
-    return !(
-      s.includes("5") ||
-      s.includes("sintesis") ||
-      s.includes("síntesis") ||
-      s.includes("conclusiones") ||
-      s.includes("generales")
-    );
+  // --- 2. LÓGICA DE MATCH INTELIGENTE MEJORADA ---
+  const normalizar = (str: string | undefined) =>
+    str
+      ? str
+          .toLowerCase()
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .replace(/[^a-z0-9]/g, "")
+      : "";
+
+  const encontrarCoincidenciaInteligente = (
+    tituloDestino: string,
+    respuestasOrigen: RespuestaSimple[],
+    materia: string
+  ) => {
+    const tDest = normalizar(tituloDestino);
+
+    // 1. Intento Exacto / Inclusión (PRIORIDAD ALTA)
+    const matchExacto = respuestasOrigen.find((r) => {
+      const tOrig = normalizar(r.pregunta_texto);
+      return (
+        tOrig === tDest ||
+        (tOrig.length > 10 && tDest.includes(tOrig)) ||
+        (tDest.length > 10 && tOrig.includes(tDest))
+      );
+    });
+    if (matchExacto) {
+      // console.log(`[MATCH EXACTO] ${materia}: "${tituloDestino}" <-> "${matchExacto.pregunta_texto}"`);
+      return matchExacto;
+    }
+
+    // 2. Intento por Palabras Clave (SOLO SI FALLA EL EXACTO)
+    // Ajustamos las palabras clave para evitar falsos positivos
+    const palabrasClave = [
+      "equipamiento",
+      "bibliografia",
+      "teoricas",
+      "practicas",
+      "contenidos",
+      "valores",
+      "aspectos",
+      "capacitacion",
+      "investigacion",
+      "extension",
+      "desempeno",
+      "auxiliares",
+    ];
+
+    for (const palabra of palabrasClave) {
+      // Solo buscamos por keyword si el destino TIENE esa palabra clave importante
+      if (tDest.includes(palabra)) {
+        const matchKeyword = respuestasOrigen.find((r) =>
+          normalizar(r.pregunta_texto).includes(palabra)
+        );
+        if (matchKeyword) {
+          // console.log(`[MATCH KEYWORD] ${materia}: "${tituloDestino}" <-> "${matchKeyword.pregunta_texto}" por "${palabra}"`);
+          return matchKeyword;
+        }
+      }
+    }
+
+    // console.warn(`[NO MATCH] ${materia}: No se encontró origen para "${tituloDestino}"`);
+    return null;
   };
 
-  const esPreguntaVisible = (
-    seccionNombre: string,
-    textoPregunta: string
-  ): boolean => {
-    const t = textoPregunta.toLowerCase();
+  // --- 3. IDENTIFICACIÓN ÚNICA DE PREGUNTAS ---
+  const preguntasClave = useMemo(() => {
+    if (!plantilla) return { integrantes: null, sintesis: null };
+    const todas = plantilla.secciones.flatMap((s) => s.preguntas);
 
-    // CASO 1: Campo "Integrantes" -> SIEMPRE VISIBLE (no importa la sección)
-    if (t.includes("integrantes")) return true;
+    const integrantes = todas.find((p) => {
+      const t = normalizar(p.texto);
+      return (
+        t.includes("integrante") ||
+        t.includes("tabla") ||
+        t.includes("actividad")
+      );
+    });
 
-    // CASO 2: Si la sección es oculta (1-4), la pregunta NO se ve (salvo integrantes)
-    if (esSeccionOculta(seccionNombre)) return false;
+    const sintesis = todas.find((p) => {
+      const t = normalizar(p.texto);
+      return (
+        (t.includes("sintesis") ||
+          t.includes("observacion") ||
+          t.includes("conclusion") ||
+          t.includes("comentario")) &&
+        p.id !== integrantes?.id
+      );
+    });
 
-    // CASO 3: Si es la Sección 5, mostramos todo (allí vive la Síntesis)
-    return true;
-  };
+    return { integrantes, sintesis };
+  }, [plantilla]);
 
-  // Etiqueta bonita para la UI
-  const getLabelAmigable = (textoOriginal: string) => {
-    if (textoOriginal.toLowerCase().includes("integrantes"))
-      return "Integrantes de la Comisión Asesora";
-    return textoOriginal; // El resto queda igual (ej: "Síntesis de los informes...")
-  };
-
-  // 3. GUARDADO INTELIGENTE (Igual que antes, procesa lo oculto)
-  const handleFinalizar = async () => {
+  // --- 4. AUTOCOMPLETADO VISUAL (METADATA) ---
+  useEffect(() => {
     if (!plantilla || !datosInsumos) return;
-    if (!window.confirm("¿Confirmar y generar informe?")) return;
+    if (Object.keys(respuestasUsuario).length > 0) return;
 
+    const nuevosValores: { [key: string]: string } = {};
+
+    plantilla.secciones.forEach((seccion) => {
+      seccion.preguntas.forEach((p) => {
+        if (
+          p.id === preguntasClave.integrantes?.id ||
+          p.id === preguntasClave.sintesis?.id
+        )
+          return;
+
+        const txt = normalizar(p.texto);
+
+        if (txt.includes("sede"))
+          nuevosValores[p.id] = datosInsumos.sede || "Sede Central";
+        else if (txt.includes("ciclo") || txt.includes("anio"))
+          nuevosValores[p.id] = String(
+            datosInsumos.anio || new Date().getFullYear()
+          );
+        // CORRECCIÓN: Autocompletar Departamento SOLO si dice "Comisión Asesora"
+        else if (txt.includes("comision") && txt.includes("asesora"))
+          nuevosValores[p.id] = datosInsumos.departamento || "";
+      });
+    });
+
+    if (Object.keys(nuevosValores).length > 0) {
+      setRespuestasUsuario((prev) => ({ ...prev, ...nuevosValores }));
+    }
+  }, [plantilla, datosInsumos, preguntasClave]);
+
+  // --- 5. PROCESO DE GUARDADO ---
+  const iniciarGuardado = () => {
+    if (preguntasClave.integrantes) {
+      const valor = respuestasUsuario[preguntasClave.integrantes.id];
+      if (!valor || valor.trim().length === 0) {
+        setErrorValidacion(true);
+        const el = document.getElementById("campo-integrantes");
+        if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+        return;
+      }
+    }
+    setErrorValidacion(false);
+
+    setModal({
+      open: true,
+      type: "confirm",
+      title: "Generar Informe",
+      message:
+        "Se recopilarán las respuestas de las cátedras y se guardará el informe. ¿Continuar?",
+      onConfirm: procesarEnvio,
+    });
+  };
+
+  const procesarEnvio = async () => {
+    setModal({ ...modal, open: false });
+    if (!plantilla || !datosInsumos) return;
     setEnviando(true);
 
     try {
@@ -142,7 +345,9 @@ const ResponderInforme: React.FC = () => {
 
       plantilla.secciones.forEach((seccion) => {
         seccion.preguntas.forEach((preguntaDestino) => {
-          // A. Manual (Lo que escribiste en los 2 campos visibles)
+          const tituloNorm = normalizar(preguntaDestino.texto);
+
+          // A. Manual (Ya sea Integrantes, Síntesis o Metadata)
           if (respuestasUsuario[preguntaDestino.id]) {
             payloadRespuestas.push({
               pregunta_id: preguntaDestino.id,
@@ -151,49 +356,46 @@ const ResponderInforme: React.FC = () => {
             return;
           }
 
-          // B. Automático (Todo lo oculto: Sede, Ciclo, Secciones 1-4)
-          let contenidoAutomatico = "";
-          const titulo = preguntaDestino.texto.trim().toLowerCase();
+          // B. Automático (Secciones Técnicas Ocultas)
+          let autoContent = "";
 
-          if (titulo.includes("sede"))
-            contenidoAutomatico = datosInsumos.sede || "";
-          else if (titulo.includes("ciclo") || titulo.includes("año"))
-            contenidoAutomatico = String(datosInsumos.anio || "");
+          // Si es Metadata que NO estaba llena (fallback)
+          if (tituloNorm.includes("sede"))
+            autoContent = datosInsumos.sede || "";
+          else if (tituloNorm.includes("ciclo") || tituloNorm.includes("anio"))
+            autoContent = String(datosInsumos.anio || "");
           else if (
-            titulo.includes("comision") &&
-            !titulo.includes("integrantes")
+            tituloNorm.includes("comision") &&
+            tituloNorm.includes("asesora")
           )
-            contenidoAutomatico = datosInsumos.departamento || "";
-          // Contenido Técnico Oculto (Secciones 1-4)
-          else if (!esPreguntaVisible(seccion.nombre, preguntaDestino.texto)) {
+            autoContent = datosInsumos.departamento || "";
+          // Si es Contenido Técnico (Busca en cátedras)
+          else if (
+            preguntaDestino.id !== preguntasClave.integrantes?.id &&
+            preguntaDestino.id !== preguntasClave.sintesis?.id
+          ) {
             const recopilacion: string[] = [];
-            datosInsumos.informes_asignaturas.forEach((informe) => {
-              // Match por nombre de pregunta
-              let match = informe.respuestas.find(
-                (r) => r.pregunta_texto?.trim().toLowerCase() === titulo
+            datosInsumos.informes_asignaturas.forEach((inf) => {
+              const match = encontrarCoincidenciaInteligente(
+                preguntaDestino.texto,
+                inf.respuestas,
+                inf.materia_nombre
               );
-
               if (match) {
-                const valor = match.texto || match.opcion_texto;
-                if (
-                  valor &&
-                  valor !== "Sin respuesta registrada." &&
-                  !valor.includes("simulada")
-                ) {
-                  recopilacion.push(`• ${informe.materia_nombre}: ${valor}`);
+                const val = match.texto || match.opcion_texto;
+                if (val && !val.toLowerCase().includes("sin respuesta")) {
+                  recopilacion.push(`• ${inf.materia_nombre}: ${val}`);
                 }
               }
             });
-            if (recopilacion.length > 0)
-              contenidoAutomatico = recopilacion.join("\n");
+            if (recopilacion.length > 0) autoContent = recopilacion.join("\n");
           }
 
-          if (contenidoAutomatico) {
+          if (autoContent)
             payloadRespuestas.push({
               pregunta_id: preguntaDestino.id,
-              texto: contenidoAutomatico,
+              texto: autoContent,
             });
-          }
         });
       });
 
@@ -210,13 +412,18 @@ const ResponderInforme: React.FC = () => {
       );
 
       if (res.ok) {
-        alert("Informe guardado correctamente.");
-        navigate("/departamento/informes-sinteticos");
+        setModal({
+          open: true,
+          type: "success",
+          title: "¡Informe Guardado!",
+          message: "El proceso ha finalizado correctamente.",
+          onConfirm: () =>
+            navigate("/departamento/informes-sinteticos-respondidos"),
+        });
       } else {
-        alert("Error al guardar.");
+        throw new Error("Error backend");
       }
     } catch (e) {
-      console.error(e);
       alert("Error de conexión.");
     } finally {
       setEnviando(false);
@@ -224,80 +431,87 @@ const ResponderInforme: React.FC = () => {
   };
 
   if (loading)
-    return (
-      <div className="p-10 text-center animate-pulse">Cargando datos...</div>
-    );
+    return <div className="p-10 text-center animate-pulse">Cargando...</div>;
 
   return (
     <div className="max-w-[1400px] mx-auto p-4 sm:p-8 bg-gray-100 min-h-screen font-sans">
-      {/* HEADER: Celeste Suave */}
-      <div className="bg-sky-50 border border-sky-100 text-slate-800 rounded-xl shadow-sm p-8 mb-8 relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-sky-200 rounded-full opacity-30 -mr-16 -mt-16 blur-3xl"></div>
+      <ModalConfirmacion
+        isOpen={modal.open}
+        type={modal.type}
+        title={modal.title}
+        message={modal.message}
+        onClose={() => setModal({ ...modal, open: false })}
+        onConfirm={
+          modal.onConfirm
+            ? modal.onConfirm
+            : () => setModal({ ...modal, open: false })
+        }
+      />
+
+      {/* HEADER CELESTE */}
+      <div className="bg-sky-50/90 backdrop-blur-md border border-sky-100 text-slate-800 rounded-xl shadow-sm p-8 mb-8 relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-sky-200 rounded-full opacity-20 -mr-16 -mt-16 blur-3xl pointer-events-none"></div>
         <div className="relative z-10">
-          <h1 className="text-3xl font-bold mb-2 text-sky-900">
+          <h1 className="text-3xl font-bold mb-2 text-sky-900 tracking-tight">
             {datosInsumos?.titulo}
           </h1>
-          <p className="text-slate-600 text-lg mb-6">
+          <p className="text-slate-600 text-lg mb-6 font-light">
             {datosInsumos?.descripcion}
           </p>
           <div className="flex flex-wrap gap-3">
-            <span className="bg-white/80 px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 border border-sky-100 text-sky-900 shadow-sm">
-              📅 Ciclo: <span className="font-bold">{datosInsumos?.anio}</span>
+            <span className="bg-white/60 px-4 py-2 rounded-lg text-sm font-medium border border-sky-200/50 text-sky-900 shadow-sm">
+              📅 Ciclo: <strong>{datosInsumos?.anio}</strong>
             </span>
-            <span className="bg-white/80 px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 border border-sky-100 text-sky-900 shadow-sm">
-              📍 Sede: <span className="font-bold">{datosInsumos?.sede}</span>
+            <span className="bg-white/60 px-4 py-2 rounded-lg text-sm font-medium border border-sky-200/50 text-sky-900 shadow-sm">
+              📍 Sede: <strong>{datosInsumos?.sede}</strong>
             </span>
-            <span className="bg-white/80 px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 border border-sky-100 text-sky-900 shadow-sm">
-              🏢 Depto:{" "}
-              <span className="font-bold">{datosInsumos?.departamento}</span>
+            <span className="bg-white/60 px-4 py-2 rounded-lg text-sm font-medium border border-sky-200/50 text-sky-900 shadow-sm">
+              🏢 Depto: <strong>{datosInsumos?.departamento}</strong>
             </span>
           </div>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        {/* --- COLUMNA IZQUIERDA: INSUMOS --- */}
+        {/* IZQUIERDA: INSUMOS */}
         <div className="lg:col-span-7 space-y-6">
           <div className="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden flex flex-col h-[750px]">
-            <div className="bg-sky-700 text-white px-6 py-4 flex justify-between items-center shrink-0">
+            <div className="bg-sky-800 text-white px-6 py-4 flex justify-between items-center shrink-0">
               <h2 className="font-bold text-lg flex items-center gap-2">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-5 w-5"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                >
-                  <path d="M9 4.804A7.968 7.968 0 005.5 4c-1.255 0-2.443.29-3.5.804v10A7.969 7.969 0 015.5 14c1.669 0 3.218.51 4.5 1.385A7.962 7.962 0 0114.5 14c1.255 0 2.443.29 3.5.804v-10A7.968 7.968 0 0014.5 4c-1.255 0-2.443.29-3.5.804V12a1 1 0 11-2 0V4.804z" />
-                </svg>
                 Respuestas de Cátedras
               </h2>
             </div>
 
-            <div className="flex overflow-x-auto border-b border-gray-200 bg-gray-50 shrink-0">
-              {datosInsumos?.informes_asignaturas.map((asignatura, index) => (
-                <button
-                  key={asignatura.id}
-                  onClick={() => setActiveTab(index)}
-                  className={`px-6 py-4 whitespace-nowrap text-sm font-bold transition-all border-b-4 focus:outline-none ${
-                    activeTab === index
-                      ? "border-sky-600 text-sky-700 bg-white"
-                      : "border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-100"
-                  }`}
+            <div className="px-6 py-4 bg-gray-50 border-b border-gray-200">
+              <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                Seleccionar Asignatura
+              </label>
+              <div className="relative">
+                <select
+                  value={activeTab}
+                  onChange={(e) => setActiveTab(Number(e.target.value))}
+                  className="block w-full pl-4 pr-10 py-3 text-base border-gray-300 focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm rounded-lg shadow-sm bg-white cursor-pointer"
                 >
-                  {asignatura.materia_nombre}
-                </button>
-              ))}
+                  {datosInsumos?.informes_asignaturas.map(
+                    (asignatura, index) => (
+                      <option key={asignatura.id} value={index}>
+                        {asignatura.materia_nombre}
+                      </option>
+                    )
+                  )}
+                </select>
+              </div>
             </div>
 
-            <div className="p-8 bg-gray-50/50 overflow-y-auto flex-grow custom-scrollbar">
+            <div className="p-8 bg-slate-50 overflow-y-auto flex-grow custom-scrollbar">
               {datosInsumos?.informes_asignaturas[activeTab] ? (
                 <div className="animate-fadeIn space-y-8">
-                  <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200 flex items-center justify-between">
+                  <div className="bg-white p-5 rounded-lg shadow-sm border border-gray-200 flex items-center justify-between">
                     <div>
-                      <p className="text-xs text-gray-400 uppercase tracking-wider font-bold">
+                      <p className="text-[10px] text-gray-400 uppercase tracking-widest font-bold mb-1">
                         Materia
                       </p>
-                      <h3 className="text-xl font-bold text-gray-800">
+                      <h3 className="text-lg font-bold text-gray-800 leading-tight">
                         {
                           datosInsumos.informes_asignaturas[activeTab]
                             .materia_nombre
@@ -305,10 +519,10 @@ const ResponderInforme: React.FC = () => {
                       </h3>
                     </div>
                     <div className="text-right">
-                      <p className="text-xs text-gray-400 uppercase tracking-wider font-bold">
+                      <p className="text-[10px] text-gray-400 uppercase tracking-widest font-bold mb-1">
                         Docente
                       </p>
-                      <p className="text-sky-600 font-medium">
+                      <p className="text-sky-700 font-semibold bg-sky-50 px-2 py-1 rounded">
                         {
                           datosInsumos.informes_asignaturas[activeTab]
                             .docente_nombre
@@ -323,14 +537,14 @@ const ResponderInforme: React.FC = () => {
                     ].respuestas.map((resp, idx) => (
                       <div
                         key={idx}
-                        className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 relative group hover:shadow-md transition-shadow"
+                        className="bg-white p-6 rounded-xl shadow-sm border border-gray-200/60 relative group hover:shadow-md transition-shadow"
                       >
-                        <div className="absolute left-0 top-4 bottom-4 w-1 bg-sky-400 rounded-r-md"></div>
+                        <div className="absolute left-0 top-4 bottom-4 w-1 bg-sky-500 rounded-r-md"></div>
                         <div className="pl-4">
-                          <h4 className="font-bold text-slate-700 text-sm mb-3 group-hover:text-sky-700 transition-colors">
+                          <h4 className="font-bold text-slate-800 text-sm mb-3 group-hover:text-sky-700 transition-colors">
                             {resp.pregunta_texto}
                           </h4>
-                          <div className="text-slate-600 text-sm leading-relaxed bg-slate-50 p-4 rounded-lg border border-slate-100">
+                          <div className="text-slate-600 text-sm leading-relaxed bg-gray-50 p-4 rounded-lg border border-gray-100">
                             <span className="whitespace-pre-wrap">
                               {resp.texto || resp.opcion_texto || (
                                 <em className="text-gray-400">
@@ -346,145 +560,111 @@ const ResponderInforme: React.FC = () => {
                 </div>
               ) : (
                 <div className="h-full flex items-center justify-center text-gray-400 italic">
-                  Seleccione una materia arriba.
+                  No hay informes disponibles.
                 </div>
               )}
             </div>
           </div>
         </div>
 
-        {/* --- COLUMNA DERECHA: FORMULARIO --- */}
+        {/* DERECHA: FORMULARIO */}
         <div className="lg:col-span-5">
           <div className="bg-white rounded-xl shadow-lg border border-sky-100 sticky top-6 flex flex-col h-[750px]">
-            <div className="bg-sky-600 text-white px-6 py-4 font-semibold text-lg flex items-center gap-2 shrink-0">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-5 w-5"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
-                  clipRule="evenodd"
-                />
-              </svg>
+            <div className="bg-sky-600 text-white px-6 py-4 font-semibold text-lg">
               Redacción Final
             </div>
 
             <div className="p-6 overflow-y-auto flex-grow space-y-6">
-              <div className="bg-sky-50 text-sky-900 text-sm p-4 rounded-lg border border-sky-100 flex gap-3">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-6 w-6 text-sky-500 shrink-0"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
+              <div className="bg-sky-50 text-sky-900 text-sm p-4 rounded-lg border border-sky-100 mb-4">
                 <p>
-                  Complete los <strong>Integrantes</strong> y la{" "}
-                  <strong>Síntesis Final</strong>. Las secciones técnicas (1 a
-                  4) se completarán automáticamente al guardar.
+                  Complete los datos requeridos. Los campos técnicos se
+                  generarán automáticamente.
                 </p>
               </div>
 
-              {plantilla?.secciones.map((seccion) => {
-                // AQUÍ APLICAMOS EL FILTRO: Solo preguntas de Sección 5 o Integrantes
-                const preguntasVisibles = seccion.preguntas.filter((p) =>
-                  esPreguntaVisible(seccion.nombre, p.texto)
-                );
+              {/* CAMPO 1: INTEGRANTES */}
+              {preguntasClave.integrantes ? (
+                <div className="animate-fadeIn" id="campo-integrantes">
+                  <label className="block text-sm font-bold text-gray-800 mb-2">
+                    Integrantes de la Comisión Asesora{" "}
+                    <span
+                      className="text-red-500 text-lg ml-1"
+                      title="Obligatorio"
+                    >
+                      *
+                    </span>
+                  </label>
+                  <textarea
+                    className={`w-full border rounded-lg p-4 text-sm focus:ring-2 transition-all shadow-sm bg-white resize-y min-h-[100px] 
+                                    ${
+                                      errorValidacion
+                                        ? "border-red-300 ring-2 ring-red-100 focus:border-red-500 focus:ring-red-500 bg-red-50/10"
+                                        : "border-gray-300 focus:ring-sky-500 focus:border-sky-500"
+                                    }`}
+                    placeholder="Liste los integrantes de la comisión..."
+                    value={
+                      respuestasUsuario[preguntasClave.integrantes.id] || ""
+                    }
+                    onChange={(e) => {
+                      setRespuestasUsuario({
+                        ...respuestasUsuario,
+                        [preguntasClave.integrantes!.id]: e.target.value,
+                      });
+                      if (e.target.value.trim().length > 0)
+                        setErrorValidacion(false);
+                    }}
+                  />
+                  {errorValidacion ? (
+                    <p className="text-xs text-red-500 mt-1 font-medium">
+                      Este campo es obligatorio.
+                    </p>
+                  ) : (
+                    <p className="text-xs text-gray-400 mt-1">
+                      Campo obligatorio
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <p className="text-red-500 text-sm">
+                  ⚠️ No se encontró la pregunta de 'Integrantes'. Verifique la
+                  plantilla.
+                </p>
+              )}
 
-                if (preguntasVisibles.length === 0) return null;
-
-                return (
-                  <div key={seccion.id} className="animate-fadeIn">
-                    <div className="space-y-6">
-                      {preguntasVisibles.map((pregunta) => {
-                        const esIntegrantes = pregunta.texto
-                          .toLowerCase()
-                          .includes("integrantes");
-                        return (
-                          <div key={pregunta.id}>
-                            <label className="block text-sm font-bold text-gray-800 mb-2">
-                              {getLabelAmigable(pregunta.texto)}{" "}
-                              {esIntegrantes && (
-                                <span
-                                  className="text-red-500 text-lg ml-1"
-                                  title="Obligatorio"
-                                >
-                                  *
-                                </span>
-                              )}
-                            </label>
-                            <textarea
-                              className={`w-full border border-gray-300 rounded-lg p-4 text-sm focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition-all shadow-sm bg-white resize-y ${
-                                esIntegrantes
-                                  ? "min-h-[100px]"
-                                  : "min-h-[250px]"
-                              }`}
-                              placeholder={
-                                esIntegrantes
-                                  ? "Liste los integrantes de la comisión..."
-                                  : "Escriba sus conclusiones generales..."
-                              }
-                              value={respuestasUsuario[pregunta.id] || ""}
-                              onChange={(e) =>
-                                setRespuestasUsuario({
-                                  ...respuestasUsuario,
-                                  [pregunta.id]: e.target.value,
-                                })
-                              }
-                            />
-                            {esIntegrantes && (
-                              <p className="text-xs text-gray-400 mt-1">
-                                Campo obligatorio
-                              </p>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                );
-              })}
+              {/* CAMPO 2: SÍNTESIS */}
+              {preguntasClave.sintesis ? (
+                <div className="animate-fadeIn pt-4 border-t border-gray-100">
+                  <label className="block text-sm font-bold text-gray-800 mb-2">
+                    {preguntasClave.sintesis.texto}
+                  </label>
+                  <textarea
+                    className="w-full border border-gray-300 rounded-lg p-4 text-sm focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition-all shadow-sm bg-white resize-y min-h-[250px]"
+                    placeholder="Escriba sus conclusiones basándose en los informes de la izquierda..."
+                    value={respuestasUsuario[preguntasClave.sintesis.id] || ""}
+                    onChange={(e) =>
+                      setRespuestasUsuario({
+                        ...respuestasUsuario,
+                        [preguntasClave.sintesis!.id]: e.target.value,
+                      })
+                    }
+                  />
+                </div>
+              ) : (
+                <p className="text-gray-400 text-sm italic">
+                  No se encontró una sección de síntesis adicional.
+                </p>
+              )}
             </div>
 
             <div className="p-6 border-t border-gray-100 bg-gray-50 shrink-0">
               <button
-                onClick={handleFinalizar}
+                onClick={iniciarGuardado}
                 disabled={enviando}
-                className={`w-full py-4 rounded-lg font-bold text-white shadow-lg transition-all flex justify-center items-center gap-2 transform active:scale-95 ${
-                  enviando
-                    ? "bg-gray-400 cursor-not-allowed"
-                    : "bg-green-600 hover:bg-green-700 hover:shadow-green-500/30"
+                className={`w-full py-4 rounded-lg font-bold text-white shadow-lg transition-all transform active:scale-95 ${
+                  enviando ? "bg-gray-400" : "bg-green-600 hover:bg-green-700"
                 }`}
               >
-                {enviando ? (
-                  "Procesando..."
-                ) : (
-                  <>
-                    <span>Guardar y Cerrar Informe</span>
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="h-5 w-5"
-                      viewBox="0 0 20 20"
-                      fill="currentColor"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                  </>
-                )}
+                {enviando ? "Procesando..." : "Guardar y Cerrar Informe"}
               </button>
             </div>
           </div>

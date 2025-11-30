@@ -691,45 +691,47 @@ def obtener_informe_sintetico_con_detalles(db: Session, instancia_id: int) -> di
 
     plantilla = instancia_sintetico.informe_sintetico
     
-
+    # Metadata segura
     nombre_departamento = instancia_sintetico.departamento.nombre if instancia_sintetico.departamento else "Sin Departamento"
-    
-    # CAMBIO: .sede.localidad
     nombre_sede = instancia_sintetico.departamento.sede.localidad if (instancia_sintetico.departamento and instancia_sintetico.departamento.sede) else "Sede Central"
     anio_ciclo = instancia_sintetico.fecha_inicio.year
 
     lista_asignaturas = []
-    
 
     informes_hijos = db.query(ActividadCurricularInstancia).options(
+
         joinedload(ActividadCurricularInstancia.cursada).joinedload(Cursada.materia),
         joinedload(ActividadCurricularInstancia.profesor),
         selectinload(ActividadCurricularInstancia.respuesta_sets)
         .selectinload(RespuestaSet.respuestas)
+        .joinedload(Respuesta.pregunta)
+        
     ).filter(
         ActividadCurricularInstancia.informe_sintetico_instancia_id == instancia_id
     ).all()
 
+
     for informe in informes_hijos:
+
         ultimo_set = sorted(informe.respuesta_sets, key=lambda x: x.id)[-1] if informe.respuesta_sets else None
         
         respuestas_procesadas = []
         if ultimo_set:
             for r in ultimo_set.respuestas:
-                # 1. Obtener texto (si es redacción)
+
                 texto = getattr(r, 'texto', None)
                 
-                # 2. Obtener opción (si es multiple choice) - ¡ESTO FALTABA!
+
                 opcion_texto = None
+                # Verificamos si el objeto tiene el atributo 'opcion' (solo los MultipleChoice lo tienen)
                 if hasattr(r, 'opcion') and r.opcion:
                      opcion_texto = r.opcion.texto
 
-                # 3. Obtener el texto de la pregunta (CRÍTICO PARA EL FRONTEND)
+                # Pregunta (Texto para el frontend)
                 pregunta_texto = ""
                 if r.pregunta:
                     pregunta_texto = r.pregunta.texto  
                 
-                # 4. Agregamos todo al diccionario
                 respuestas_procesadas.append({
                     "pregunta_id": r.pregunta_id,
                     "pregunta_texto": pregunta_texto, 
@@ -748,10 +750,8 @@ def obtener_informe_sintetico_con_detalles(db: Session, instancia_id: int) -> di
         "id": instancia_sintetico.id,
         "titulo": plantilla.titulo if plantilla else "Informe Sintético",
         "descripcion": plantilla.descripcion if plantilla else "",
-
         "sede": nombre_sede,
         "anio": anio_ciclo,
         "departamento": nombre_departamento,
-
         "informes_asignaturas": lista_asignaturas
     }
