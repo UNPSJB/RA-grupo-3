@@ -142,23 +142,19 @@ const NavigationMenuSecretaria: React.FC<NavigationMenuProps> = () => {
 
             <DesktopDropdown title="Encuestas">
               <DropdownItem to="/secretaria/modelos">
-                Activar Encuestas
+                Modelos
+              </DropdownItem>
+              <DropdownItem to="/secretaria/CicloVida">
+                Configurar Ciclos
+              </DropdownItem>
+              <DropdownItem to="/secretaria/plazos"> {/* Nuevo link */}
+                Ver Plazos Vigentes
               </DropdownItem>
               <DropdownItem to="/secretaria/estadisticas">
                 Estadisticas
               </DropdownItem>
             </DesktopDropdown>
 
-            {/* <DesktopDropdown title="Cuenta">
-              <DropdownItem to="/secretaria/gestion">Gestión</DropdownItem>
-              <button
-                onClick={logout}
-                className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900"
-                role="menuitem"
-              >
-                Cerrar Sesión
-              </button>
-            </DesktopDropdown> */}
           </div>
         </div>
       </div>
@@ -186,8 +182,11 @@ const NavigationMenuSecretaria: React.FC<NavigationMenuProps> = () => {
             </MobileDropdown>
 
             <MobileDropdown title="Encuestas">
-              <DropdownItem to="/secretaria/modelos">
-                Activar Encuestas
+              <DropdownItem to="/secretaria/CicloVida">
+                Configurar Ciclos
+              </DropdownItem>
+              <DropdownItem to="/secretaria/plazos">
+                Ver Plazos Vigentes
               </DropdownItem>
               <DropdownItem to="/secretaria/estadisticas">
                 Estadisticas

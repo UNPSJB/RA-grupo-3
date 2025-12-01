@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 import collections
 from typing import List, Optional
 
@@ -218,12 +218,13 @@ def get_plantilla_para_instancia_reporte(
     resultado.materia_nombre = instancia.cursada.materia.nombre if instancia.cursada else "Desconocida"
     resultado.sede = sede_str
     resultado.anio = instancia.cursada.cuatrimestre.anio if instancia.cursada and instancia.cursada.cuatrimestre else datetime.now().year
-    resultado.codigo = str(instancia.cursada.materia.id) if instancia.cursada else "-"
+    resultado.codigo = instancia.cursada.materia.codigo if instancia.cursada and instancia.cursada.materia else "-"
     resultado.docente_responsable = instancia.profesor.nombre if instancia.profesor else "-"
     
     resultado.cantidad_inscriptos = cant_alumnos
 
     return resultado
+
 
 def generar_informe_sintetico_para_departamento(
     db: Session, 
@@ -682,3 +683,58 @@ def obtener_informe_sintetico_respondido(
         fecha=instancia.fecha_inicio,
         secciones=secciones_res
     )
+
+def procesar_vencimiento_informes_profesores(db: Session):
+
+    now = datetime.now()
+    
+    # Buscar informes vencidos
+    stmt_vencidos = select(ActividadCurricularInstancia).join(Cursada).join(Materia).join(carrera_materia_association).join(Carrera).where(
+        ActividadCurricularInstancia.estado == EstadoInforme.PENDIENTE,
+        ActividadCurricularInstancia.fecha_fin != None,
+        ActividadCurricularInstancia.fecha_fin <= now
+    )
+    
+    informes_vencidos = db.scalars(stmt_vencidos).all()
+    
+    if not informes_vencidos:
+        return # Nada que hacer
+    
+    deptos_afectados = set()
+    
+    # Cerrar informes
+    for informe in informes_vencidos:
+        print(f"🔴 [AUTO] Cerrando Informe Profesor ID {informe.id} (Vencido)")
+        informe.estado = EstadoInforme.COMPLETADO
+        db.add(informe)
+        
+        if informe.cursada and informe.cursada.materia and informe.cursada.materia.carreras:
+            depto_id = informe.cursada.materia.carreras[0].departamento_id
+            deptos_afectados.add(depto_id)
+            
+    db.commit() # Guardar cierres
+    
+    fecha_cierre_sintetico = now + timedelta(days=7)
+    
+    for depto_id in deptos_afectados:
+        try:
+            stmt_sintetico_existente = select(InformeSinteticoInstancia).where(
+                InformeSinteticoInstancia.departamento_id == depto_id,
+                InformeSinteticoInstancia.estado == EstadoInforme.PENDIENTE
+            )
+            sintetico_existente = db.scalars(stmt_sintetico_existente).first()
+            
+            if sintetico_existente:
+                print(f"🔵 [AUTO] Actualizando Informe Sintético existente para Depto {depto_id}")
+                generar_informe_sintetico_para_departamento(
+                    db, depto_id, fecha_cierre_sintetico
+                )
+
+            else:
+                print(f"fq [AUTO] Abriendo NUEVO Informe Sintético para Depto {depto_id}")
+                generar_informe_sintetico_para_departamento(
+                    db, depto_id, fecha_cierre_sintetico
+                )
+                
+        except Exception as e:
+            print(f"⚠️ Error generando sintético automático para Depto {depto_id}: {e}")

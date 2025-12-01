@@ -21,31 +21,55 @@ from src.departamento.router import router as depto_router
 from fastapi.middleware.cors import CORSMiddleware
 from src.instrumento.router_departamento import router as instrumento_departamento_router
 from src.system.router import router as system_router
+from apscheduler.schedulers.background import BackgroundScheduler
+from src.encuestas.scheduler import check_ciclo_vida_encuestas
 
-
+# --- DEFINICIÓN CORRECTA DEL LIFESPAN (MANTENER ESTA) ---
+@asynccontextmanager
+async def db_creation_lifespan(app: FastAPI):
+    # 1. Crear tablas
+    ModeloBase.metadata.create_all(bind=engine)
+    
+    # 2. Iniciar el Scheduler
+    scheduler = BackgroundScheduler()
+    
+    # Configurar la tarea: Ejecutar cada 1 minuto
+    scheduler.add_job(check_ciclo_vida_encuestas, 'interval', minutes=1)
+    
+    scheduler.start()
+    print("⏰ Scheduler de Ciclo de Vida iniciado (Revisión cada 1 min).")
+    
+    yield
+    
+    # 3. Apagar el scheduler al detener la app
+    try:
+        scheduler.shutdown()
+    except Exception:
+        pass
 
 load_dotenv()
 
 ENV = os.getenv("ENV")
 ROOT_PATH = os.getenv(f"ROOT_PATH_{ENV.upper()}")
 
-@asynccontextmanager
-async def db_creation_lifespan(app: FastAPI):
-    ModeloBase.metadata.create_all(bind=engine)
-    yield
-
+# --- ❌ BORRAR ESTE BLOQUE DUPLICADO QUE ESTABA AQUÍ ---
+# @asynccontextmanager
+# async def db_creation_lifespan(app: FastAPI):
+#     ModeloBase.metadata.create_all(bind=engine)
+#     yield
+# -------------------------------------------------------
 
 #app = FastAPI(root_path=ROOT_PATH, lifespan=db_creation_lifespan)
-app = FastAPI(lifespan=db_creation_lifespan)  # Sin root_path
+app = FastAPI(lifespan=db_creation_lifespan) 
 app.add_middleware(
     CORSMiddleware,
-allow_origins=["http://localhost:5173", "http://127.0.0.1:5173", "http://localhost:5174","https://tecno-fedora.tailef1e6a.ts.net", "https://tecno-fedora.tailef1e6a.ts.net:5173"], 
+    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173", "http://localhost:5174","https://tecno-fedora.tailef1e6a.ts.net", "https://tecno-fedora.tailef1e6a.ts.net:5173"], 
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
-# Rutas
 
+# Rutas
 app.include_router(router_gestion)
 app.include_router(pregunta_router)
 app.include_router(seccion_router)
@@ -56,7 +80,7 @@ app.include_router(materia_router)
 app.include_router(router_profesor)
 app.include_router(instrumento_router)
 app.include_router(instrumento_public_router)
-app.include_router(instrumento_departamento_router) #nuevo router para estadisticas dpto
+app.include_router(instrumento_departamento_router)
 app.include_router(encuesta_profesor_router)
 app.include_router(auth_router)
 app.include_router(account_router)

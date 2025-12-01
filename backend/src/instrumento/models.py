@@ -143,7 +143,7 @@ class InformeSinteticoInstancia(InstrumentoInstancia):
 
     actividades_curriculares_instancia: Mapped[List["ActividadCurricularInstancia"]] = relationship(
         back_populates="informe_sintetico_instancia",       
-    foreign_keys="[ActividadCurricularInstancia.informe_sintetico_instancia_id]"
+        foreign_keys="ActividadCurricularInstancia.informe_sintetico_instancia_id"
     )
     departamento_id: Mapped[int | None] = mapped_column(ForeignKey("departamentos.id"), nullable=True)
     departamento: Mapped["Departamento"] = relationship(

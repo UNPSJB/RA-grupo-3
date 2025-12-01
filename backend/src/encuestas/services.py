@@ -9,12 +9,13 @@ from src.persona.models import Inscripcion, Profesor
 from src.materia.models import Cursada, Cuatrimestre, Materia, Carrera
 from datetime import datetime
 from src.pregunta.models import Pregunta, PreguntaMultipleChoice
-from src.enumerados import EstadoInstancia, TipoPregunta,EstadoInstrumento, EstadoInforme, TipoInstrumento
+from src.enumerados import EstadoInstancia, TipoPregunta,EstadoInstrumento, EstadoInforme, TipoInstrumento, CicloMateria
 from src.respuesta.models import Respuesta, RespuestaMultipleChoice, RespuestaRedaccion, RespuestaSet
 from src.instrumento import models as instrumento_models
 from src.materia.models import Departamento, Sede
 from datetime import datetime
 from typing import Optional
+from src.encuestas.models import PeriodoEvaluacion
 
 
 def crear_plantilla_encuesta(
@@ -76,6 +77,10 @@ def eliminar_plantilla(db: Session, plantilla_id: int) -> models.Encuesta:
     return db_plantilla
 
 
+# ... imports previos ...
+# Asegúrate de tener datetime importado
+from datetime import datetime
+
 def activar_encuesta_para_cursada(db: Session, data: schemas.EncuestaInstanciaCreate) -> models.EncuestaInstancia:
     cursada = db.get(Cursada, data.cursada_id)
     if not cursada:
@@ -89,14 +94,24 @@ def activar_encuesta_para_cursada(db: Session, data: schemas.EncuestaInstanciaCr
     stmt_existente = select(models.EncuestaInstancia).where(models.EncuestaInstancia.cursada_id == data.cursada_id)
     instancia_existente = db.execute(stmt_existente).scalar_one_or_none()
     if instancia_existente:
-        raise BadRequest(detail=f"Ya existe una instancia de encuesta (ID: {instancia_existente.id}) para la cursada {data.cursada_id}.")
+        raise BadRequest(detail=f"Ya existe una instancia de encuesta para la cursada {data.cursada_id}.")
     
+    estado_inicial = data.estado
+
+    if data.fecha_inicio and data.fecha_inicio > datetime.now(data.fecha_inicio.tzinfo):
+        estado_inicial = EstadoInstancia.PENDIENTE
+        print(f"🕒 Planificando encuesta diferida para: {data.fecha_inicio}")
+    else:
+        estado_inicial = EstadoInstancia.ACTIVA
+
     nueva_instancia = models.EncuestaInstancia(
         cursada_id=data.cursada_id,
         plantilla_id=data.plantilla_id,
         fecha_inicio=data.fecha_inicio,
         fecha_fin=data.fecha_fin,
-        estado=data.estado 
+        estado=estado_inicial,
+        fecha_limite_informe=data.fecha_fin_informe,
+        fecha_limite_sintetico=data.fecha_fin_sintetico
     )
     db.add(nueva_instancia)
     try:
@@ -105,7 +120,7 @@ def activar_encuesta_para_cursada(db: Session, data: schemas.EncuestaInstanciaCr
     except Exception as e:
         db.rollback()
         print(f"ERROR en commit al activar instancia: {e}")
-        raise BadRequest(detail=f"Error al guardar la instancia en la base de datos: {e}")
+        raise BadRequest(detail=f"Error al guardar la instancia: {e}")
 
     return nueva_instancia
 
@@ -888,7 +903,7 @@ def obtener_dashboard_profesor(db: Session, profesor_id: int) -> List[schemas.Da
     """
     current_year = datetime.now().year
     
-    # Buscamos las cursadas del profesor en el año actual que tengan instancia de encuesta
+    # Buscamos las cursadas del profesor en el año actual
     stmt = (
         select(Cursada)
         .join(Cuatrimestre)
@@ -898,8 +913,9 @@ def obtener_dashboard_profesor(db: Session, profesor_id: int) -> List[schemas.Da
         )
         .options(
             joinedload(Cursada.materia),
-            joinedload(Cursada.encuesta_instancia),
-            selectinload(Cursada.inscripciones) # Cargamos inscripciones para contar
+            joinedload(Cursada.cuatrimestre), # <--- Importante: Cargar el cuatrimestre
+            joinedload(Cursada.encuesta_instancia).joinedload(models.EncuestaInstancia.periodo),
+            selectinload(Cursada.inscripciones) 
         )
     )
     
@@ -908,22 +924,34 @@ def obtener_dashboard_profesor(db: Session, profesor_id: int) -> List[schemas.Da
     dashboard_items = []
     
     for cursada in cursadas:
-        # Solo nos interesan cursadas con encuesta generada (Activa o Cerrada)
         instancia = cursada.encuesta_instancia
         if not instancia:
             continue
             
         total_alumnos = len(cursada.inscripciones)
-        # Contamos cuántos tienen ha_respondido = True
         respuestas = sum(1 for i in cursada.inscripciones if i.ha_respondido)
         
+        # Fecha límite del reporte
+        fecha_reporte = None
+        if instancia.periodo:
+            fecha_reporte = instancia.periodo.fecha_limite_informe
+
+        # --- OBTENCIÓN DEL PERIODO (Corrección del error) ---
+        periodo_val = "Indefinido"
+        if cursada.cuatrimestre and cursada.cuatrimestre.periodo:
+            # Extraemos el valor del Enum (ej: "primero", "segundo")
+            periodo_val = cursada.cuatrimestre.periodo.value
+        # ----------------------------------------------------
+
         dashboard_items.append(schemas.DashboardProfesorItem(
             materia_id=cursada.materia.id,
             materia_nombre=cursada.materia.nombre,
             cantidad_inscriptos=total_alumnos,
             cantidad_respuestas=respuestas,
             fecha_fin=instancia.fecha_fin,
-            estado=instancia.estado.value
+            fecha_limite_informe=fecha_reporte,
+            estado=instancia.estado.value,
+            periodo=periodo_val  # <--- Aquí se envía el campo faltante
         ))
         
     return dashboard_items
@@ -947,9 +975,11 @@ def listar_cursadas_sin_encuesta(db: Session) -> List[Dict[str, Any]]:
     
     resultado = []
     for c in cursadas:
+        ciclo_val = c.materia.ciclo if c.materia.ciclo else CicloMateria.BASICO
         resultado.append({
             "id": c.id,
             "materia_nombre": c.materia.nombre,
+            "materia_ciclo": ciclo_val,
             "profesor_nombre": c.profesor.nombre,
             "anio": c.cuatrimestre.anio,
             "periodo": c.cuatrimestre.periodo.value if c.cuatrimestre.periodo else "-"
@@ -979,3 +1009,144 @@ def listar_todas_instancias_activas(db: Session) -> List[Dict[str, Any]]:
 def listar_todos_departamentos(db: Session) -> List[Departamento]:
     """Lista simple de departamentos para el selector."""
     return db.scalars(select(Departamento)).all()
+
+def crear_periodo_y_activar_encuestas(
+    db: Session, 
+    data: schemas.PeriodoEvaluacionCreate
+):
+    nuevo_periodo = models.PeriodoEvaluacion(
+        nombre=data.nombre,
+        fecha_inicio_encuesta=data.fecha_inicio_encuesta,
+        fecha_fin_encuesta=data.fecha_fin_encuesta,
+        fecha_limite_informe=data.fecha_limite_informe,
+        fecha_limite_sintetico=data.fecha_limite_sintetico
+    )
+    db.add(nuevo_periodo)
+    db.flush() 
+
+    now = datetime.now(data.fecha_inicio_encuesta.tzinfo)
+    estado_inicial = EstadoInstancia.ACTIVA
+    if data.fecha_inicio_encuesta > now:
+        estado_inicial = EstadoInstancia.PENDIENTE
+    
+    instancias_creadas = []
+    for cursada_id in data.cursadas_ids:
+        
+        nueva_instancia = models.EncuestaInstancia(
+            cursada_id=cursada_id,
+            plantilla_id=data.plantilla_id,
+            periodo_evaluacion_id=nuevo_periodo.id, 
+            estado=estado_inicial,
+            fecha_inicio=data.fecha_inicio_encuesta, 
+            fecha_fin=data.fecha_fin_encuesta
+        )
+        db.add(nueva_instancia)
+        instancias_creadas.append(nueva_instancia)
+
+    db.commit()
+    return {
+        "periodo_id": nuevo_periodo.id,
+        "cantidad_encuestas": len(instancias_creadas),
+        "estado_inicial": estado_inicial
+    }
+
+def activar_periodo_masivo(db: Session, data: schemas.ActivacionMasivaRequest):
+    nuevo_periodo = models.PeriodoEvaluacion(
+        nombre=data.nombre_periodo,
+        fecha_inicio_encuesta=data.fecha_inicio_encuesta,
+        fecha_fin_encuesta=data.fecha_fin_encuesta,
+        fecha_limite_informe=data.fecha_limite_informe,
+        fecha_limite_sintetico=data.fecha_limite_sintetico
+    )
+    db.add(nuevo_periodo)
+    db.flush() 
+
+    estado_inicial = EstadoInstancia.ACTIVA
+    if data.fecha_inicio_encuesta:
+        inicio = data.fecha_inicio_encuesta.replace(tzinfo=None) if data.fecha_inicio_encuesta.tzinfo else data.fecha_inicio_encuesta
+        if inicio > datetime.now():
+            estado_inicial = EstadoInstancia.PENDIENTE
+            print(f"🕒 Periodo diferido. Inicio: {inicio}")
+
+    instancias_creadas = 0
+
+    def crear_instancias(ids_cursadas, plantilla_id):
+        count = 0
+        for cursada_id in ids_cursadas:
+            existe = db.query(models.EncuestaInstancia).filter_by(cursada_id=cursada_id).first()
+            if existe: continue 
+
+            nueva = models.EncuestaInstancia(
+                cursada_id=cursada_id,
+                plantilla_id=plantilla_id,
+                periodo_evaluacion_id=nuevo_periodo.id,
+                estado=estado_inicial,
+                fecha_inicio=data.fecha_inicio_encuesta, 
+                fecha_fin=data.fecha_fin_encuesta
+            )
+            db.add(nueva)
+            count += 1
+        return count
+
+    instancias_creadas += crear_instancias(data.cursadas_basico_ids, data.plantilla_basico_id)
+    instancias_creadas += crear_instancias(data.cursadas_superior_ids, data.plantilla_superior_id)
+
+    try:
+        db.commit()
+        return {"message": f"Periodo creado con {instancias_creadas} encuestas.", "periodo_id": nuevo_periodo.id}
+    except Exception as e:
+        db.rollback()
+        raise e
+    
+def listar_periodos_evaluacion(db: Session) -> List[PeriodoEvaluacion]:
+    """
+    Lista los periodos de evaluación con sus encuestas y materias asociadas.
+    Ordenados del más reciente al más antiguo.
+    """
+    stmt = (
+        select(PeriodoEvaluacion)
+        .options(
+            selectinload(PeriodoEvaluacion.encuestas)
+            .joinedload(models.EncuestaInstancia.cursada)
+            .joinedload(Cursada.materia)
+        )
+        .order_by(PeriodoEvaluacion.id.desc())
+    )
+    return db.scalars(stmt).all()
+
+def adelantar_etapa_periodo(db: Session, periodo_id: int):
+    """
+    Busca la próxima fecha de vencimiento futura en el periodo y la establece
+    al momento actual, forzando el cierre de esa etapa.
+    """
+    periodo = db.get(models.PeriodoEvaluacion, periodo_id)
+    if not periodo:
+        raise NotFound(detail="Periodo no encontrado")
+
+    now = datetime.now()
+    etapa_adelantada = ""
+
+    # Prioridad 1: Cierre de Encuestas (si está en el futuro)
+    if periodo.fecha_fin_encuesta > now:
+        periodo.fecha_fin_encuesta = now
+        etapa_adelantada = "Cierre de Encuestas"
+    
+    # Prioridad 2: Cierre de Informes Docentes (si existe y está en el futuro)
+    elif periodo.fecha_limite_informe and periodo.fecha_limite_informe > now:
+        periodo.fecha_limite_informe = now
+        etapa_adelantada = "Cierre de Informes Docentes"
+        
+    # Prioridad 3: Generación de Sintéticos (si existe y está en el futuro)
+    elif periodo.fecha_limite_sintetico and periodo.fecha_limite_sintetico > now:
+        periodo.fecha_limite_sintetico = now
+        etapa_adelantada = "Generación de Informes Sintéticos"
+        
+    else:
+        raise BadRequest(detail="Este periodo ya ha finalizado todas sus etapas planificadas.")
+
+    db.add(periodo)
+    db.commit()
+    db.refresh(periodo)
+    
+    print(f"⏩ [MANUAL] Se adelantó: {etapa_adelantada} para Periodo {periodo.id}")
+    return periodo
