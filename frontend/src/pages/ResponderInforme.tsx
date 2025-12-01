@@ -2,63 +2,37 @@ import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 
-// Componentes de Secciones
-import Seccion0 from "../components/informe_sintetico/Seccion0";
-import Seccion1 from "../components/informe_sintetico/Seccion1";
-import Seccion2 from "../components/informe_sintetico/Seccion2";
-import Seccion2A from "../components/informe_sintetico/Seccion2A";
-import Seccion2B from "../components/informe_sintetico/Seccion2B";
-import Seccion2C from "../components/informe_sintetico/Seccion2C";
-import Seccion3 from "../components/informe_sintetico/Seccion3";
-import Seccion4 from "../components/informe_sintetico/Seccion4";
-
-import { BotonTraerRespuestas } from "../components/informe_sintetico/BotonTraerRespuesta";
-
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
 
-// Componente local de Barra de Progreso
-const BarraProgreso = ({
-  actual,
-  total,
-}: {
-  actual: number;
-  total: number;
-}) => {
-  const porcentaje = Math.min(
-    100,
-    Math.max(0, Math.round((actual / total) * 100))
-  );
-  return (
-    <div className="w-full bg-gray-200 rounded-full h-2.5 mb-6">
-      <div
-        className="bg-indigo-600 h-2.5 rounded-full transition-all duration-500 ease-out"
-        style={{ width: `${porcentaje}%` }}
-      ></div>
-      <div className="text-right text-xs text-gray-500 mt-1 font-medium">
-        Paso {actual} de {total}
-      </div>
-    </div>
-  );
-};
-
 // --- Interfaces ---
-interface InformeCurricular {
+interface RespuestaSimple {
+  pregunta_id: number;
+  pregunta_texto?: string;
+  texto?: string;
+  opcion_texto?: string;
+}
+
+interface InformeAsignatura {
   id: number;
-  estado: string;
   materia_nombre: string;
-  materia_id: number;
-  profesor_nombre: string;
-  cuatrimestre_info: string;
-  equipamiento?: string;
-  bibliografia?: string;
+  docente_nombre: string;
+  respuestas: RespuestaSimple[];
+}
+
+interface InformeSinteticoCompleto {
+  id: number;
+  titulo: string;
+  descripcion: string;
+  sede?: string;
+  anio?: number;
+  departamento?: string;
+  informes_asignaturas: InformeAsignatura[];
 }
 
 interface Pregunta {
   id: number;
   texto: string;
   tipo: "REDACCION" | "MULTIPLE_CHOICE";
-  opciones?: { id: number; texto: string }[] | null;
-  origen_datos?: string | null;
 }
 
 interface Seccion {
@@ -72,270 +46,381 @@ interface PlantillaInforme {
   titulo: string;
   descripcion: string;
   secciones: Seccion[];
-  informes_curriculares_asociados?: InformeCurricular[];
 }
 
-interface ResultadoOpcionStats {
-  opcion_texto: string;
-  cantidad: number;
-}
-interface ResultadoPreguntaStats {
-  pregunta_tipo: string;
-  resultados_opciones: ResultadoOpcionStats[];
-}
-interface ResultadoSeccionStats {
-  seccion_nombre: string;
-  resultados_por_pregunta: ResultadoPreguntaStats[];
-}
-interface ResultadoCursadaStats {
-  resultados_por_seccion: ResultadoSeccionStats[];
-}
+// --- MAPA DE PALABRAS CLAVE ---
+// Claves en minúsculas y SIN punto final para facilitar el match
+const KEYWORDS_POR_PREFIJO: Record<string, string[]> = {
+  "0": ["alumnos", "inscriptos", "comisiones", "teóricas", "prácticas"],
+  "1": ["equipamiento", "bibliografía", "insumos"],
+  "2": ["horas", "dictadas"],
+  "2.a": ["contenidos", "planificados", "estrategias"],
+  "2.b": ["encuesta", "juicio", "valor"],
+  "2.c": ["aspectos", "positivos", "obstáculos"],
+  "3": ["actividades", "investigación", "extensión", "capacitación"],
+  "4": ["auxiliares", "desempeño", "justificación"],
+  "5": ["observaciones", "comentarios"],
+};
+
+// --- MODAL SIMPLE ---
+const ModalConfirmacion: React.FC<{
+  isOpen: boolean;
+  type: "success" | "confirm";
+  title: string;
+  message: string;
+  onClose: () => void;
+  onConfirm?: () => void;
+}> = ({ isOpen, type, title, message, onClose, onConfirm }) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-fadeIn">
+      <div className="bg-white rounded-xl shadow-xl max-w-sm w-full p-6 text-center transform transition-all scale-100 border border-gray-100">
+        <div
+          className={`mx-auto flex items-center justify-center h-12 w-12 rounded-full mb-4 ${
+            type === "success" ? "bg-green-100" : "bg-blue-100"
+          }`}
+        >
+          {type === "success" ? (
+            <svg
+              className="h-6 w-6 text-green-600"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M5 13l4 4L19 7"
+              />
+            </svg>
+          ) : (
+            <svg
+              className="h-6 w-6 text-blue-600"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+          )}
+        </div>
+        <h3 className="text-lg font-bold text-gray-900 mb-2">{title}</h3>
+        <p className="text-sm text-gray-500 mb-6">{message}</p>
+        <div className="flex justify-center gap-3">
+          {type === "confirm" ? (
+            <>
+              <button
+                onClick={onClose}
+                className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 text-sm font-medium hover:bg-gray-50 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={onConfirm}
+                className="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 shadow-sm transition-transform active:scale-95"
+              >
+                Confirmar
+              </button>
+            </>
+          ) : (
+            <button
+              onClick={onConfirm || onClose}
+              className="w-full py-2 rounded-lg bg-green-600 text-white text-sm font-medium hover:bg-green-700 shadow-sm"
+            >
+              Aceptar
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const ResponderInforme: React.FC = () => {
   const { instanciaId } = useParams<{ instanciaId: string }>();
   const navigate = useNavigate();
-  const { token, logout } = useAuth();
+  const { token } = useAuth();
 
-  // Estados de datos
+  const [datosInsumos, setDatosInsumos] =
+    useState<InformeSinteticoCompleto | null>(null);
   const [plantilla, setPlantilla] = useState<PlantillaInforme | null>(null);
-  const [informes, setInformes] = useState<InformeCurricular[]>([]);
-  const [respuestas, setRespuestas] = useState<{ [key: string]: string }>({});
+  const [activeTab, setActiveTab] = useState<number>(0);
+  const [respuestasUsuario, setRespuestasUsuario] = useState<{
+    [key: string]: string;
+  }>({});
 
-  // Estados de UI
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState(0);
-  const [mensaje, setMensaje] = useState<string | null>(null);
-  const [cargandoEnvio, setCargandoEnvio] = useState(false);
-  const [informeCompletado, setInformeCompletado] = useState(false);
-
-  const [cuatrimestreSeleccionado, setCuatrimestreSeleccionado] =
-    useState<string>("");
-  const [informeSeleccionadoId, setInformeSeleccionadoId] =
-    useState<string>("todas");
-
-  const opcionesCuatrimestre = useMemo(() => {
-    if (!plantilla?.informes_curriculares_asociados) return [];
-    const cuatris = plantilla.informes_curriculares_asociados.map(
-      (i) => i.cuatrimestre_info
-    );
-    return Array.from(new Set(cuatris)).sort();
-  }, [plantilla]);
+  const [enviando, setEnviando] = useState(false);
+  const [errorValidacion, setErrorValidacion] = useState(false);
+  const [modal, setModal] = useState<{
+    open: boolean;
+    type: "success" | "confirm";
+    title: string;
+    message: string;
+    onConfirm?: () => void;
+  }>({ open: false, type: "success", title: "", message: "" });
 
   useEffect(() => {
-    if (opcionesCuatrimestre.length > 0 && !cuatrimestreSeleccionado) {
-      setCuatrimestreSeleccionado(opcionesCuatrimestre[0]);
-    }
-  }, [opcionesCuatrimestre, cuatrimestreSeleccionado]);
-
-  // 2. Cargar Datos del Informe
-  useEffect(() => {
-    if (!token) {
-      setMensaje("Sesión expirada");
-      return;
-    }
-    const load = async () => {
+    if (!token || !instanciaId) return;
+    const cargarDatos = async () => {
+      setLoading(true);
       try {
-        if (!plantilla) setLoading(true);
-        const res = await fetch(
-          `${API_BASE_URL}/departamento/instancia/${instanciaId}/detalles`,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-
-        if (!res.ok) {
-          if (res.status === 401) logout();
-          throw new Error("Error cargando plantilla o sesión inválida");
-        }
-
-        const data: PlantillaInforme = await res.json();
-        setPlantilla(data);
-
-        // Filtrar informes según el cuatrimestre seleccionado
-        const informesAsociados = data.informes_curriculares_asociados || [];
-        if (cuatrimestreSeleccionado) {
-          const filtrados = informesAsociados.filter(
-            (i) => i.cuatrimestre_info === cuatrimestreSeleccionado
-          );
-          setInformes(filtrados);
-          if (filtrados.length > 0) setInformeSeleccionadoId("todas");
-        } else {
-          setInformes([]);
-        }
-      } catch (e) {
-        setMensaje(e instanceof Error ? e.message : "Error desconocido");
+        const [resInsumos, resPlantilla] = await Promise.all([
+          fetch(
+            `${API_BASE_URL}/departamento/informes-sinteticos/${instanciaId}/detalle-completo`,
+            { headers: { Authorization: `Bearer ${token}` } }
+          ),
+          fetch(
+            `${API_BASE_URL}/departamento/instancia/${instanciaId}/detalles`,
+            { headers: { Authorization: `Bearer ${token}` } }
+          ),
+        ]);
+        if (resInsumos.ok) setDatosInsumos(await resInsumos.json());
+        if (resPlantilla.ok) setPlantilla(await resPlantilla.json());
+      } catch (error) {
+        console.error(error);
       } finally {
         setLoading(false);
       }
     };
-    load();
-  }, [instanciaId, token, cuatrimestreSeleccionado, logout]);
+    cargarDatos();
+  }, [instanciaId, token]);
 
-  const informeSeleccionado =
-    informeSeleccionadoId === "todas"
-      ? null
-      : informes.find((i) => i.id === Number(informeSeleccionadoId));
+  const normalizar = (str: string | undefined) =>
+    str
+      ? str
+          .toLowerCase()
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .replace(/[^a-z0-9]/g, "")
+      : "";
 
-  const materiasFiltradas = informeSeleccionado
-    ? [informeSeleccionado]
-    : informes;
+  const encontrarCoincidenciaInteligente = (
+    tituloDestino: string,
+    respuestasOrigen: RespuestaSimple[],
+    materia: string
+  ) => {
+    const tDest = normalizar(tituloDestino);
+    const matchExacto = respuestasOrigen.find((r) => {
+      const tOrig = normalizar(r.pregunta_texto);
+      return (
+        tOrig === tDest ||
+        (tOrig.length > 10 && tDest.includes(tOrig)) ||
+        (tDest.length > 10 && tOrig.includes(tDest))
+      );
+    });
+    if (matchExacto) return matchExacto;
 
-  const handleInputChange = (key: string, valor: string) => {
-    setRespuestas((prev) => ({ ...prev, [key]: valor }));
-    setMensaje(null);
+    const palabrasClave = [
+      "equipamiento",
+      "bibliografia",
+      "teoricas",
+      "practicas",
+      "contenidos",
+      "valores",
+      "aspectos",
+      "capacitacion",
+      "investigacion",
+      "extension",
+      "desempeno",
+      "auxiliares",
+    ];
+    for (const palabra of palabrasClave) {
+      if (tDest.includes(palabra)) {
+        const matchKeyword = respuestasOrigen.find((r) =>
+          normalizar(r.pregunta_texto).includes(palabra)
+        );
+        if (matchKeyword) return matchKeyword;
+      }
+    }
+    return null;
   };
 
-  const handleCopyContent = (texto: string, targetKey?: string) => {
-    if (targetKey) {
-      if (
-        window.confirm(
-          "¿Reemplazar el contenido actual con el resumen de los profesores?"
+  const preguntasClave = useMemo(() => {
+    if (!plantilla || !plantilla.secciones)
+      return { integrantes: null, sintesis: null };
+
+    const todas = plantilla.secciones.flatMap((s) => s.preguntas || []);
+    const integrantes = todas.find((p) => {
+      if (!p || !p.texto) return false;
+      const t = normalizar(p.texto);
+      return t.includes("integrante") && t.includes("comision");
+    });
+    const sintesis = todas.find((p) => {
+      if (!p || !p.texto) return false;
+      const t = normalizar(p.texto);
+      return (
+        (t.includes("sintesis") ||
+          t.includes("observacion") ||
+          t.includes("conclusion") ||
+          t.includes("comentario")) &&
+        p.id !== integrantes?.id
+      );
+    });
+    return { integrantes, sintesis };
+  }, [plantilla]);
+
+  useEffect(() => {
+    if (!plantilla || !datosInsumos) return;
+    if (Object.keys(respuestasUsuario).length > 0) return;
+    const nuevosValores: { [key: string]: string } = {};
+    plantilla.secciones.forEach((seccion) => {
+      seccion.preguntas?.forEach((p) => {
+        if (
+          p.id === preguntasClave.integrantes?.id ||
+          p.id === preguntasClave.sintesis?.id
         )
-      ) {
-        handleInputChange(targetKey, texto);
-      }
-    } else {
-      navigator.clipboard.writeText(texto).then(() => {
-        alert(
-          "Resumen copiado al portapapeles.\nPégalo en la celda correspondiente."
-        );
+          return;
+        const txt = normalizar(p.texto);
+        if (txt.includes("sede"))
+          nuevosValores[p.id] = datosInsumos.sede || "Sede Central";
+        else if (txt.includes("ciclo") || txt.includes("anio"))
+          nuevosValores[p.id] = String(
+            datosInsumos.anio || new Date().getFullYear()
+          );
+        else if (txt.includes("comision") && txt.includes("asesora"))
+          nuevosValores[p.id] = datosInsumos.departamento || "";
       });
+    });
+    if (Object.keys(nuevosValores).length > 0)
+      setRespuestasUsuario((prev) => ({ ...prev, ...nuevosValores }));
+  }, [plantilla, datosInsumos, preguntasClave]);
+
+  const iniciarGuardado = () => {
+    if (preguntasClave.integrantes) {
+      const valor = respuestasUsuario[preguntasClave.integrantes.id];
+      if (!valor || valor.trim().length === 0) {
+        setErrorValidacion(true);
+        const el = document.getElementById("campo-integrantes");
+        if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+        return;
+      }
     }
+    setErrorValidacion(false);
+    setModal({
+      open: true,
+      type: "confirm",
+      title: "Generar Informe",
+      message:
+        "Se recopilarán las respuestas de las cátedras y se guardará el informe. ¿Continuar?",
+      onConfirm: procesarEnvio,
+    });
   };
 
-  const autoCompletarPorcentajes = async (preguntaId: number) => {
-    if (!token) return;
-    if (!confirm("¿Desea calcular y autocompletar los porcentajes?")) return;
-
-    setLoading(true);
-    const nuevasRespuestas = { ...respuestas };
+  const procesarEnvio = async () => {
+    setModal({ ...modal, open: false });
+    if (!plantilla || !datosInsumos) return;
+    setEnviando(true);
 
     try {
-      for (const materia of materiasFiltradas) {
-        if (!materia.materia_id) continue;
+      const payloadRespuestas: { pregunta_id: number; texto: string }[] = [];
 
-        const res = await fetch(
-          `${API_BASE_URL}/departamento/estadisticas/materia/${materia.materia_id}`,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        );
+      plantilla.secciones.forEach((seccion) => {
+        // Obtenemos el prefijo de la SECCIÓN (para 0, 1, 3, 4, 5)
+        let prefijoSeccion = seccion.nombre.split(" ")[0].trim().toLowerCase();
+        if (prefijoSeccion.endsWith("."))
+          prefijoSeccion = prefijoSeccion.slice(0, -1);
 
-        if (res.ok) {
-          const data: ResultadoCursadaStats[] = await res.json();
-
-          if (data.length > 0) {
-            const resultado = data[0];
-            const scores: Record<string, { s: number; c: number }> = {
-              B: { s: 0, c: 0 },
-              C: { s: 0, c: 0 },
-              D: { s: 0, c: 0 },
-              ET: { s: 0, c: 0 },
-              EP: { s: 0, c: 0 },
-            };
-
-            resultado.resultados_por_seccion.forEach((sec) => {
-              let key = "";
-              if (sec.seccion_nombre.startsWith("B:")) key = "B";
-              else if (sec.seccion_nombre.startsWith("C:")) key = "C";
-              else if (sec.seccion_nombre.startsWith("D:")) key = "D";
-              else if (sec.seccion_nombre.startsWith("E:")) {
-                if (sec.seccion_nombre.includes("TEORÍA")) key = "ET";
-                else if (sec.seccion_nombre.includes("PRÁCTICA")) key = "EP";
-              }
-
-              if (key) {
-                sec.resultados_por_pregunta.forEach((p) => {
-                  if (
-                    p.pregunta_tipo === "MULTIPLE_CHOICE" &&
-                    p.resultados_opciones
-                  ) {
-                    p.resultados_opciones.forEach((opt) => {
-                      const match = opt.opcion_texto.match(/\((\d)\)/);
-                      if (match && opt.cantidad > 0) {
-                        const val = parseInt(match[1]);
-                        scores[key].s += val * opt.cantidad;
-                        scores[key].c += opt.cantidad;
-                      }
-                    });
-                  }
-                });
-              }
+        seccion.preguntas.forEach((preguntaDestino) => {
+          // 1. Manual o Metadata
+          if (respuestasUsuario[preguntaDestino.id]) {
+            payloadRespuestas.push({
+              pregunta_id: preguntaDestino.id,
+              texto: respuestasUsuario[preguntaDestino.id],
             });
-
-            Object.entries(scores).forEach(([colKey, val]) => {
-              const avg = val.c > 0 ? val.s / val.c : 0;
-              const percent = (avg / 4) * 100;
-              const finalVal = percent > 0 ? `${percent.toFixed(0)}%` : "-";
-              nuevasRespuestas[`p${preguntaId}_m${materia.id}_${colKey}`] =
-                finalVal;
-            });
+            return;
           }
-        }
-      }
-      setRespuestas(nuevasRespuestas);
-      alert("Cálculo completado con éxito.");
-    } catch (e) {
-      console.error(e);
-      alert("Ocurrió un error al intentar calcular los porcentajes.");
-    } finally {
-      setLoading(false);
-    }
-  };
+          const tituloNorm = normalizar(preguntaDestino.texto);
+          if (tituloNorm.includes("sede")) {
+            payloadRespuestas.push({
+              pregunta_id: preguntaDestino.id,
+              texto: datosInsumos.sede || "",
+            });
+            return;
+          }
+          if (tituloNorm.includes("ciclo") || tituloNorm.includes("anio")) {
+            payloadRespuestas.push({
+              pregunta_id: preguntaDestino.id,
+              texto: String(datosInsumos.anio || ""),
+            });
+            return;
+          }
+          if (
+            tituloNorm.includes("comision") &&
+            tituloNorm.includes("asesora")
+          ) {
+            payloadRespuestas.push({
+              pregunta_id: preguntaDestino.id,
+              texto: datosInsumos.departamento || "",
+            });
+            return;
+          }
 
-  const irSiguiente = () => {
-    if (plantilla && activeTab < plantilla.secciones.length - 1) {
-      setActiveTab((prev) => prev + 1);
-      window.scrollTo(0, 0);
-    }
-  };
-
-  const irAnterior = () => {
-    if (activeTab > 0) {
-      setActiveTab((prev) => prev - 1);
-      window.scrollTo(0, 0);
-    }
-  };
-
-  const handleFinalizar = async () => {
-    if (
-      !confirm("¿Está seguro de enviar el informe? Pasará a estado COMPLETADO.")
-    )
-      return;
-    setCargandoEnvio(true);
-
-    const answersMap = new Map<number, string>();
-    Object.entries(respuestas).forEach(([key, val]) => {
-      if (!isNaN(Number(key))) {
-        answersMap.set(Number(key), String(val));
-      }
-    });
-
-    plantilla?.secciones.forEach((sec) => {
-      sec.preguntas.forEach((preg) => {
-        const compositeKeys = Object.keys(respuestas).filter((k) =>
-          k.startsWith(`p${preg.id}_`)
-        );
-        if (compositeKeys.length > 0) {
-          const tableData: Record<string, Record<string, string>> = {};
-          compositeKeys.forEach((k) => {
-            const parts = k.split("_");
-            if (parts.length >= 3) {
-              const mId = parts[1];
-              const col = parts.slice(2).join("_");
-              if (!tableData[mId]) tableData[mId] = {};
-              tableData[mId][col] = String(respuestas[k]);
+          // 2. Lógica Automática
+          if (
+            preguntaDestino.id !== preguntasClave.integrantes?.id &&
+            preguntaDestino.id !== preguntasClave.sintesis?.id
+          ) {
+            // --- CORRECCIÓN CLAVE: Obtener prefijo de la PREGUNTA para 2.A, 2.B, 2.C ---
+            // Si la sección es la 2, miramos el inicio de la pregunta.
+            // Ej: "2.A. Completar..." -> prefijo "2.a"
+            let prefijoBusqueda = prefijoSeccion;
+            if (prefijoSeccion === "2") {
+              const partesPregunta = preguntaDestino.texto.split(" ");
+              const inicio = partesPregunta[0].trim().toLowerCase(); // "2.", "2.a.", "2.b."
+              // Limpiamos el punto final para usar en el mapa
+              prefijoBusqueda = inicio.replace(/\.$/, "");
             }
-          });
-          answersMap.set(preg.id, JSON.stringify(tableData));
-        }
+
+            const keywords = KEYWORDS_POR_PREFIJO[prefijoBusqueda] || [];
+            const recopilacion: string[] = [];
+
+            datosInsumos.informes_asignaturas.forEach((inf) => {
+              const respuestasRelevantes = inf.respuestas.filter((r) => {
+                const textoPregProf = normalizar(r.pregunta_texto);
+
+                // Casos especiales Sección 0 y 2 (Hora pura)
+                if (prefijoBusqueda === "0")
+                  return (
+                    textoPregProf.includes("alumno") ||
+                    textoPregProf.includes("comision")
+                  );
+                if (prefijoBusqueda === "2")
+                  return (
+                    textoPregProf.includes("horas") &&
+                    textoPregProf.includes("dictadas")
+                  );
+
+                // Resto (1, 2.a, 2.b, 2.c, 3...)
+                return keywords.some((k) => textoPregProf.includes(k));
+              });
+
+              respuestasRelevantes.forEach((r) => {
+                const val = r.texto || r.opcion_texto;
+                if (val && !val.toLowerCase().includes("sin respuesta")) {
+                  recopilacion.push(`• ${inf.materia_nombre}: ${val}`);
+                }
+              });
+            });
+
+            if (recopilacion.length > 0) {
+              const textoUnico = Array.from(new Set(recopilacion)).join("\n");
+              payloadRespuestas.push({
+                pregunta_id: preguntaDestino.id,
+                texto: textoUnico,
+              });
+            }
+          }
+        });
       });
-    });
 
-    const payload = Array.from(answersMap.entries()).map(([pid, val]) => ({
-      pregunta_id: pid,
-      texto: val,
-    }));
-
-    try {
       const res = await fetch(
         `${API_BASE_URL}/departamento/instancia/${instanciaId}/responder`,
         {
@@ -344,339 +429,223 @@ const ResponderInforme: React.FC = () => {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify({ respuestas: payload }),
+          body: JSON.stringify({ respuestas: payloadRespuestas }),
         }
       );
 
       if (res.ok) {
-        setInformeCompletado(true);
-        window.scrollTo(0, 0);
+        setModal({
+          open: true,
+          type: "success",
+          title: "¡Informe Guardado!",
+          message: "El proceso ha finalizado correctamente.",
+          onConfirm: () => navigate("/departamento/estadisticas"),
+        });
       } else {
-        throw new Error("Error al enviar el informe.");
+        throw new Error("Error backend");
       }
     } catch (e) {
-      console.error(e);
-      setMensaje("Hubo un error al intentar enviar el informe.");
-    } finally {
-      setCargandoEnvio(false);
+      alert("Error de conexión.");
+      setEnviando(false);
     }
   };
 
   if (loading)
-    return (
-      <div className="py-20 text-center text-gray-500 animate-pulse">
-        Cargando datos del informe...
-      </div>
-    );
-  if (informeCompletado)
-    return <div className="text-center p-10">¡Informe Enviado!</div>;
-  if (!plantilla)
-    return (
-      <div className="p-10 text-center text-red-500">
-        Error cargando plantilla.
-      </div>
-    );
+    return <div className="p-10 text-center animate-pulse">Cargando...</div>;
 
   return (
-    <div className="max-w-8xl mx-auto bg-white p-6 sm:p-8 rounded-xl shadow-sm mt-6 border border-gray-200 mb-20">
-      <div className="pb-6 mb-6 border-b border-gray-100 text-center">
-        <h1 className="text-2xl sm:text-3xl font-bold text-indigo-900 mb-2">
-          {plantilla.titulo}
-        </h1>
-        <p className="text-gray-500 max-w-3xl mx-auto">
-          {plantilla.descripcion}
-        </p>
-      </div>
-
-      <BarraProgreso
-        actual={activeTab + 1}
-        total={plantilla.secciones.length}
+    <div className="max-w-[1400px] mx-auto p-4 sm:p-8 bg-gray-100 min-h-screen font-sans">
+      <ModalConfirmacion
+        isOpen={modal.open}
+        type={modal.type}
+        title={modal.title}
+        message={modal.message}
+        onClose={() => setModal({ ...modal, open: false })}
+        onConfirm={
+          modal.onConfirm
+            ? modal.onConfirm
+            : () => setModal({ ...modal, open: false })
+        }
       />
-
-      <div className="hidden sm:flex border-b border-gray-200 mb-8 overflow-x-auto no-scrollbar">
-        {plantilla.secciones.map((sec, i) => (
-          <div
-            key={sec.id}
-            className={`py-3 px-5 whitespace-nowrap font-medium text-sm border-b-2 ${
-              activeTab === i
-                ? "border-indigo-600 text-indigo-600 bg-indigo-50/50"
-                : "border-transparent text-gray-400"
-            }`}
-          >
-            <span className="mr-2 text-xs font-bold">{i + 1}.</span>
-            {sec.nombre}
+      <div className="bg-sky-50/90 backdrop-blur-md border border-sky-100 text-slate-800 rounded-xl shadow-sm p-8 mb-8 relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-sky-200 rounded-full opacity-20 -mr-16 -mt-16 blur-3xl pointer-events-none"></div>
+        <div className="relative z-10">
+          <h1 className="text-3xl font-bold mb-2 text-sky-900 tracking-tight">
+            {datosInsumos?.titulo || "Cargando..."}
+          </h1>
+          <p className="text-slate-600 text-lg mb-6 font-light">
+            {datosInsumos?.descripcion}
+          </p>
+          <div className="flex flex-wrap gap-3">
+            <span className="bg-white/60 px-4 py-2 rounded-lg text-sm font-medium border border-sky-200/50 text-sky-900 shadow-sm">
+              📅 Ciclo: <strong>{datosInsumos?.anio}</strong>
+            </span>
+            <span className="bg-white/60 px-4 py-2 rounded-lg text-sm font-medium border border-sky-200/50 text-sky-900 shadow-sm">
+              📍 Sede: <strong>{datosInsumos?.sede}</strong>
+            </span>
+            <span className="bg-white/60 px-4 py-2 rounded-lg text-sm font-medium border border-sky-200/50 text-sky-900 shadow-sm">
+              🏢 Depto: <strong>{datosInsumos?.departamento}</strong>
+            </span>
           </div>
-        ))}
+        </div>
       </div>
-
-      <div className="animate-fadeIn min-h-[300px]">
-        {plantilla.secciones.map((sec, index) => (
-          <div
-            key={sec.id}
-            className={activeTab === index ? "block" : "hidden"}
-          >
-            {/* CASO SECCIÓN 0: Tabla General */}
-            {index === 0 && (
-              <>
-                <div className="flex flex-col sm:flex-row gap-4 bg-blue-50 p-4 rounded-lg border border-blue-100 mb-6 items-center">
-                  <div className="flex items-center gap-2 text-blue-800 font-semibold">
-                    <span>Filtrar Cursadas:</span>
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        <div className="lg:col-span-7 space-y-6">
+          <div className="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden flex flex-col h-[750px]">
+            <div className="bg-sky-800 text-white px-6 py-4 flex justify-between items-center shrink-0">
+              <h2 className="font-bold text-lg flex items-center gap-2">
+                Respuestas de Cátedras
+              </h2>
+            </div>
+            <div className="px-6 py-4 bg-gray-50 border-b border-gray-200">
+              <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                Seleccionar Asignatura
+              </label>
+              <select
+                value={activeTab}
+                onChange={(e) => setActiveTab(Number(e.target.value))}
+                className="block w-full pl-4 pr-10 py-3 text-base border-gray-300 focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm rounded-lg shadow-sm bg-white cursor-pointer"
+              >
+                {datosInsumos?.informes_asignaturas?.map(
+                  (asignatura, index) => (
+                    <option key={asignatura.id} value={index}>
+                      {asignatura.materia_nombre}
+                    </option>
+                  )
+                )}
+              </select>
+            </div>
+            <div className="p-8 bg-slate-50 overflow-y-auto flex-grow custom-scrollbar">
+              {datosInsumos?.informes_asignaturas &&
+              datosInsumos.informes_asignaturas[activeTab] ? (
+                <div className="animate-fadeIn space-y-8">
+                  <div className="bg-white p-5 rounded-lg shadow-sm border border-gray-200 flex items-center justify-between">
+                    <div>
+                      <p className="text-[10px] text-gray-400 uppercase tracking-widest font-bold mb-1">
+                        Materia
+                      </p>
+                      <h3 className="text-lg font-bold text-gray-800 leading-tight">
+                        {
+                          datosInsumos.informes_asignaturas[activeTab]
+                            .materia_nombre
+                        }
+                      </h3>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-[10px] text-gray-400 uppercase tracking-widest font-bold mb-1">
+                        Docente
+                      </p>
+                      <p className="text-sky-700 font-semibold bg-sky-50 px-2 py-1 rounded">
+                        {
+                          datosInsumos.informes_asignaturas[activeTab]
+                            .docente_nombre
+                        }
+                      </p>
+                    </div>
                   </div>
-                  <select
-                    className="flex-1 border border-blue-300 rounded-md p-2 bg-white text-sm focus:ring-2 focus:ring-blue-500"
-                    value={cuatrimestreSeleccionado}
-                    onChange={(e) =>
-                      setCuatrimestreSeleccionado(e.target.value)
-                    }
-                    disabled={opcionesCuatrimestre.length === 0}
-                  >
-                    {opcionesCuatrimestre.map((op) => (
-                      <option key={op} value={op}>
-                        {op}
-                      </option>
+                  <hr className="border-gray-200" />
+                  <div className="space-y-6">
+                    {datosInsumos.informes_asignaturas[
+                      activeTab
+                    ].respuestas.map((resp, idx) => (
+                      <div
+                        key={idx}
+                        className="bg-white p-6 rounded-xl shadow-sm border border-gray-200/60 relative group hover:shadow-md transition-shadow"
+                      >
+                        <div className="absolute left-0 top-4 bottom-4 w-1 bg-sky-500 rounded-r-md"></div>
+                        <div className="pl-4">
+                          <h4 className="font-bold text-slate-800 text-sm mb-3 group-hover:text-sky-700 transition-colors">
+                            {resp.pregunta_texto}
+                          </h4>
+                          <div className="text-slate-600 text-sm leading-relaxed bg-gray-50 p-4 rounded-lg border border-gray-100">
+                            <span className="whitespace-pre-wrap">
+                              {resp.texto || resp.opcion_texto || (
+                                <em className="text-gray-400">
+                                  Sin respuesta.
+                                </em>
+                              )}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
                     ))}
-                  </select>
-                </div>
-                {sec.preguntas.map((p) => (
-                  <div key={p.id}>
-                    <h4 className="font-bold text-gray-800 text-lg mb-4">
-                      {p.texto}
-                    </h4>
-                    <Seccion0
-                      materiasFiltradas={materiasFiltradas as any}
-                      respuestas={respuestas}
-                      handleInputChange={handleInputChange}
-                      preguntaId={p.id}
-                      instanciaId={instanciaId!}
-                    />
                   </div>
-                ))}
-              </>
-            )}
-
-            {/* CASO SECCIÓN 1: Tabla Necesidades */}
-            {index === 1 && (
-              <>
-                <div className="mb-4">
-                  <BotonTraerRespuestas
-                    instanciaId={instanciaId!}
-                    seccionPrefijo="1."
-                    onCopy={(t) => {
-                      alert("Copiado.");
-                      navigator.clipboard.writeText(t);
+                </div>
+              ) : (
+                <div className="h-full flex items-center justify-center text-gray-400 italic">
+                  No hay informes disponibles.
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+        <div className="lg:col-span-5">
+          <div className="bg-white rounded-xl shadow-lg border border-sky-100 sticky top-6 flex flex-col h-[750px]">
+            <div className="bg-sky-600 text-white px-6 py-4 font-semibold text-lg">
+              Redacción Final
+            </div>
+            <div className="p-6 overflow-y-auto flex-grow space-y-6">
+              <div className="bg-sky-50 text-sky-900 text-sm p-4 rounded-lg border border-sky-100 mb-4">
+                <p>
+                  Complete los datos requeridos. Los campos técnicos se
+                  generarán automáticamente.
+                </p>
+              </div>
+              {preguntasClave.integrantes && (
+                <div className="animate-fadeIn" id="campo-integrantes">
+                  <label className="block text-sm font-bold text-gray-800 mb-2">
+                    {preguntasClave.integrantes.texto}{" "}
+                    <span className="text-red-500">*</span>
+                  </label>
+                  <textarea
+                    className={`w-full border rounded-lg p-4 text-sm min-h-[100px] ${
+                      errorValidacion
+                        ? "border-red-300 ring-2 ring-red-100"
+                        : "border-gray-300 focus:ring-sky-500"
+                    }`}
+                    value={
+                      respuestasUsuario[preguntasClave.integrantes.id] || ""
+                    }
+                    onChange={(e) => {
+                      setRespuestasUsuario({
+                        ...respuestasUsuario,
+                        [preguntasClave.integrantes!.id]: e.target.value,
+                      });
+                      if (e.target.value.trim().length > 0)
+                        setErrorValidacion(false);
                     }}
                   />
                 </div>
-                {sec.preguntas.map((p) => (
-                  <div key={p.id}>
-                    <h4 className="font-bold text-gray-800 text-lg mb-4">
-                      {p.texto}
-                    </h4>
-                    <Seccion1
-                      materiasFiltradas={materiasFiltradas as any}
-                      respuestas={respuestas}
-                      handleInputChange={handleInputChange}
-                      preguntaId={p.id}
-                      instanciaId={instanciaId!}
-                      onCopyContent={handleCopyContent}
-                    />
-                  </div>
-                ))}
-              </>
-            )}
-
-            {/* CASO SECCIÓN 2: Tablas de Desarrollo */}
-            {index === 2 && (
-              <div className="space-y-8">
-                {sec.preguntas.map((p) => {
-                  const props = {
-                    materiasFiltradas: materiasFiltradas as any,
-                    respuestas,
-                    handleInputChange,
-                    preguntaId: p.id,
-                    instanciaId: instanciaId!,
-                  };
-
-                  if (p.texto.startsWith("2.B")) {
-                    return (
-                      <div
-                        key={p.id}
-                        className="bg-white p-1 sm:p-4 rounded-lg border border-gray-200 shadow-sm"
-                      >
-                        <div className="mb-4 flex justify-between items-center border-b pb-3">
-                          <p className="font-bold text-gray-800 text-lg">
-                            {p.texto}
-                          </p>
-                          <button
-                            onClick={() => autoCompletarPorcentajes(p.id)}
-                            className="bg-green-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-green-700 flex items-center gap-2 shadow-sm transition-colors"
-                          >
-                            Calcular desde Encuestas
-                          </button>
-                        </div>
-                        <div className="overflow-x-auto">
-                          <Seccion2B {...props} />
-                        </div>
-                      </div>
-                    );
-                  }
-
-                  let Componente = Seccion2;
-                  let prefijo = "2.";
-                  if (p.texto.startsWith("2.A")) {
-                    prefijo = "2.A";
-                    Componente = Seccion2A;
-                  } else if (p.texto.startsWith("2.C")) {
-                    prefijo = "2.C";
-                    Componente = Seccion2C;
-                  }
-
-                  return (
-                    <div
-                      key={p.id}
-                      className="bg-white p-1 sm:p-4 rounded-lg border border-gray-200 shadow-sm mb-6"
-                    >
-                      <div className="mb-4 flex justify-between items-center border-b pb-3">
-                        <p className="font-bold text-gray-800 text-lg">
-                          {p.texto}
-                        </p>
-                        <BotonTraerRespuestas
-                          instanciaId={instanciaId!}
-                          seccionPrefijo={prefijo}
-                          onCopy={(t) => handleCopyContent(t)}
-                        />
-                      </div>
-                      <div className="overflow-x-auto">
-                        <Componente {...props} />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-
-            {/* CASO SECCIÓN 3: Tabla Actividades (CORREGIDO) */}
-            {index === 3 && (
-              <div className="space-y-8">
-                {sec.preguntas.map((p) => (
-                  <div
-                    key={p.id}
-                    className="bg-white p-1 sm:p-4 rounded-lg border border-gray-200 shadow-sm"
-                  >
-                    <div className="mb-4 flex justify-between items-center border-b pb-3">
-                      <p className="font-bold text-gray-800 text-lg">
-                        {p.texto}
-                      </p>
-                      <BotonTraerRespuestas
-                        instanciaId={instanciaId!}
-                        seccionPrefijo="3."
-                        onCopy={(t) => handleCopyContent(t)}
-                      />
-                    </div>
-                    <div className="overflow-x-auto">
-                      <Seccion3
-                        materiasFiltradas={materiasFiltradas as any}
-                        respuestas={respuestas}
-                        handleInputChange={handleInputChange}
-                        preguntaId={p.id}
-                        instanciaId={instanciaId!}
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* CASO SECCIÓN 4: Tabla Auxiliares (CORREGIDO) */}
-            {index === 4 && (
-              <div className="space-y-8">
-                {sec.preguntas.map((p) => (
-                  <div
-                    key={p.id}
-                    className="bg-white p-1 sm:p-4 rounded-lg border border-gray-200 shadow-sm"
-                  >
-                    <div className="mb-4 flex justify-between items-center border-b pb-3">
-                      <p className="font-bold text-gray-800 text-lg">
-                        {p.texto}
-                      </p>
-                      <BotonTraerRespuestas
-                        instanciaId={instanciaId!}
-                        seccionPrefijo="4."
-                        onCopy={(t) => handleCopyContent(t)}
-                      />
-                    </div>
-                    <div className="overflow-x-auto">
-                      <Seccion4
-                        materiasFiltradas={materiasFiltradas as any}
-                        respuestas={respuestas}
-                        handleInputChange={handleInputChange}
-                        preguntaId={p.id}
-                        instanciaId={instanciaId!}
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* RENDERIZADO GENÉRICO (SECCIONES > 4, ej: Sección 5) */}
-            {index > 4 && (
-              <div className="space-y-6">
-                {sec.preguntas.map((p) => (
-                  <div
-                    key={p.id}
-                    className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm"
-                  >
-                    <label className="block font-medium text-gray-900 text-lg mb-4">
-                      {p.texto}
-                    </label>
-                    <div className="mb-3">
-                      <BotonTraerRespuestas
-                        instanciaId={instanciaId!}
-                        seccionPrefijo={p.texto.split(" ")[0]}
-                        onCopy={(t) => handleCopyContent(t, p.id.toString())}
-                      />
-                    </div>
-                    <textarea
-                      className="w-full p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 min-h-[150px]"
-                      placeholder="Escriba aquí..."
-                      value={respuestas[p.id.toString()] || ""}
-                      onChange={(e) =>
-                        handleInputChange(p.id.toString(), e.target.value)
-                      }
-                    />
-                  </div>
-                ))}
-              </div>
-            )}
+              )}
+              {preguntasClave.sintesis && (
+                <div className="animate-fadeIn pt-4 border-t border-gray-100">
+                  <label className="block text-sm font-bold text-gray-800 mb-2">
+                    {preguntasClave.sintesis.texto}
+                  </label>
+                  <textarea
+                    className="w-full border border-gray-300 rounded-lg p-4 text-sm min-h-[250px] focus:ring-sky-500"
+                    value={respuestasUsuario[preguntasClave.sintesis.id] || ""}
+                    onChange={(e) =>
+                      setRespuestasUsuario({
+                        ...respuestasUsuario,
+                        [preguntasClave.sintesis!.id]: e.target.value,
+                      })
+                    }
+                  />
+                </div>
+              )}
+            </div>
+            <div className="p-6 border-t border-gray-100 bg-gray-50 shrink-0">
+              <button
+                onClick={iniciarGuardado}
+                disabled={enviando}
+                className="w-full py-4 rounded-lg font-bold text-white shadow-lg bg-green-600 hover:bg-green-700"
+              >
+                {enviando ? "Procesando..." : "Guardar y Cerrar Informe"}
+              </button>
+            </div>
           </div>
-        ))}
-      </div>
-
-      <div className="flex justify-between items-center pt-8 mt-10 border-t border-gray-200">
-        <button
-          onClick={irAnterior}
-          disabled={activeTab === 0}
-          className="flex items-center px-6 py-2.5 rounded-lg font-medium text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          ← Anterior
-        </button>
-        {plantilla && activeTab < plantilla.secciones.length - 1 ? (
-          <button
-            onClick={irSiguiente}
-            className="flex items-center px-6 py-2.5 rounded-lg font-bold text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm"
-          >
-            Siguiente →
-          </button>
-        ) : (
-          <button
-            onClick={handleFinalizar}
-            disabled={cargandoEnvio}
-            className="flex items-center px-8 py-2.5 rounded-lg font-bold text-white bg-green-600 hover:bg-green-700 shadow-md disabled:bg-green-400"
-          >
-            {cargandoEnvio ? "Enviando..." : "Finalizar Informe"}
-          </button>
-        )}
+        </div>
       </div>
     </div>
   );

@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 import collections
 from typing import List, Optional
-
+import unicodedata
 from sqlalchemy import select, func, and_
 from sqlalchemy.orm import Session, selectinload, joinedload
 from fastapi import HTTPException
@@ -49,7 +49,6 @@ from src.encuestas.schemas import (
     DashboardDepartamentoStats,
     StatDato
 )
-from src.materia.models import Cursada
 
 
 def get_instrumento_completo(db: Session, instrumento_id: int) -> models.InstrumentoBase:
@@ -104,7 +103,6 @@ def listar_plantillas_por_estado(
     estado: EstadoInstrumento
 ) -> List[models.InstrumentoBase]:
     
-
     estado_string = estado.value
 
     statement = select(models.InstrumentoBase).where(
@@ -128,7 +126,6 @@ def publicar_plantilla(
     db.refresh(db_plantilla)
     return db_plantilla
 
-# --- 4. ELIMINAR (Para "Borrar") ---
 def eliminar_plantilla(db: Session, plantilla_id: int):
     db_plantilla = get_plantilla_por_id(db, plantilla_id)
     if not db_plantilla:
@@ -179,8 +176,6 @@ def get_plantilla_para_instancia_reporte(
             joinedload(ActividadCurricularInstancia.cursada)
             .joinedload(Cursada.cuatrimestre),
             
-            # Usamos joinedload para llegar a cursada (igual que arriba)
-            # y LUEGO selectinload para traer sus inscripciones
             joinedload(ActividadCurricularInstancia.cursada)
             .selectinload(Cursada.inscripciones),
             
@@ -194,11 +189,6 @@ def get_plantilla_para_instancia_reporte(
     if instancia.profesor_id != profesor_id:
         raise HTTPException(status_code=403, detail="No tienes permiso para este reporte.")
     
-    # --- CORRECCIÓN: Eliminamos esta validación para permitir ver historial ---
-    # if instancia.estado != EstadoInforme.PENDIENTE:
-    #    raise HTTPException(status_code=400, detail="El reporte no está pendiente.")
-    # ------------------------------------------------------------------------
-
     # Lógica de Sedes
     sedes_set = set()
     if instancia.cursada and instancia.cursada.materia:
@@ -231,20 +221,13 @@ def generar_informe_sintetico_para_departamento(
     departamento_id: int,
     fecha_fin_informe: datetime
 ) -> InformeSinteticoInstancia:
-    """
-    Busca los Informes Curriculares COMPLETADOS del departamento, 
-    crea un Informe Sintético y marca los informes como RESUMIDO.
-    """
     
-    # 1. Verificar que el departamento exista
     departamento = db.get(Departamento, departamento_id)
     if not departamento:
         raise NotFound(detail=f"Departamento con ID {departamento_id} no encontrado.")
     
-    # Obtener año actual
     anio_actual = datetime.now().year 
 
-    # 2. Encontrar la plantilla de Informe Sintético que esté publicada
     stmt_plantilla = select(InformeSintetico.id).where(
         InformeSintetico.estado == EstadoInstrumento.PUBLICADA,
         InformeSintetico.tipo == TipoInstrumento.INFORME_SINTETICO
@@ -254,12 +237,10 @@ def generar_informe_sintetico_para_departamento(
     if not plantilla_sintetico_id:
         raise BadRequest(detail="No se encontró una plantilla de 'Informe Sintético' publicada.")
 
-    # 3. Encontrar todos los informes de actividad curricular COMPLETADOS y no resumidos
-    #    FILTRADOS POR AÑO ACTUAL
     stmt_ac_completadas = (
         select(ActividadCurricularInstancia)
         .join(Cursada, ActividadCurricularInstancia.cursada_id == Cursada.id)
-        .join(Cuatrimestre, Cursada.cuatrimestre_id == Cuatrimestre.id) # Join con Cuatrimestre
+        .join(Cuatrimestre, Cursada.cuatrimestre_id == Cuatrimestre.id)
         .join(Materia, Cursada.materia_id == Materia.id)
         .join(carrera_materia_association, Materia.id == carrera_materia_association.c.materia_id)
         .join(Carrera, carrera_materia_association.c.carrera_id == Carrera.id)
@@ -267,10 +248,7 @@ def generar_informe_sintetico_para_departamento(
             Carrera.departamento_id == departamento_id,
             ActividadCurricularInstancia.estado == EstadoInforme.COMPLETADO,
             ActividadCurricularInstancia.informe_sintetico_instancia_id == None,
-            
-            # --- FILTRO CRÍTICO ---
             Cuatrimestre.anio == anio_actual
-            # ----------------------
         )
     ).distinct()
     
@@ -279,7 +257,6 @@ def generar_informe_sintetico_para_departamento(
     if not informes_a_resumir:
         raise NotFound(detail=f"No se encontraron informes de actividad curricular 'Completados' del año {anio_actual} para el departamento '{departamento.nombre}'.")
 
-    # 4. Crear la nueva instancia de Informe Sintético
     print(f"Generando informe sintético para Depto. {departamento_id} con {len(informes_a_resumir)} informes.")
     
     nueva_instancia_sintetica = InformeSinteticoInstancia(
@@ -290,10 +267,10 @@ def generar_informe_sintetico_para_departamento(
         fecha_fin=fecha_fin_informe,
         estado=EstadoInforme.PENDIENTE 
     )
-    # 5. Vincular los informes y marcar como RESUMIDO
+
     for informe_ac in informes_a_resumir:
         informe_ac.informe_sintetico_instancia = nueva_instancia_sintetica
-        informe_ac.estado = EstadoInforme.RESUMIDO # Actualiza el estado
+        informe_ac.estado = EstadoInforme.RESUMIDO
         db.add(informe_ac)
         
     db.add(nueva_instancia_sintetica)
@@ -340,68 +317,117 @@ def generar_resumen_por_seccion(
 ) -> str:
     """
     Recorre los informes curriculares asociados al sintético.
-    Busca respuestas de texto en la sección que comienza con 'numero_seccion'.
+    CORRECCIÓN: Filtros estrictos y excluyentes para evitar duplicación de contenido entre secciones.
     """
-    # --- CORRECCIÓN IMPORTANTE AQUÍ ---
     instancia = db.query(models.InformeSinteticoInstancia).options(
         selectinload(models.InformeSinteticoInstancia.actividades_curriculares_instancia)
         .options(
-            # Cargamos la Cursada y sus relaciones en paralelo (separado por coma)
             selectinload(models.ActividadCurricularInstancia.cursada).selectinload(Cursada.materia),
-            selectinload(models.ActividadCurricularInstancia.cursada).selectinload(Cursada.profesor)
+            selectinload(models.ActividadCurricularInstancia.cursada).selectinload(Cursada.profesor),
+            selectinload(models.ActividadCurricularInstancia.cursada).selectinload(Cursada.inscripciones)
         )
     ).filter_by(id=instancia_sintetico_id).first()
-    # ----------------------------------
 
     if not instancia:
         raise NotFound(detail="Instancia de informe sintético no encontrada")
 
     resumen_total = ""
-    contador = 0
+    
+    # Normalizamos la sección solicitada
+    seccion_solicitada = normalize_text(numero_seccion).strip()
+    if seccion_solicitada.endswith("."): seccion_solicitada = seccion_solicitada[:-1] 
 
-    # 2. Recorrer cada informe de profesor (ACI) asociado
-    for aci in instancia.actividades_curriculares_instancia:
-        if not aci.cursada or not aci.cursada.materia:
-            continue
-            
-        # Filtro por materia (si se solicita)
-        if materia_id and aci.cursada.materia.id != materia_id:
-            continue
-            
-        profesor_nombre = aci.profesor.nombre if aci.profesor else "Docente"
+    # --- LÓGICA DE FILTRADO ESTRICTO ---
+    def es_pregunta_de_seccion(texto_pregunta: str, seccion: str) -> bool:
+        t = normalize_text(texto_pregunta)
         
-        # 3. Buscar el RespuestaSet del ACI (el último creado)
+        if seccion == "0":
+            # Solo comisiones, ignorar alumnos (ya se procesan aparte)
+            return "comision" in t and ("teorica" in t or "practica" in t)
+        
+        if seccion == "1":
+            return "equipamiento" in t or "bibliografia" in t or "insumo" in t
+        
+        if seccion == "2": # Solo horas
+            return "horas" in t and "dictadas" in t
+        
+        if seccion == "2.a": # Solo contenidos/estrategias
+            return "contenidos" in t or "estrategias" in t or "planificados" in t
+        
+        if seccion == "2.b": # Encuesta y Juicio
+            # Excluir explícitamente aspectos positivos/obstáculos para no mezclar con 2.C
+            es_encuesta = "encuesta" in t or "juicio" in t or "valor" in t
+            es_2c = "aspecto" in t or "obstaculo" in t
+            return es_encuesta and not es_2c
+        
+        if seccion == "2.c": # Aspectos positivos/obstáculos
+            return "aspecto" in t or "obstaculo" in t or "positivo" in t
+        
+        if seccion == "3":
+            return "actividad" in t or "investigacion" in t or "extension" in t or "gestion" in t
+        
+        if seccion == "4":
+            return "auxiliar" in t or "desempeño" in t or "jtp" in t
+        
+        if seccion == "5":
+            return "observacion" in t or "comentario" in t
+            
+        return False
+
+    # Caso especial: Alumnos (Sección 0)
+    busca_alumnos = "0" in seccion_solicitada and ("alumno" in numero_seccion.lower() or "inscripto" in numero_seccion.lower())
+    if "alumno" in numero_seccion.lower() and "inscripto" in numero_seccion.lower():
+        busca_alumnos = True
+
+    for aci in instancia.actividades_curriculares_instancia:
+        if not aci.cursada or not aci.cursada.materia: continue
+        if materia_id and aci.cursada.materia.id != materia_id: continue
+            
+        materia_nombre = aci.cursada.materia.nombre
+
+        # --- LÓGICA 1: DATOS AUTOMÁTICOS (ALUMNOS) ---
+        if busca_alumnos:
+            cantidad_real = len(aci.cursada.inscripciones)
+            if not materia_id:
+                resumen_total += f"• {materia_nombre}: {cantidad_real}\n"
+            else:
+                resumen_total = str(cantidad_real)
+            continue 
+
+        # --- LÓGICA 2: BÚSQUEDA CON FILTRO ---
         respuesta_set = db.query(RespuestaSet).filter_by(
             instrumento_instancia_id=aci.id
         ).order_by(RespuestaSet.created_at.desc()).first()
 
-        if not respuesta_set:
-            continue
+        if not respuesta_set: continue
 
-        # 4. Buscar Respuestas de Redacción
-        respuestas_texto = db.query(RespuestaRedaccion).join(Pregunta).join(Seccion)\
-            .filter(
-                RespuestaRedaccion.respuesta_set_id == respuesta_set.id,
-                Seccion.nombre.startswith(numero_seccion) 
-            ).all()
+        respuestas_encontradas = []
+        
+        for resp in respuesta_set.respuestas:
+            if isinstance(resp, RespuestaRedaccion):
+                # Usamos la función de filtrado estricto
+                if es_pregunta_de_seccion(resp.pregunta.texto, seccion_solicitada):
+                     if resp.texto:
+                        respuestas_encontradas.append(resp.texto)
 
-        if respuestas_texto:
-            contador += 1
-            # Si no filtramos por materia, mostramos el título para distinguir
+        if respuestas_encontradas:
             if not materia_id:
-                resumen_total += f"--- {aci.cursada.materia.nombre} ({profesor_nombre}) ---\n"
+                resumen_total += f"• {materia_nombre}:\n"
             
-            for resp in respuestas_texto:
-                texto_limpio = resp.texto.strip()
-                if texto_limpio:
-                    resumen_total += f"{texto_limpio}\n"
+            for txt in respuestas_encontradas:
+                txt_limpio = txt.strip()
+                if txt_limpio:
+                    # Formato limpio: si ya tiene bullets, no agregamos otro nivel
+                    if txt_limpio.startswith("•") or txt_limpio.startswith("-"):
+                         resumen_total += f"{txt_limpio}\n"
+                    else:
+                         resumen_total += f"  - {txt_limpio}\n"
             
             if not materia_id:
                 resumen_total += "\n"
 
     return resumen_total.strip()
 
-#Funciones que no estaban 
 def listar_informes_sinteticos_por_departamento(
     db: Session, 
     admin: AdminDepartamento
@@ -410,7 +436,6 @@ def listar_informes_sinteticos_por_departamento(
     if not admin.departamento_id:
         raise BadRequest(detail="El administrador no tiene un departamento asignado.")
 
-    # Buscamos los informes sintéticos de ese departamento
     stmt = (
         select(models.InformeSinteticoInstancia)
         .where(models.InformeSinteticoInstancia.departamento_id == admin.departamento_id)
@@ -433,7 +458,6 @@ def listar_informes_sinteticos_por_departamento(
             plantilla=inst.informe_sintetico, 
             departamento_id=inst.departamento_id,
             estado=inst.estado, 
-
             cantidad_reportes=len(inst.actividades_curriculares_instancia)
         ))
         
@@ -445,7 +469,6 @@ def obtener_estadisticas_informe_sintetico(
     admin: AdminDepartamento
 ) -> encuestas_schemas.InformeSinteticoResultado:
     
-    # 1. Obtener la instancia del Informe Sintético
     informe = db.get(models.InformeSinteticoInstancia, informe_id)
     if not informe:
         raise NotFound(detail="Informe sintético no encontrado.")
@@ -453,10 +476,8 @@ def obtener_estadisticas_informe_sintetico(
     if informe.departamento_id != admin.departamento_id:
         raise BadRequest(detail="No tiene permisos para ver este informe.")
 
-    # 2. Identificar todas las Encuestas de Alumnos vinculadas
     ids_encuestas_alumnos = []
     
-    # Cargamos la relación necesaria
     informe = db.query(models.InformeSinteticoInstancia).filter_by(id=informe_id).options(
         selectinload(models.InformeSinteticoInstancia.actividades_curriculares_instancia)
     ).first()
@@ -474,8 +495,6 @@ def obtener_estadisticas_informe_sintetico(
             resultados_por_seccion=[]
         )
 
-    # 3. Cargar la Plantilla de Encuesta de Alumno
-    # --- CORRECCIÓN AQUÍ: Usar EncuestaInstancia directo, NO models.EncuestaInstancia ---
     primera_encuesta = db.get(EncuestaInstancia, ids_encuestas_alumnos[0]) 
     
     if not primera_encuesta:
@@ -489,7 +508,6 @@ def obtener_estadisticas_informe_sintetico(
         .selectinload(PreguntaMultipleChoice.opciones)
     ).filter_by(id=plantilla_encuesta.id).first()
 
-    # 4. AGREGACIÓN DE DATOS
     stmt_respuestas = (
         select(Respuesta)
         .join(RespuestaSet)
@@ -504,7 +522,6 @@ def obtener_estadisticas_informe_sintetico(
         if isinstance(resp, RespuestaMultipleChoice) and resp.opcion_id:
             conteo_global[resp.pregunta_id][resp.opcion_id] += 1
 
-    # 5. Construir el objeto de respuesta
     resultados_secciones = []
 
     for seccion in plantilla_full.secciones:
@@ -532,7 +549,7 @@ def obtener_estadisticas_informe_sintetico(
         if preguntas_seccion:
             resultados_secciones.append(encuestas_schemas.ResultadoSeccion(
                 seccion_nombre=seccion.nombre,
-                resultados_por_pregunta=preguntas_de_esta_seccion
+                resultados_por_pregunta=preguntas_seccion
             ))
 
     return encuestas_schemas.InformeSinteticoResultado(
@@ -542,8 +559,6 @@ def obtener_estadisticas_informe_sintetico(
         cantidad_total_reportes=len(ids_encuestas_alumnos),
         resultados_por_seccion=resultados_secciones
     )
-#Graficos del dpto
-
 
 def obtener_dashboard_departamento(
     db: Session,
@@ -553,7 +568,6 @@ def obtener_dashboard_departamento(
     if not admin.departamento_id:
         raise BadRequest(detail="Admin sin departamento asignado.")
 
-    # 1. Obtener todos los informes (ACI) del departamento
     stmt = (
         select(ActividadCurricularInstancia)
         .join(Cursada)
@@ -572,14 +586,10 @@ def obtener_dashboard_departamento(
     
     informes = db.scalars(stmt).all()
     
-    # 2. Calcular Estado de Cumplimiento
     total = len(informes)
     pendientes = sum(1 for i in informes if i.estado == EstadoInforme.PENDIENTE)
-    # Consideramos completados tanto los COMPLETADO como los RESUMIDO (ya procesados)
     completados = sum(1 for i in informes if i.estado in [EstadoInforme.COMPLETADO, EstadoInforme.RESUMIDO])
 
-    # 3. Calcular Cobertura de Contenidos (Sección 2.A)
-    # Inicializamos contadores para las 4 opciones conocidas
     conteo_cobertura = {
         "0% - 25%": 0,
         "26% - 50%": 0, 
@@ -590,29 +600,22 @@ def obtener_dashboard_departamento(
     necesidades = []
 
     for informe in informes:
-        # Solo analizamos informes con respuestas
         if not informe.respuesta_sets: continue
         
-        # Tomamos el set de respuestas más reciente
         rset = informe.respuesta_sets[-1] 
         
         for resp in rset.respuestas:
-            # A. Detectar pregunta de Porcentaje (2.A)
-            # Buscamos por texto parcial si no tenemos IDs fijos, o por tipo
             if isinstance(resp, RespuestaMultipleChoice) and resp.opcion:
                 texto_opcion = resp.opcion.texto
                 if texto_opcion in conteo_cobertura:
                     conteo_cobertura[texto_opcion] += 1
             
-            # B. Detectar Necesidades (Sección 1)
             if isinstance(resp, RespuestaRedaccion) and resp.pregunta:
-                # Filtramos por el texto de la pregunta de la Sección 1
                 if "necesidades de equipamiento" in resp.pregunta.texto.lower() and resp.texto:
-                    if len(resp.texto) > 5: # Ignorar respuestas vacías o muy cortas
+                    if len(resp.texto) > 5: 
                         materia = informe.cursada.materia.nombre if informe.cursada else "Desconocida"
                         necesidades.append(f"[{materia}] {resp.texto[:100]}...")
 
-    # Formatear datos para el gráfico
     stats_cobertura = [
         StatDato(label=k, value=v) for k, v in conteo_cobertura.items()
     ]
@@ -622,68 +625,149 @@ def obtener_dashboard_departamento(
         informes_pendientes=pendientes,
         informes_completados=completados,
         cobertura_contenidos=stats_cobertura,
-        necesidades_recientes=necesidades[:5] # Solo las 5 más recientes
+        necesidades_recientes=necesidades[:5] 
     )
 
-#para el pdf del informe sintetico
+def normalize_text(text: str) -> str:
+    if not text: return ""
+    return ''.join(c for c in unicodedata.normalize('NFD', text) 
+                   if unicodedata.category(c) != 'Mn').lower()
+
 def obtener_informe_sintetico_respondido(
     db: Session, 
     informe_id: int,
     admin: AdminDepartamento
 ) -> schemas.InformeRespondido:
     
-    # 1. Buscar la instancia
-    instancia = db.get(InformeSinteticoInstancia, informe_id)
-    if not instancia:
-        raise NotFound(detail="Informe no encontrado")
-    
-    if instancia.departamento_id != admin.departamento_id:
-        raise BadRequest(detail="No tiene permisos para ver este informe.")
+    # ... (búsqueda de instancia y respuesta_set igual que antes)
+    instancia = db.get(models.InformeSinteticoInstancia, informe_id)
+    if not instancia: raise NotFound(detail="Informe no encontrado")
+    if instancia.departamento_id != admin.departamento_id: raise BadRequest(detail="No tiene permisos.")
 
-    # 2. Buscar las respuestas (tomamos el último set de respuestas guardado)
     respuesta_set = db.query(RespuestaSet).filter(
         RespuestaSet.instrumento_instancia_id == informe_id
     ).order_by(RespuestaSet.created_at.desc()).first()
 
-    # Mapa rápido de respuestas: { pregunta_id: "Texto de respuesta" }
     respuestas_map = {}
     if respuesta_set:
         for r in respuesta_set.respuestas:
             if isinstance(r, RespuestaRedaccion):
                 respuestas_map[r.pregunta_id] = r.texto
-            # Si hubiera multiple choice en el sintético, podrías agregarlo aquí
 
-    # 3. Construir la estructura ordenada por secciones
     secciones_res = []
-    # Usamos la plantilla asociada para mantener el orden correcto de preguntas
     plantilla = instancia.informe_sintetico
-    
-    # Cargar relaciones si no están cargadas (o confiar en lazy load si la sesión está abierta)
-    # Para seguridad, mejor iteramos sobre lo que tenemos si la plantilla se cargó.
-    # Si falla, habría que hacer un query con eager load, pero intentemos así primero.
     
     for sec in plantilla.secciones:
         pregs_res = []
         for preg in sec.preguntas:
-            # Obtenemos el texto, si no hay respuesta ponemos un guion
+            
+            # --- FILTRO CORREGIDO ---
+            t_norm = normalize_text(preg.texto)
+            
+            # Solo ocultamos del cuerpo si es la pregunta específica de la cabecera
+            if "integrante" in t_norm and "comision" in t_norm:
+                continue 
+            
+            # (Opcional) Si quieres ocultar la pregunta de "Observaciones... Comisión Asesora" del cuerpo
+            # porque ya es la última sección, puedes dejar este también:
+            # if "observaciones" in t_norm and "comision" in t_norm and "asesora" in t_norm:
+            #    continue
+            # ------------------------
+
             txt_resp = respuestas_map.get(preg.id, "Sin respuesta registrada.")
             pregs_res.append(schemas.PreguntaRespondida(
                 pregunta_texto=preg.texto,
                 respuesta_texto=txt_resp
             ))
         
-        secciones_res.append(schemas.SeccionRespondida(
-            seccion_nombre=sec.nombre,
-            preguntas=pregs_res
-        ))
+        if pregs_res:
+            secciones_res.append(schemas.SeccionRespondida(
+                seccion_nombre=sec.nombre,
+                preguntas=pregs_res
+            ))
 
     return schemas.InformeRespondido(
         titulo=plantilla.titulo,
         departamento=instancia.departamento.nombre if instancia.departamento else "Desconocido",
         fecha=instancia.fecha_inicio,
+        integrantes_comision=instancia.integrantes_comision, 
         secciones=secciones_res
     )
 
+def obtener_informe_sintetico_con_detalles(db: Session, instancia_id: int) -> dict:
+
+    instancia_sintetico = db.query(models.InformeSinteticoInstancia).options(
+        joinedload(models.InformeSinteticoInstancia.departamento).joinedload(Departamento.sede)
+    ).filter(models.InformeSinteticoInstancia.id == instancia_id).first()
+
+    if not instancia_sintetico:
+        raise NotFound(detail="Informe sintético no encontrado")
+
+    plantilla = instancia_sintetico.informe_sintetico
+    
+    nombre_departamento = instancia_sintetico.departamento.nombre if instancia_sintetico.departamento else "Sin Departamento"
+    nombre_sede = instancia_sintetico.departamento.sede.localidad if (instancia_sintetico.departamento and instancia_sintetico.departamento.sede) else "Sede Central"
+    anio_ciclo = instancia_sintetico.fecha_inicio.year
+
+    lista_asignaturas = []
+
+    informes_hijos = db.query(ActividadCurricularInstancia).options(
+
+        joinedload(ActividadCurricularInstancia.cursada).joinedload(Cursada.materia),
+        joinedload(ActividadCurricularInstancia.profesor),
+        selectinload(ActividadCurricularInstancia.respuesta_sets)
+        .selectinload(RespuestaSet.respuestas)
+        .joinedload(Respuesta.pregunta)
+        
+    ).filter(
+        ActividadCurricularInstancia.informe_sintetico_instancia_id == instancia_id
+    ).all()
+
+
+    for informe in informes_hijos:
+
+        ultimo_set = sorted(informe.respuesta_sets, key=lambda x: x.id)[-1] if informe.respuesta_sets else None
+        
+        respuestas_procesadas = []
+        if ultimo_set:
+            for r in ultimo_set.respuestas:
+
+                texto = getattr(r, 'texto', None)
+                
+                opcion_texto = None
+                if hasattr(r, 'opcion') and r.opcion:
+                     opcion_texto = r.opcion.texto
+
+                pregunta_texto = ""
+                if r.pregunta:
+                    pregunta_texto = r.pregunta.texto  
+                
+                respuestas_procesadas.append({
+                    "pregunta_id": r.pregunta_id,
+                    "pregunta_texto": pregunta_texto, 
+                    "texto": texto,
+                    "opcion_texto": opcion_texto 
+                })
+
+        lista_asignaturas.append({
+            "id": informe.id,
+            "materia_nombre": informe.cursada.materia.nombre if informe.cursada else "Desconocida",
+            # --- AGREGAR ESTA LÍNEA ---
+            "materia_id": informe.cursada.materia.id if informe.cursada and informe.cursada.materia else 0,
+            # --------------------------
+            "docente_nombre": informe.profesor.nombre if informe.profesor else "Sin docente",
+            "respuestas": respuestas_procesadas
+        })
+
+    return {
+        "id": instancia_sintetico.id,
+        "titulo": plantilla.titulo if plantilla else "Informe Sintético",
+        "descripcion": plantilla.descripcion if plantilla else "",
+        "sede": nombre_sede,
+        "anio": anio_ciclo,
+        "departamento": nombre_departamento,
+        "informes_asignaturas": lista_asignaturas
+    }
 def procesar_vencimiento_informes_profesores(db: Session):
 
     now = datetime.now()

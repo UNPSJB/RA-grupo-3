@@ -399,9 +399,13 @@ def seed_plantillas_data(db: Session):
         seccion_4_sint = find_or_create_seccion(db, plantilla_informe_sintetico, "4. Desempeño de Auxiliares")
         crear_pregunta_redaccion(db, seccion_4_sint, "Completar tabla de Valoración del desempeño de auxiliares (E, MB, B, R, I) y justificación.")
 
+        
         seccion_5_sint = find_or_create_seccion(db, plantilla_informe_sintetico, "5. Observaciones (Comisión Asesora)")
+        crear_pregunta_redaccion(db, seccion_5_sint, "Nómina de Integrantes de la Comisión Asesora.")
+        # --------------------------
         crear_pregunta_redaccion(db, seccion_5_sint, "Observaciones o comentarios que desee expresar la Comisión Asesora en relación al conjunto de actividades desarrolladas por los docentes de los diferentes espacios curriculares.")
         
+
         db.commit()
         print("   - Plantilla 'Informe Sintético Departamental' (ANEXO II) completada.")    
         

@@ -42,6 +42,7 @@ class InstrumentoCompleto(InstrumentoPlantilla):
     informes_curriculares_asociados: List[InformeCurricularSimple] = [] 
 
 
+
 class InformeSinteticoInstanciaBase(BaseModel):
     id: int
     fecha_inicio: datetime
@@ -50,6 +51,7 @@ class InformeSinteticoInstanciaBase(BaseModel):
     estado: EstadoInforme 
     
     model_config = {"from_attributes": True}
+
 
 class InformeSinteticoInstanciaList(InformeSinteticoInstanciaBase):
     plantilla: InstrumentoPlantilla
@@ -87,5 +89,37 @@ class InformeRespondido(BaseModel):
     titulo: str
     departamento: str
     fecha: datetime
+    # --- CAMBIO AQUÍ: Agregamos este campo ---
+    integrantes_comision: Optional[str] = None 
+    # -----------------------------------------
     secciones: List[SeccionRespondida]
+#schemas para traernos los informes de actividad curricular
+class RespuestaSimple(BaseModel):
+    pregunta_id: int
+    pregunta_texto: Optional[str] = None
+    texto: Optional[str] = None
+    opcion_texto: Optional[str] = None
 
+class InformeAsignaturaDetalle(BaseModel):
+    id: int
+    materia_nombre: str
+    materia_id: int
+    docente_nombre: str
+    respuestas: List[RespuestaSimple]
+    
+    class Config:
+        from_attributes = True
+
+class InformeSinteticoCompletoRead(BaseModel):
+    id: int
+    titulo: str
+    descripcion: str
+
+    sede: Optional[str] = None
+    anio: Optional[int] = None
+    departamento: Optional[str] = None
+
+    informes_asignaturas: List[InformeAsignaturaDetalle]
+    
+    class Config:
+        from_attributes = True
