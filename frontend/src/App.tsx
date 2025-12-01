@@ -29,7 +29,8 @@ import HistorialEncuestas from "./pages/HistorialEncuestas";
 import ResponderInforme from "./pages/ResponderInforme";
 import ListaReportesProfesor from "./pages/ListaReportesProfesor.tsx";
 import VerReporteProfesor from "./pages/VerReporteProfesor";
-
+import CicloVida from "./pages/CicloVida.tsx";
+import VerCicloVida from "./pages/VerCicloVida.tsx";
 
 const MainLayout: React.FC = () => {
   const location = useLocation();
@@ -56,6 +57,7 @@ const MainLayout: React.FC = () => {
   );
 };
 
+const VerCicloVidaWithLoading = withLoading(VerCicloVida);
 const VerReporteProfesorWithLoading = withLoading(VerReporteProfesor);
 const PoliticasPrivacidadWithLoading = withLoading(PoliticasPrivacidad);
 const GestionCicloVidaWithLoading = withLoading(GestionCicloVida);
@@ -75,6 +77,7 @@ const DepartamentoEstadisticasCursadasWithLoading = withLoading(DepartamentoEsta
 const DepartamentoInformesPageWithLoading = withLoading(DepartamentoInformesPage);
 const HistorialEncuestasWithLoading = withLoading(HistorialEncuestas);
 const ListaReportesProfesorWithLoading = withLoading(ListaReportesProfesor);
+const CicloVidaWithLoading = withLoading(CicloVida);
 
 const App: React.FC = () => {
   return (
@@ -98,7 +101,7 @@ const App: React.FC = () => {
               <Route path="publicadas" element={<EncuestasPageWithLoading />} />
               <Route path="crear" element={<CrearPlantillaWithLoading />} />
             </Route>
-
+            <Route path="cicloVida" element={<CicloVidaWithLoading />}/>
             {/* ESTADÍSTICAS Y CUENTA */}
             <Route
               path="estadisticas"
@@ -106,10 +109,10 @@ const App: React.FC = () => {
                 <div className="p-6">Página de Estadísticas (Secretaría)</div>
               }
             />
-            <Route
-              path="otros"
-              element={<div className="p-6">Página de Otros (Secretaría)</div>}
-            />
+            {/* CicloVida de las encuestas*/}
+            <Route path="modelos" element={<GestionCicloVida/>}/>
+            <Route path="plazos" element={<VerCicloVida/>}/>
+
             <Route path="gestion" element={<GestionCuentasWithLoading />} />
           </Route>
         </Route>

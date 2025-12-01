@@ -8,6 +8,7 @@ from src.instrumento import services as instrumento_services
 from src.encuestas.schemas import GenerarSinteticoResponse, GenerarSinteticoRequest
 from typing import List
 from src.encuestas.schemas import CerrarEncuestaBody
+from src.encuestas.scheduler import check_ciclo_vida_encuestas
 
 # --- CAMBIO 1: Importamos AMBOS guardias ---
 from src.dependencies import (
@@ -131,3 +132,43 @@ def get_encuestas_activas_admin(db: Session = Depends(get_db)):
 )
 def get_lista_departamentos(db: Session = Depends(get_db)):
     return services.listar_todos_departamentos(db)
+
+
+@router_gestion.post("/activar-masivo", status_code=status.HTTP_201_CREATED)
+def activar_encuestas_masivo(
+    data: schemas.ActivacionMasivaRequest,
+    db: Session = Depends(get_db)
+):
+    try:
+        return services.activar_periodo_masivo(db, data)
+    except Exception as e:
+        print(f"Error activando masivo: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+    
+@router_gestion.get(
+    "/periodos",
+    response_model=List[schemas.PeriodoEvaluacionResponse],
+    dependencies=[Depends(get_current_admin_secretaria)]
+)
+def listar_periodos_registrados(db: Session = Depends(get_db)):
+    return services.listar_periodos_evaluacion(db)
+
+@router_gestion.post(
+    "/periodo/{periodo_id}/adelantar",
+    dependencies=[Depends(get_current_admin_secretaria)]
+)
+def adelantar_fase_periodo(periodo_id: int, db: Session = Depends(get_db)):
+    try:
+        # 1. Modificar la fecha en la BD
+        services.adelantar_etapa_periodo(db, periodo_id)
+        
+        # 2. Forzar la ejecución del ciclo de vida AHORA MISMO
+        # Esto procesará los cierres y generaciones pendientes sin esperar al minuto
+        check_ciclo_vida_encuestas()
+        
+        return {"message": "Etapa adelantada y procesada correctamente."}
+    except (NotFound, BadRequest) as e:
+        raise HTTPException(status_code=e.STATUS_CODE, detail=e.DETAIL)
+    except Exception as e:
+        print(f"Error adelantando periodo: {e}")
+        raise HTTPException(status_code=500, detail="Error interno al adelantar el periodo.")

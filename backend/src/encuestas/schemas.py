@@ -4,7 +4,7 @@ from pydantic import BaseModel, Field
 
 from src.seccion.schemas import Seccion
 
-from src.enumerados import EstadoInstancia,TipoPregunta,TipoInstrumento
+from src.enumerados import EstadoInstancia,TipoPregunta,TipoInstrumento, CicloMateria
 
 
 
@@ -13,8 +13,10 @@ class DashboardProfesorItem(BaseModel):
     materia_nombre: str
     cantidad_inscriptos: int
     cantidad_respuestas: int
-    fecha_fin: Optional[datetime] = None
+    fecha_fin: Optional[datetime] = None #cierre de alumnos
+    fecha_limite_informe: Optional[datetime] = None # cierre reporte profesor
     estado: str # "activa", "cerrada", etc.
+    periodo: str
 #instrumento
 class InstrumentoBaseCreate(BaseModel):
     titulo: str
@@ -52,6 +54,8 @@ class PlantillaInfo(BaseModel):
 class EncuestaInstanciaBase(BaseModel):
     fecha_inicio: datetime
     fecha_fin: Optional[datetime] = None
+    fecha_limite_informe: Optional[datetime] = None
+    fecha_limite_sintetico: Optional[datetime] = None
     estado: EstadoInstancia = Field(default = EstadoInstancia.PENDIENTE)
 
 class EncuestaInstanciaCreate(EncuestaInstanciaBase):
@@ -138,6 +142,7 @@ class GenerarSinteticoResponse(BaseModel):
 class CursadaAdminList(BaseModel):
     id: int
     materia_nombre: str
+    materia_ciclo: CicloMateria
     profesor_nombre: str
     anio: int
     periodo: str
@@ -190,4 +195,55 @@ class InformeHistoricoResponse(BaseModel):
     fecha_envio: Optional[datetime] = None
     estado: str
 
+    model_config = {"from_attributes": True}
+
+class PeriodoEvaluacionCreate(BaseModel):
+    nombre: str
+    fecha_inicio_encuesta: datetime
+    fecha_fin_encuesta: datetime
+    fecha_limite_informe: Optional[datetime] = None
+    fecha_limite_sintetico: Optional[datetime] = None
+    
+    plantilla_id: int
+    cursadas_ids: List[int]
+
+class ActivacionMasivaRequest(BaseModel):
+    nombre_periodo: str = "Nuevo Periodo"
+    
+    fecha_inicio_encuesta: datetime
+    fecha_fin_encuesta: datetime
+    fecha_limite_informe: Optional[datetime] = None
+    fecha_limite_sintetico: Optional[datetime] = None
+    
+    plantilla_basico_id: int
+    cursadas_basico_ids: List[int]
+    
+    plantilla_superior_id: int
+    cursadas_superior_ids: List[int]
+
+class MateriaSimple(BaseModel):
+    nombre: str
+    model_config = {"from_attributes": True}
+
+class CursadaSimple(BaseModel):
+    materia: MateriaSimple
+    model_config = {"from_attributes": True}
+
+class EncuestaResumen(BaseModel):
+    id: int
+    estado: EstadoInstancia
+    cursada: CursadaSimple
+    model_config = {"from_attributes": True}
+
+class PeriodoEvaluacionResponse(BaseModel):
+    id: int
+    nombre: str
+    fecha_inicio_encuesta: datetime
+    fecha_fin_encuesta: datetime
+    fecha_limite_informe: Optional[datetime] = None
+    fecha_limite_sintetico: Optional[datetime] = None
+    
+    # Lista de encuestas asociadas
+    encuestas: List[EncuestaResumen] = []
+    
     model_config = {"from_attributes": True}

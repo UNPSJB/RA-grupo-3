@@ -1,5 +1,9 @@
 from enum import StrEnum
 
+class CicloMateria(StrEnum):
+     BASICO = "basico"
+     SUPERIOR = "superior"
+
 class TipoCuatrimestre(StrEnum):
         PRIMERO = "primero"
         SEGUNDO = "segundo"
