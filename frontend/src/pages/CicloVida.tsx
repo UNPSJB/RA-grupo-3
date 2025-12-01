@@ -239,11 +239,9 @@ const GestionCicloVida: React.FC = () => {
 
   if (loading) return <Spinner />;
 
-  // Variables dinámicas según el tab activo
   const isP1 = periodoActivoTab === "P1";
   const currentResumen = isP1 ? resumenImpacto.p1 : resumenImpacto.p2;
   
-  // Getters y Setters dinámicos para los inputs
   const currentInicio = isP1 ? fechaInicioEncuestaP1 : fechaInicioEncuestaP2;
   const setInicio = isP1 ? setFechaInicioEncuestaP1 : setFechaInicioEncuestaP2;
   

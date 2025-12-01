@@ -102,9 +102,11 @@ def get_detalles_instancia_sintetico(
                     "materia_nombre": mat_nom,
                     "profesor_nombre": prof_nom,
                     "cuatrimestre_info": str(cuatri),
-                    "equipamiento": "", # Se enviará vacío para no romper
-                    "bibliografia": "", # Se enviará vacío para no romper
-                    "estado": ac.estado
+                    "equipamiento": "", 
+                    "bibliografia": "", 
+                    # --- CORRECCIÓN AQUÍ ---
+                    "estado": ac.estado.value  # Agregamos .value para pasar el string "resumido"
+                    # -----------------------
                 })
 
         # 4. Retorno
