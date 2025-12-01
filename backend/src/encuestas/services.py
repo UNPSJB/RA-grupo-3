@@ -903,7 +903,7 @@ def obtener_dashboard_profesor(db: Session, profesor_id: int) -> List[schemas.Da
     """
     current_year = datetime.now().year
     
-    # Buscamos las cursadas del profesor en el año actual que tengan instancia de encuesta
+    # Buscamos las cursadas del profesor en el año actual
     stmt = (
         select(Cursada)
         .join(Cuatrimestre)
@@ -913,8 +913,9 @@ def obtener_dashboard_profesor(db: Session, profesor_id: int) -> List[schemas.Da
         )
         .options(
             joinedload(Cursada.materia),
-            joinedload(Cursada.encuesta_instancia),
-            selectinload(Cursada.inscripciones) # Cargamos inscripciones para contar
+            joinedload(Cursada.cuatrimestre), # <--- Importante: Cargar el cuatrimestre
+            joinedload(Cursada.encuesta_instancia).joinedload(models.EncuestaInstancia.periodo),
+            selectinload(Cursada.inscripciones) 
         )
     )
     
@@ -923,22 +924,34 @@ def obtener_dashboard_profesor(db: Session, profesor_id: int) -> List[schemas.Da
     dashboard_items = []
     
     for cursada in cursadas:
-        # Solo nos interesan cursadas con encuesta generada (Activa o Cerrada)
         instancia = cursada.encuesta_instancia
         if not instancia:
             continue
             
         total_alumnos = len(cursada.inscripciones)
-        # Contamos cuántos tienen ha_respondido = True
         respuestas = sum(1 for i in cursada.inscripciones if i.ha_respondido)
         
+        # Fecha límite del reporte
+        fecha_reporte = None
+        if instancia.periodo:
+            fecha_reporte = instancia.periodo.fecha_limite_informe
+
+        # --- OBTENCIÓN DEL PERIODO (Corrección del error) ---
+        periodo_val = "Indefinido"
+        if cursada.cuatrimestre and cursada.cuatrimestre.periodo:
+            # Extraemos el valor del Enum (ej: "primero", "segundo")
+            periodo_val = cursada.cuatrimestre.periodo.value
+        # ----------------------------------------------------
+
         dashboard_items.append(schemas.DashboardProfesorItem(
             materia_id=cursada.materia.id,
             materia_nombre=cursada.materia.nombre,
             cantidad_inscriptos=total_alumnos,
             cantidad_respuestas=respuestas,
             fecha_fin=instancia.fecha_fin,
-            estado=instancia.estado.value
+            fecha_limite_informe=fecha_reporte,
+            estado=instancia.estado.value,
+            periodo=periodo_val  # <--- Aquí se envía el campo faltante
         ))
         
     return dashboard_items
@@ -1100,3 +1113,40 @@ def listar_periodos_evaluacion(db: Session) -> List[PeriodoEvaluacion]:
         .order_by(PeriodoEvaluacion.id.desc())
     )
     return db.scalars(stmt).all()
+
+def adelantar_etapa_periodo(db: Session, periodo_id: int):
+    """
+    Busca la próxima fecha de vencimiento futura en el periodo y la establece
+    al momento actual, forzando el cierre de esa etapa.
+    """
+    periodo = db.get(models.PeriodoEvaluacion, periodo_id)
+    if not periodo:
+        raise NotFound(detail="Periodo no encontrado")
+
+    now = datetime.now()
+    etapa_adelantada = ""
+
+    # Prioridad 1: Cierre de Encuestas (si está en el futuro)
+    if periodo.fecha_fin_encuesta > now:
+        periodo.fecha_fin_encuesta = now
+        etapa_adelantada = "Cierre de Encuestas"
+    
+    # Prioridad 2: Cierre de Informes Docentes (si existe y está en el futuro)
+    elif periodo.fecha_limite_informe and periodo.fecha_limite_informe > now:
+        periodo.fecha_limite_informe = now
+        etapa_adelantada = "Cierre de Informes Docentes"
+        
+    # Prioridad 3: Generación de Sintéticos (si existe y está en el futuro)
+    elif periodo.fecha_limite_sintetico and periodo.fecha_limite_sintetico > now:
+        periodo.fecha_limite_sintetico = now
+        etapa_adelantada = "Generación de Informes Sintéticos"
+        
+    else:
+        raise BadRequest(detail="Este periodo ya ha finalizado todas sus etapas planificadas.")
+
+    db.add(periodo)
+    db.commit()
+    db.refresh(periodo)
+    
+    print(f"⏩ [MANUAL] Se adelantó: {etapa_adelantada} para Periodo {periodo.id}")
+    return periodo

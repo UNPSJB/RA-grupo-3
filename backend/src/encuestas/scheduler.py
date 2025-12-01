@@ -3,11 +3,11 @@ from sqlalchemy import select
 from src.database import SessionLocal
 from src.enumerados import EstadoInstancia
 from src.encuestas.models import EncuestaInstancia, PeriodoEvaluacion
-
 from src.encuestas.services import cerrar_instancia_encuesta
 from src.instrumento.services import procesar_vencimiento_informes_profesores
 import logging
 
+# Configurar logger para que salga en la consola
 logger = logging.getLogger("uvicorn")
 
 def check_ciclo_vida_encuestas():
@@ -16,6 +16,9 @@ def check_ciclo_vida_encuestas():
     """
     db = SessionLocal()
     now = datetime.now()
+    
+    # --- DEBUG LOG: Para ver si corre y qué hora tiene ---
+    print(f"⏰ [SCHEDULER] Ejecutando revisión. Hora del sistema: {now}")
     
     try:
         # --- ENCUESTAS ALUMNOS (APERTURA Y CIERRE) ---
@@ -26,6 +29,15 @@ def check_ciclo_vida_encuestas():
         )
         
         encuestas_para_abrir = db.scalars(stmt_apertura).all()
+        
+        # --- DEBUG LOG: Ver cuántas encontró ---
+        if encuestas_para_abrir:
+            print(f"   -> Se encontraron {len(encuestas_para_abrir)} encuestas para ABRIR.")
+        else:
+            # Descomenta esto si quieres ver ruido cuando no hay nada
+            # print("   -> No hay encuestas para abrir por ahora.")
+            pass
+
         for encuesta in encuestas_para_abrir:
             encuesta.estado = EstadoInstancia.ACTIVA
             db.add(encuesta)
@@ -33,6 +45,8 @@ def check_ciclo_vida_encuestas():
         
         db.commit()
 
+        # ... (Resto del código de cierre igual que antes) ...
+        
         stmt_cierre = select(EncuestaInstancia).join(PeriodoEvaluacion).where(
             EncuestaInstancia.estado == EstadoInstancia.ACTIVA,
             PeriodoEvaluacion.fecha_fin_encuesta <= now

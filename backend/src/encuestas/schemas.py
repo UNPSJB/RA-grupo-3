@@ -13,8 +13,10 @@ class DashboardProfesorItem(BaseModel):
     materia_nombre: str
     cantidad_inscriptos: int
     cantidad_respuestas: int
-    fecha_fin: Optional[datetime] = None
+    fecha_fin: Optional[datetime] = None #cierre de alumnos
+    fecha_limite_informe: Optional[datetime] = None # cierre reporte profesor
     estado: str # "activa", "cerrada", etc.
+    periodo: str
 #instrumento
 class InstrumentoBaseCreate(BaseModel):
     titulo: str
