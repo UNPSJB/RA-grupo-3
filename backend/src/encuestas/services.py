@@ -15,6 +15,7 @@ from src.instrumento import models as instrumento_models
 from src.materia.models import Departamento, Sede
 from datetime import datetime
 from typing import Optional
+from src.encuestas.models import PeriodoEvaluacion
 
 
 def crear_plantilla_encuesta(
@@ -1083,3 +1084,19 @@ def activar_periodo_masivo(db: Session, data: schemas.ActivacionMasivaRequest):
     except Exception as e:
         db.rollback()
         raise e
+    
+def listar_periodos_evaluacion(db: Session) -> List[PeriodoEvaluacion]:
+    """
+    Lista los periodos de evaluación con sus encuestas y materias asociadas.
+    Ordenados del más reciente al más antiguo.
+    """
+    stmt = (
+        select(PeriodoEvaluacion)
+        .options(
+            selectinload(PeriodoEvaluacion.encuestas)
+            .joinedload(models.EncuestaInstancia.cursada)
+            .joinedload(Cursada.materia)
+        )
+        .order_by(PeriodoEvaluacion.id.desc())
+    )
+    return db.scalars(stmt).all()

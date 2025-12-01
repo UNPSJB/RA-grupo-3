@@ -30,6 +30,7 @@ import ResponderInforme from "./pages/ResponderInforme";
 import ListaReportesProfesor from "./pages/ListaReportesProfesor.tsx";
 import VerReporteProfesor from "./pages/VerReporteProfesor";
 import CicloVida from "./pages/CicloVida.tsx";
+import VerCicloVida from "./pages/VerCicloVida.tsx";
 
 const MainLayout: React.FC = () => {
   const location = useLocation();
@@ -56,6 +57,7 @@ const MainLayout: React.FC = () => {
   );
 };
 
+const VerCicloVidaWithLoading = withLoading(VerCicloVida);
 const VerReporteProfesorWithLoading = withLoading(VerReporteProfesor);
 const PoliticasPrivacidadWithLoading = withLoading(PoliticasPrivacidad);
 const GestionCicloVidaWithLoading = withLoading(GestionCicloVida);
@@ -107,10 +109,10 @@ const App: React.FC = () => {
                 <div className="p-6">Página de Estadísticas (Secretaría)</div>
               }
             />
-            <Route
-              path="otros"
-              element={<div className="p-6">Página de Otros (Secretaría)</div>}
-            />
+            {/* CicloVida de las encuestas*/}
+            <Route path="modelos" element={<GestionCicloVida/>}/>
+            <Route path="plazos" element={<VerCicloVida/>}/>
+
             <Route path="gestion" element={<GestionCuentasWithLoading />} />
           </Route>
         </Route>

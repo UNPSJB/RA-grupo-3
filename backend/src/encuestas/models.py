@@ -57,5 +57,7 @@ class EncuestaInstancia(InstrumentoInstancia):
     periodo: Mapped["PeriodoEvaluacion"] = relationship(back_populates="encuestas")
 
     actividad_curricular_instancia: Mapped["ActividadCurricularInstancia"] = relationship(
-        back_populates="encuesta_instancia", uselist=False
+        back_populates="encuesta_instancia", 
+        uselist=False,
+        foreign_keys="ActividadCurricularInstancia.encuesta_instancia_id"
     )

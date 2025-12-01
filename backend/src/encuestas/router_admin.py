@@ -143,3 +143,11 @@ def activar_encuestas_masivo(
     except Exception as e:
         print(f"Error activando masivo: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+    
+@router_gestion.get(
+    "/periodos",
+    response_model=List[schemas.PeriodoEvaluacionResponse],
+    dependencies=[Depends(get_current_admin_secretaria)]
+)
+def listar_periodos_registrados(db: Session = Depends(get_db)):
+    return services.listar_periodos_evaluacion(db)

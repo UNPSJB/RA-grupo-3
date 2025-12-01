@@ -218,3 +218,30 @@ class ActivacionMasivaRequest(BaseModel):
     
     plantilla_superior_id: int
     cursadas_superior_ids: List[int]
+
+class MateriaSimple(BaseModel):
+    nombre: str
+    model_config = {"from_attributes": True}
+
+class CursadaSimple(BaseModel):
+    materia: MateriaSimple
+    model_config = {"from_attributes": True}
+
+class EncuestaResumen(BaseModel):
+    id: int
+    estado: EstadoInstancia
+    cursada: CursadaSimple
+    model_config = {"from_attributes": True}
+
+class PeriodoEvaluacionResponse(BaseModel):
+    id: int
+    nombre: str
+    fecha_inicio_encuesta: datetime
+    fecha_fin_encuesta: datetime
+    fecha_limite_informe: Optional[datetime] = None
+    fecha_limite_sintetico: Optional[datetime] = None
+    
+    # Lista de encuestas asociadas
+    encuestas: List[EncuestaResumen] = []
+    
+    model_config = {"from_attributes": True}
