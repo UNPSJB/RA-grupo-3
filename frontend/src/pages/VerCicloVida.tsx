@@ -45,44 +45,55 @@ const PeriodoCard: React.FC<{
 }> = ({ periodo, onAdelantar }) => {
   const [showMaterias, setShowMaterias] = useState(false);
   
-  // --- LÓGICA DE ESTADOS ---
+  // --- LÓGICA DE ESTADOS Y FECHAS ---
   const now = new Date();
   const inicio = new Date(periodo.fecha_inicio_encuesta);
+  const finEncuesta = new Date(periodo.fecha_fin_encuesta);
+  const finInforme = periodo.fecha_limite_informe ? new Date(periodo.fecha_limite_informe) : null;
+  const finSintetico = periodo.fecha_limite_sintetico ? new Date(periodo.fecha_limite_sintetico) : null;
   
-  // Calculamos el final absoluto del ciclo
-  const fechasCierre = [
-      periodo.fecha_fin_encuesta, 
-      periodo.fecha_limite_informe, 
-      periodo.fecha_limite_sintetico
-  ].filter(Boolean).map(d => new Date(d!));
-  
+  // Calculamos el final absoluto del ciclo para determinar si está "En Curso"
+  const fechasCierre = [finEncuesta, finInforme, finSintetico].filter((d): d is Date => d !== null);
   const finAbsoluto = fechasCierre.length > 0 
       ? new Date(Math.max(...fechasCierre.map(d => d.getTime()))) 
       : inicio;
 
+  // --- DETERMINAR ETAPA ACTIVA (Para pintar la barra azul) ---
+  const isEncuestaActiva = now >= inicio && now <= finEncuesta;
+  const isInformeActivo = finInforme && now > finEncuesta && now <= finInforme;
+  const isSinteticoActivo = finSintetico && finInforme && now > finInforme && now <= finSintetico;
+
+  // --- ESTILOS VISUALES GENERALES DE LA TARJETA ---
   let estadoLabel = "Finalizado";
-  let estadoColor = "bg-gray-200 text-gray-600 border-gray-300";
+  let badgeStyle = "bg-gray-200 text-gray-600 border-gray-300";
+  let cardBorderClass = "border-gray-200"; 
+  let headerBgClass = "bg-gray-100";       
   let esAdelantable = false;
 
   if (now < inicio) {
       estadoLabel = "En Espera";
-      estadoColor = "bg-yellow-100 text-yellow-800 border-yellow-200";
+      badgeStyle = "bg-yellow-100 text-yellow-800 border-yellow-200";
+      cardBorderClass = "border-yellow-300 ring-1 ring-yellow-100";
+      headerBgClass = "bg-yellow-50";
       esAdelantable = false;
   } else if (now <= finAbsoluto) {
       estadoLabel = "En Curso";
-      estadoColor = "bg-green-100 text-green-700 border-green-200";
+      badgeStyle = "bg-green-100 text-green-700 border-green-200";
+      cardBorderClass = "border-green-500 ring-2 ring-green-100 shadow-md";
+      headerBgClass = "bg-green-50";
       esAdelantable = true;
   }
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden mb-6 transition-all hover:shadow-md">
-      {/* Encabezado Gris */}
-      <div className="bg-gray-100 px-6 py-4 border-b border-gray-200 flex flex-col sm:flex-row justify-between items-center gap-4">
+    <div className={`bg-white rounded-xl shadow-sm border overflow-hidden mb-6 transition-all hover:shadow-md ${cardBorderClass}`}>
+      
+      {/* Encabezado */}
+      <div className={`${headerBgClass} px-6 py-4 border-b border-gray-200 flex flex-col sm:flex-row justify-between items-center gap-4`}>
         <div>
           <h3 className="text-lg font-bold text-gray-700 flex items-center gap-3">
             {periodo.nombre}
             <span
-              className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded-full border ${estadoColor}`}
+              className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded-full border ${badgeStyle}`}
             >
               {estadoLabel}
             </span>
@@ -97,7 +108,7 @@ const PeriodoCard: React.FC<{
             {esAdelantable && (
                 <button
                     onClick={() => onAdelantar(periodo.id)}
-                    className="bg-red-100 hover:bg-red-200 text-red-700 border border-red-200 px-3 py-1.5 rounded text-xs font-bold transition-colors flex items-center gap-1"
+                    className="bg-white hover:bg-red-50 text-red-700 border border-red-200 px-3 py-1.5 rounded text-xs font-bold transition-colors flex items-center gap-1 shadow-sm"
                 >
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
@@ -130,11 +141,12 @@ const PeriodoCard: React.FC<{
         </div>
       </div>
 
-      {/* Grid de Plazos */}
+      {/* Grid de Plazos con Barras Activas */}
       <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-8 text-sm">
+        
         {/* Columna 1: Encuestas */}
-        <div className="flex flex-col space-y-3 border-l-4 border-gray-300 pl-4">
-          <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">
+        <div className={`flex flex-col space-y-3 border-l-4 pl-4 transition-colors duration-300 ${isEncuestaActiva ? "border-blue-500 bg-blue-50/10 rounded-r-lg" : "border-gray-300"}`}>
+          <span className={`text-xs font-bold uppercase tracking-wider ${isEncuestaActiva ? "text-blue-600" : "text-gray-400"}`}>
             Encuestas Alumnos
           </span>
           <div>
@@ -152,8 +164,8 @@ const PeriodoCard: React.FC<{
         </div>
 
         {/* Columna 2: Informes */}
-        <div className="flex flex-col space-y-3 border-l-4 border-gray-300 pl-4">
-          <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">
+        <div className={`flex flex-col space-y-3 border-l-4 pl-4 transition-colors duration-300 ${isInformeActivo ? "border-blue-500 bg-blue-50/10 rounded-r-lg" : "border-gray-300"}`}>
+          <span className={`text-xs font-bold uppercase tracking-wider ${isInformeActivo ? "text-blue-600" : "text-gray-400"}`}>
             Informes de Cátedra
           </span>
           <div>
@@ -172,8 +184,8 @@ const PeriodoCard: React.FC<{
         </div>
 
         {/* Columna 3: Sintéticos */}
-        <div className="flex flex-col space-y-3 border-l-4 border-gray-300 pl-4">
-          <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">
+        <div className={`flex flex-col space-y-3 border-l-4 pl-4 transition-colors duration-300 ${isSinteticoActivo ? "border-blue-500 bg-blue-50/10 rounded-r-lg" : "border-gray-300"}`}>
+          <span className={`text-xs font-bold uppercase tracking-wider ${isSinteticoActivo ? "text-blue-600" : "text-gray-400"}`}>
             Informe Sintético
           </span>
           <div>
@@ -256,7 +268,7 @@ const VerCicloVida: React.FC = () => {
     fetchPeriodos();
   }, [token]);
 
-  // --- NUEVA LÓGICA DE ORDENAMIENTO (useMemo) ---
+  // --- LÓGICA DE ORDENAMIENTO ---
   const sortedPeriodos = useMemo(() => {
     const now = new Date();
     return [...periodos].sort((a, b) => {
