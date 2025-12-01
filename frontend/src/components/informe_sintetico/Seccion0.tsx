@@ -1,76 +1,132 @@
-import React from "react";
-import { BotonTraerRespuestas } from "./BotonTraerRespuesta";
+import React, { useEffect } from "react";
 
-interface InformeCurricular {
-  id: number;
-  materia_nombre: string;
+interface DatosFila {
   materia_id: number;
-}
-interface Props {
-  materiasFiltradas: InformeCurricular[];
-  respuestas: { [key: string]: string };
-  handleInputChange: (key: string, value: string) => void;
-  preguntaId: number;
-  instanciaId: string; // <--- Nuevo Prop
+  materia_nombre: string;
+  inscriptos: number;
+  teoricas: number;
+  practicas: number;
 }
 
-const Seccion0: React.FC<Props> = ({
-  materiasFiltradas,
-  respuestas,
-  handleInputChange,
-  preguntaId,
-  instanciaId,
+interface Props {
+  materias: { id: number; materia_nombre: string; respuestas: any[] }[]; // Vienen de datosInsumos
+  valorActual: string; // El JSON stringified que guardamos en la respuesta
+  onChange: (valorSerializado: string) => void;
+}
+
+export const TablaCuantitativaInput: React.FC<Props> = ({
+  materias,
+  valorActual,
+  onChange,
 }) => {
+  // Parseamos el string guardado a objeto, o iniciamos vacío
+  const datosGrid: Record<number, DatosFila> = valorActual
+    ? JSON.parse(valorActual)
+    : {};
+
+  // Al montar, si está vacío, pre-llenamos con la estructura básica
+  useEffect(() => {
+    if (!valorActual) {
+      const inicial: Record<number, DatosFila> = {};
+      materias.forEach((m) => {
+        // AQUÍ PODEMOS USAR LA LÓGICA DE AUTOCOMPLETADO NUMÉRICO
+        // (Buscar en m.respuestas los valores numéricos)
+        inicial[m.id] = {
+          materia_id: m.id,
+          materia_nombre: m.materia_nombre,
+          inscriptos: 0, // O traer de DB
+          teoricas: 0,
+          practicas: 0,
+        };
+      });
+      onChange(JSON.stringify(inicial));
+    }
+  }, []);
+
+  const handleChange = (
+    materiaId: number,
+    campo: keyof DatosFila,
+    valor: string
+  ) => {
+    const nuevosDatos = { ...datosGrid };
+    if (!nuevosDatos[materiaId]) {
+      // Fallback si no existe
+      nuevosDatos[materiaId] = {
+        materia_id: materiaId,
+        materia_nombre:
+          materias.find((m) => m.id === materiaId)?.materia_nombre || "",
+        inscriptos: 0,
+        teoricas: 0,
+        practicas: 0,
+      };
+    }
+
+    (nuevosDatos[materiaId] as any)[campo] = Number(valor);
+    onChange(JSON.stringify(nuevosDatos));
+  };
+
   return (
-    <div className="p-4 bg-gray-50 rounded border border-gray-200 mb-4">
-      <div className="overflow-x-auto bg-white rounded-lg border border-gray-200 shadow-sm">
-        <table className="min-w-full divide-y divide-gray-200 text-sm">
-          <thead className="bg-slate-800 text-white">
-            <tr>
-              <th className="px-4 py-3 text-left w-[40%]">
-                Actividad Curricular
-              </th>
-              <th className="px-2 py-3 text-center w-[20%]">Cant. Alumnos</th>
-              <th className="px-2 py-3 text-center w-[20%]">Com. Teóricas</th>
-              <th className="px-2 py-3 text-center w-[20%]">Com. Prácticas</th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {materiasFiltradas.map((m) => (
-              <tr key={m.id} className="hover:bg-blue-50/30 group">
-                <td className="px-4 py-3 font-semibold text-gray-800">
+    <div className="overflow-x-auto border rounded-lg shadow-sm">
+      <table className="min-w-full divide-y divide-gray-200 text-sm">
+        <thead className="bg-sky-50 text-sky-900">
+          <tr>
+            <th className="px-4 py-2 text-left">Asignatura</th>
+            <th className="px-2 py-2 text-center w-24">Inscriptos</th>
+            <th className="px-2 py-2 text-center w-24">Com. Teóricas</th>
+            <th className="px-2 py-2 text-center w-24">Com. Prácticas</th>
+          </tr>
+        </thead>
+        <tbody className="bg-white divide-y divide-gray-100">
+          {materias.map((m) => {
+            const fila = datosGrid[m.id] || {
+              inscriptos: 0,
+              teoricas: 0,
+              practicas: 0,
+            };
+            return (
+              <tr key={m.id}>
+                <td className="px-4 py-2 font-medium text-gray-700">
                   {m.materia_nombre}
                 </td>
-
-                {/* Ejemplo: Botón en Cantidad Alumnos */}
-                {["inscriptos", "teoricas", "practicas"].map((field) => {
-                  const key = `p${preguntaId}_m${m.id}_${field}`;
-                  return (
-                    <td key={field} className="px-2 py-2 relative">
-                      <input
-                        type="text"
-                        className="w-full text-center border border-gray-300 rounded p-1.5"
-                        value={respuestas[key] || ""}
-                        onChange={(e) => handleInputChange(key, e.target.value)}
-                      />
-                      <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <BotonTraerRespuestas
-                          instanciaId={instanciaId}
-                          seccionPrefijo="0."
-                          materiaId={m.materia_id}
-                          mini={true}
-                          onCopy={(t) => handleInputChange(key, t)}
-                        />
-                      </div>
-                    </td>
-                  );
-                })}
+                <td className="px-2 py-1">
+                  <input
+                    type="number"
+                    className="w-full border rounded p-1 text-center"
+                    value={fila.inscriptos}
+                    onChange={(e) =>
+                      handleChange(m.id, "inscriptos", e.target.value)
+                    }
+                  />
+                </td>
+                <td className="px-2 py-1">
+                  <input
+                    type="number"
+                    className="w-full border rounded p-1 text-center"
+                    value={fila.teoricas}
+                    onChange={(e) =>
+                      handleChange(m.id, "teoricas", e.target.value)
+                    }
+                  />
+                </td>
+                <td className="px-2 py-1">
+                  <input
+                    type="number"
+                    className="w-full border rounded p-1 text-center"
+                    value={fila.practicas}
+                    onChange={(e) =>
+                      handleChange(m.id, "practicas", e.target.value)
+                    }
+                  />
+                </td>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            );
+          })}
+        </tbody>
+      </table>
+      <p className="text-xs text-gray-400 mt-2 p-2">
+        * Estos datos se guardarán estructurados para generar la tabla en el
+        PDF.
+      </p>
     </div>
   );
 };
-export default Seccion0;

@@ -91,5 +91,8 @@ export interface InformeCompletoLectura {
   titulo: string;
   departamento: string;
   fecha: string;
+
+  integrantes_comision?: string | null;
+  // --------------------------
   secciones: SeccionRespondida[];
 }

@@ -126,6 +126,15 @@ def seed_initial_data(db: Session):
         )
         db.add(sec)
 
+    if not db.query(AdminDepartamento).filter_by(username="departamento_tw").first():
+        ad_tw = AdminDepartamento(
+            nombre="Jefe Depto Trelew",
+            username="departamento_tw",  # <--- Usuario para entrar
+            hashed_password=get_password_hash("123456"),
+            departamento_id=depto_info_tw.id # Vinculado a Trelew
+        )
+        db.add(ad_tw)
+
     db.commit()
     # Recargar para tener IDs
     for p in profesores: db.refresh(p)

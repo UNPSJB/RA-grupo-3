@@ -48,6 +48,20 @@ interface PlantillaInforme {
   secciones: Seccion[];
 }
 
+// --- MAPA DE PALABRAS CLAVE ---
+// Claves en minúsculas y SIN punto final para facilitar el match
+const KEYWORDS_POR_PREFIJO: Record<string, string[]> = {
+  "0": ["alumnos", "inscriptos", "comisiones", "teóricas", "prácticas"],
+  "1": ["equipamiento", "bibliografía", "insumos"],
+  "2": ["horas", "dictadas"],
+  "2.a": ["contenidos", "planificados", "estrategias"],
+  "2.b": ["encuesta", "juicio", "valor"],
+  "2.c": ["aspectos", "positivos", "obstáculos"],
+  "3": ["actividades", "investigación", "extensión", "capacitación"],
+  "4": ["auxiliares", "desempeño", "justificación"],
+  "5": ["observaciones", "comentarios"],
+};
+
 // --- MODAL SIMPLE ---
 const ModalConfirmacion: React.FC<{
   isOpen: boolean;
@@ -117,7 +131,7 @@ const ModalConfirmacion: React.FC<{
             </>
           ) : (
             <button
-              onClick={onClose}
+              onClick={onConfirm || onClose}
               className="w-full py-2 rounded-lg bg-green-600 text-white text-sm font-medium hover:bg-green-700 shadow-sm"
             >
               Aceptar
@@ -151,14 +165,8 @@ const ResponderInforme: React.FC = () => {
     title: string;
     message: string;
     onConfirm?: () => void;
-  }>({
-    open: false,
-    type: "success",
-    title: "",
-    message: "",
-  });
+  }>({ open: false, type: "success", title: "", message: "" });
 
-  // 1. CARGA DE DATOS
   useEffect(() => {
     if (!token || !instanciaId) return;
     const cargarDatos = async () => {
@@ -185,7 +193,6 @@ const ResponderInforme: React.FC = () => {
     cargarDatos();
   }, [instanciaId, token]);
 
-  // --- 2. LÓGICA DE MATCH INTELIGENTE MEJORADA ---
   const normalizar = (str: string | undefined) =>
     str
       ? str
@@ -201,8 +208,6 @@ const ResponderInforme: React.FC = () => {
     materia: string
   ) => {
     const tDest = normalizar(tituloDestino);
-
-    // 1. Intento Exacto / Inclusión (PRIORIDAD ALTA)
     const matchExacto = respuestasOrigen.find((r) => {
       const tOrig = normalizar(r.pregunta_texto);
       return (
@@ -211,13 +216,8 @@ const ResponderInforme: React.FC = () => {
         (tDest.length > 10 && tOrig.includes(tDest))
       );
     });
-    if (matchExacto) {
-      // console.log(`[MATCH EXACTO] ${materia}: "${tituloDestino}" <-> "${matchExacto.pregunta_texto}"`);
-      return matchExacto;
-    }
+    if (matchExacto) return matchExacto;
 
-    // 2. Intento por Palabras Clave (SOLO SI FALLA EL EXACTO)
-    // Ajustamos las palabras clave para evitar falsos positivos
     const palabrasClave = [
       "equipamiento",
       "bibliografia",
@@ -232,39 +232,29 @@ const ResponderInforme: React.FC = () => {
       "desempeno",
       "auxiliares",
     ];
-
     for (const palabra of palabrasClave) {
-      // Solo buscamos por keyword si el destino TIENE esa palabra clave importante
       if (tDest.includes(palabra)) {
         const matchKeyword = respuestasOrigen.find((r) =>
           normalizar(r.pregunta_texto).includes(palabra)
         );
-        if (matchKeyword) {
-          // console.log(`[MATCH KEYWORD] ${materia}: "${tituloDestino}" <-> "${matchKeyword.pregunta_texto}" por "${palabra}"`);
-          return matchKeyword;
-        }
+        if (matchKeyword) return matchKeyword;
       }
     }
-
-    // console.warn(`[NO MATCH] ${materia}: No se encontró origen para "${tituloDestino}"`);
     return null;
   };
 
-  // --- 3. IDENTIFICACIÓN ÚNICA DE PREGUNTAS ---
   const preguntasClave = useMemo(() => {
-    if (!plantilla) return { integrantes: null, sintesis: null };
-    const todas = plantilla.secciones.flatMap((s) => s.preguntas);
+    if (!plantilla || !plantilla.secciones)
+      return { integrantes: null, sintesis: null };
 
+    const todas = plantilla.secciones.flatMap((s) => s.preguntas || []);
     const integrantes = todas.find((p) => {
+      if (!p || !p.texto) return false;
       const t = normalizar(p.texto);
-      return (
-        t.includes("integrante") ||
-        t.includes("tabla") ||
-        t.includes("actividad")
-      );
+      return t.includes("integrante") && t.includes("comision");
     });
-
     const sintesis = todas.find((p) => {
+      if (!p || !p.texto) return false;
       const t = normalizar(p.texto);
       return (
         (t.includes("sintesis") ||
@@ -274,45 +264,35 @@ const ResponderInforme: React.FC = () => {
         p.id !== integrantes?.id
       );
     });
-
     return { integrantes, sintesis };
   }, [plantilla]);
 
-  // --- 4. AUTOCOMPLETADO VISUAL (METADATA) ---
   useEffect(() => {
     if (!plantilla || !datosInsumos) return;
     if (Object.keys(respuestasUsuario).length > 0) return;
-
     const nuevosValores: { [key: string]: string } = {};
-
     plantilla.secciones.forEach((seccion) => {
-      seccion.preguntas.forEach((p) => {
+      seccion.preguntas?.forEach((p) => {
         if (
           p.id === preguntasClave.integrantes?.id ||
           p.id === preguntasClave.sintesis?.id
         )
           return;
-
         const txt = normalizar(p.texto);
-
         if (txt.includes("sede"))
           nuevosValores[p.id] = datosInsumos.sede || "Sede Central";
         else if (txt.includes("ciclo") || txt.includes("anio"))
           nuevosValores[p.id] = String(
             datosInsumos.anio || new Date().getFullYear()
           );
-        // CORRECCIÓN: Autocompletar Departamento SOLO si dice "Comisión Asesora"
         else if (txt.includes("comision") && txt.includes("asesora"))
           nuevosValores[p.id] = datosInsumos.departamento || "";
       });
     });
-
-    if (Object.keys(nuevosValores).length > 0) {
+    if (Object.keys(nuevosValores).length > 0)
       setRespuestasUsuario((prev) => ({ ...prev, ...nuevosValores }));
-    }
   }, [plantilla, datosInsumos, preguntasClave]);
 
-  // --- 5. PROCESO DE GUARDADO ---
   const iniciarGuardado = () => {
     if (preguntasClave.integrantes) {
       const valor = respuestasUsuario[preguntasClave.integrantes.id];
@@ -324,7 +304,6 @@ const ResponderInforme: React.FC = () => {
       }
     }
     setErrorValidacion(false);
-
     setModal({
       open: true,
       type: "confirm",
@@ -344,10 +323,13 @@ const ResponderInforme: React.FC = () => {
       const payloadRespuestas: { pregunta_id: number; texto: string }[] = [];
 
       plantilla.secciones.forEach((seccion) => {
-        seccion.preguntas.forEach((preguntaDestino) => {
-          const tituloNorm = normalizar(preguntaDestino.texto);
+        // Obtenemos el prefijo de la SECCIÓN (para 0, 1, 3, 4, 5)
+        let prefijoSeccion = seccion.nombre.split(" ")[0].trim().toLowerCase();
+        if (prefijoSeccion.endsWith("."))
+          prefijoSeccion = prefijoSeccion.slice(0, -1);
 
-          // A. Manual (Ya sea Integrantes, Síntesis o Metadata)
+        seccion.preguntas.forEach((preguntaDestino) => {
+          // 1. Manual o Metadata
           if (respuestasUsuario[preguntaDestino.id]) {
             payloadRespuestas.push({
               pregunta_id: preguntaDestino.id,
@@ -355,47 +337,87 @@ const ResponderInforme: React.FC = () => {
             });
             return;
           }
-
-          // B. Automático (Secciones Técnicas Ocultas)
-          let autoContent = "";
-
-          // Si es Metadata que NO estaba llena (fallback)
-          if (tituloNorm.includes("sede"))
-            autoContent = datosInsumos.sede || "";
-          else if (tituloNorm.includes("ciclo") || tituloNorm.includes("anio"))
-            autoContent = String(datosInsumos.anio || "");
-          else if (
+          const tituloNorm = normalizar(preguntaDestino.texto);
+          if (tituloNorm.includes("sede")) {
+            payloadRespuestas.push({
+              pregunta_id: preguntaDestino.id,
+              texto: datosInsumos.sede || "",
+            });
+            return;
+          }
+          if (tituloNorm.includes("ciclo") || tituloNorm.includes("anio")) {
+            payloadRespuestas.push({
+              pregunta_id: preguntaDestino.id,
+              texto: String(datosInsumos.anio || ""),
+            });
+            return;
+          }
+          if (
             tituloNorm.includes("comision") &&
             tituloNorm.includes("asesora")
-          )
-            autoContent = datosInsumos.departamento || "";
-          // Si es Contenido Técnico (Busca en cátedras)
-          else if (
+          ) {
+            payloadRespuestas.push({
+              pregunta_id: preguntaDestino.id,
+              texto: datosInsumos.departamento || "",
+            });
+            return;
+          }
+
+          // 2. Lógica Automática
+          if (
             preguntaDestino.id !== preguntasClave.integrantes?.id &&
             preguntaDestino.id !== preguntasClave.sintesis?.id
           ) {
+            // --- CORRECCIÓN CLAVE: Obtener prefijo de la PREGUNTA para 2.A, 2.B, 2.C ---
+            // Si la sección es la 2, miramos el inicio de la pregunta.
+            // Ej: "2.A. Completar..." -> prefijo "2.a"
+            let prefijoBusqueda = prefijoSeccion;
+            if (prefijoSeccion === "2") {
+              const partesPregunta = preguntaDestino.texto.split(" ");
+              const inicio = partesPregunta[0].trim().toLowerCase(); // "2.", "2.a.", "2.b."
+              // Limpiamos el punto final para usar en el mapa
+              prefijoBusqueda = inicio.replace(/\.$/, "");
+            }
+
+            const keywords = KEYWORDS_POR_PREFIJO[prefijoBusqueda] || [];
             const recopilacion: string[] = [];
+
             datosInsumos.informes_asignaturas.forEach((inf) => {
-              const match = encontrarCoincidenciaInteligente(
-                preguntaDestino.texto,
-                inf.respuestas,
-                inf.materia_nombre
-              );
-              if (match) {
-                const val = match.texto || match.opcion_texto;
+              const respuestasRelevantes = inf.respuestas.filter((r) => {
+                const textoPregProf = normalizar(r.pregunta_texto);
+
+                // Casos especiales Sección 0 y 2 (Hora pura)
+                if (prefijoBusqueda === "0")
+                  return (
+                    textoPregProf.includes("alumno") ||
+                    textoPregProf.includes("comision")
+                  );
+                if (prefijoBusqueda === "2")
+                  return (
+                    textoPregProf.includes("horas") &&
+                    textoPregProf.includes("dictadas")
+                  );
+
+                // Resto (1, 2.a, 2.b, 2.c, 3...)
+                return keywords.some((k) => textoPregProf.includes(k));
+              });
+
+              respuestasRelevantes.forEach((r) => {
+                const val = r.texto || r.opcion_texto;
                 if (val && !val.toLowerCase().includes("sin respuesta")) {
                   recopilacion.push(`• ${inf.materia_nombre}: ${val}`);
                 }
-              }
+              });
             });
-            if (recopilacion.length > 0) autoContent = recopilacion.join("\n");
-          }
 
-          if (autoContent)
-            payloadRespuestas.push({
-              pregunta_id: preguntaDestino.id,
-              texto: autoContent,
-            });
+            if (recopilacion.length > 0) {
+              const textoUnico = Array.from(new Set(recopilacion)).join("\n");
+              payloadRespuestas.push({
+                pregunta_id: preguntaDestino.id,
+                texto: textoUnico,
+              });
+            }
+          }
         });
       });
 
@@ -417,15 +439,13 @@ const ResponderInforme: React.FC = () => {
           type: "success",
           title: "¡Informe Guardado!",
           message: "El proceso ha finalizado correctamente.",
-          onConfirm: () =>
-            navigate("/departamento/informes-sinteticos-respondidos"),
+          onConfirm: () => navigate("/departamento/estadisticas"),
         });
       } else {
         throw new Error("Error backend");
       }
     } catch (e) {
       alert("Error de conexión.");
-    } finally {
       setEnviando(false);
     }
   };
@@ -447,13 +467,11 @@ const ResponderInforme: React.FC = () => {
             : () => setModal({ ...modal, open: false })
         }
       />
-
-      {/* HEADER CELESTE */}
       <div className="bg-sky-50/90 backdrop-blur-md border border-sky-100 text-slate-800 rounded-xl shadow-sm p-8 mb-8 relative overflow-hidden">
         <div className="absolute top-0 right-0 w-64 h-64 bg-sky-200 rounded-full opacity-20 -mr-16 -mt-16 blur-3xl pointer-events-none"></div>
         <div className="relative z-10">
           <h1 className="text-3xl font-bold mb-2 text-sky-900 tracking-tight">
-            {datosInsumos?.titulo}
+            {datosInsumos?.titulo || "Cargando..."}
           </h1>
           <p className="text-slate-600 text-lg mb-6 font-light">
             {datosInsumos?.descripcion}
@@ -471,9 +489,7 @@ const ResponderInforme: React.FC = () => {
           </div>
         </div>
       </div>
-
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        {/* IZQUIERDA: INSUMOS */}
         <div className="lg:col-span-7 space-y-6">
           <div className="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden flex flex-col h-[750px]">
             <div className="bg-sky-800 text-white px-6 py-4 flex justify-between items-center shrink-0">
@@ -481,30 +497,27 @@ const ResponderInforme: React.FC = () => {
                 Respuestas de Cátedras
               </h2>
             </div>
-
             <div className="px-6 py-4 bg-gray-50 border-b border-gray-200">
               <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
                 Seleccionar Asignatura
               </label>
-              <div className="relative">
-                <select
-                  value={activeTab}
-                  onChange={(e) => setActiveTab(Number(e.target.value))}
-                  className="block w-full pl-4 pr-10 py-3 text-base border-gray-300 focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm rounded-lg shadow-sm bg-white cursor-pointer"
-                >
-                  {datosInsumos?.informes_asignaturas.map(
-                    (asignatura, index) => (
-                      <option key={asignatura.id} value={index}>
-                        {asignatura.materia_nombre}
-                      </option>
-                    )
-                  )}
-                </select>
-              </div>
+              <select
+                value={activeTab}
+                onChange={(e) => setActiveTab(Number(e.target.value))}
+                className="block w-full pl-4 pr-10 py-3 text-base border-gray-300 focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm rounded-lg shadow-sm bg-white cursor-pointer"
+              >
+                {datosInsumos?.informes_asignaturas?.map(
+                  (asignatura, index) => (
+                    <option key={asignatura.id} value={index}>
+                      {asignatura.materia_nombre}
+                    </option>
+                  )
+                )}
+              </select>
             </div>
-
             <div className="p-8 bg-slate-50 overflow-y-auto flex-grow custom-scrollbar">
-              {datosInsumos?.informes_asignaturas[activeTab] ? (
+              {datosInsumos?.informes_asignaturas &&
+              datosInsumos.informes_asignaturas[activeTab] ? (
                 <div className="animate-fadeIn space-y-8">
                   <div className="bg-white p-5 rounded-lg shadow-sm border border-gray-200 flex items-center justify-between">
                     <div>
@@ -548,7 +561,7 @@ const ResponderInforme: React.FC = () => {
                             <span className="whitespace-pre-wrap">
                               {resp.texto || resp.opcion_texto || (
                                 <em className="text-gray-400">
-                                  Sin respuesta registrada.
+                                  Sin respuesta.
                                 </em>
                               )}
                             </span>
@@ -566,14 +579,11 @@ const ResponderInforme: React.FC = () => {
             </div>
           </div>
         </div>
-
-        {/* DERECHA: FORMULARIO */}
         <div className="lg:col-span-5">
           <div className="bg-white rounded-xl shadow-lg border border-sky-100 sticky top-6 flex flex-col h-[750px]">
             <div className="bg-sky-600 text-white px-6 py-4 font-semibold text-lg">
               Redacción Final
             </div>
-
             <div className="p-6 overflow-y-auto flex-grow space-y-6">
               <div className="bg-sky-50 text-sky-900 text-sm p-4 rounded-lg border border-sky-100 mb-4">
                 <p>
@@ -581,27 +591,18 @@ const ResponderInforme: React.FC = () => {
                   generarán automáticamente.
                 </p>
               </div>
-
-              {/* CAMPO 1: INTEGRANTES */}
-              {preguntasClave.integrantes ? (
+              {preguntasClave.integrantes && (
                 <div className="animate-fadeIn" id="campo-integrantes">
                   <label className="block text-sm font-bold text-gray-800 mb-2">
-                    Integrantes de la Comisión Asesora{" "}
-                    <span
-                      className="text-red-500 text-lg ml-1"
-                      title="Obligatorio"
-                    >
-                      *
-                    </span>
+                    {preguntasClave.integrantes.texto}{" "}
+                    <span className="text-red-500">*</span>
                   </label>
                   <textarea
-                    className={`w-full border rounded-lg p-4 text-sm focus:ring-2 transition-all shadow-sm bg-white resize-y min-h-[100px] 
-                                    ${
-                                      errorValidacion
-                                        ? "border-red-300 ring-2 ring-red-100 focus:border-red-500 focus:ring-red-500 bg-red-50/10"
-                                        : "border-gray-300 focus:ring-sky-500 focus:border-sky-500"
-                                    }`}
-                    placeholder="Liste los integrantes de la comisión..."
+                    className={`w-full border rounded-lg p-4 text-sm min-h-[100px] ${
+                      errorValidacion
+                        ? "border-red-300 ring-2 ring-red-100"
+                        : "border-gray-300 focus:ring-sky-500"
+                    }`}
                     value={
                       respuestasUsuario[preguntasClave.integrantes.id] || ""
                     }
@@ -614,32 +615,15 @@ const ResponderInforme: React.FC = () => {
                         setErrorValidacion(false);
                     }}
                   />
-                  {errorValidacion ? (
-                    <p className="text-xs text-red-500 mt-1 font-medium">
-                      Este campo es obligatorio.
-                    </p>
-                  ) : (
-                    <p className="text-xs text-gray-400 mt-1">
-                      Campo obligatorio
-                    </p>
-                  )}
                 </div>
-              ) : (
-                <p className="text-red-500 text-sm">
-                  ⚠️ No se encontró la pregunta de 'Integrantes'. Verifique la
-                  plantilla.
-                </p>
               )}
-
-              {/* CAMPO 2: SÍNTESIS */}
-              {preguntasClave.sintesis ? (
+              {preguntasClave.sintesis && (
                 <div className="animate-fadeIn pt-4 border-t border-gray-100">
                   <label className="block text-sm font-bold text-gray-800 mb-2">
                     {preguntasClave.sintesis.texto}
                   </label>
                   <textarea
-                    className="w-full border border-gray-300 rounded-lg p-4 text-sm focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition-all shadow-sm bg-white resize-y min-h-[250px]"
-                    placeholder="Escriba sus conclusiones basándose en los informes de la izquierda..."
+                    className="w-full border border-gray-300 rounded-lg p-4 text-sm min-h-[250px] focus:ring-sky-500"
                     value={respuestasUsuario[preguntasClave.sintesis.id] || ""}
                     onChange={(e) =>
                       setRespuestasUsuario({
@@ -649,20 +633,13 @@ const ResponderInforme: React.FC = () => {
                     }
                   />
                 </div>
-              ) : (
-                <p className="text-gray-400 text-sm italic">
-                  No se encontró una sección de síntesis adicional.
-                </p>
               )}
             </div>
-
             <div className="p-6 border-t border-gray-100 bg-gray-50 shrink-0">
               <button
                 onClick={iniciarGuardado}
                 disabled={enviando}
-                className={`w-full py-4 rounded-lg font-bold text-white shadow-lg transition-all transform active:scale-95 ${
-                  enviando ? "bg-gray-400" : "bg-green-600 hover:bg-green-700"
-                }`}
+                className="w-full py-4 rounded-lg font-bold text-white shadow-lg bg-green-600 hover:bg-green-700"
               >
                 {enviando ? "Procesando..." : "Guardar y Cerrar Informe"}
               </button>

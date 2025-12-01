@@ -259,6 +259,12 @@ const DetalleInformeCompleto: React.FC = () => {
         },
         { label: "ID Informe", value: selectedInformeId },
         { label: "Estado", value: "Finalizado" },
+        // --- CAMPO AGREGADO A LA CABECERA ---
+        {
+          label: "Comisión Asesora",
+          value: informeLectura.integrantes_comision || "Sin datos registrados",
+        },
+        // ------------------------------------
       ],
       secciones: informeLectura.secciones.map((sec) => ({
         nombre: sec.seccion_nombre,
@@ -385,7 +391,9 @@ const DetalleInformeCompleto: React.FC = () => {
                           </span>
                         )}
                       </td>
-                      <td className="px-6 py-4 text-right">
+
+                      {/* --- COLUMNA DE ACCIÓN MODIFICADA --- */}
+                      <td className="px-6 py-4 text-right flex justify-end gap-2">
                         {inf.estado === "pendiente" ? (
                           <button
                             onClick={() =>
@@ -398,12 +406,27 @@ const DetalleInformeCompleto: React.FC = () => {
                             Completar
                           </button>
                         ) : (
-                          <button
-                            onClick={() => setSelectedInformeId(inf.id)}
-                            className="text-indigo-600 hover:underline text-sm font-semibold"
-                          >
-                            Ver Detalle
-                          </button>
+                          <>
+                            {/* Botón Ver Detalle (Lectura) */}
+                            <button
+                              onClick={() => setSelectedInformeId(inf.id)}
+                              className="text-gray-600 hover:text-blue-600 text-xs font-semibold px-2 py-1 border border-gray-200 rounded"
+                            >
+                              Ver
+                            </button>
+
+                            {/* Botón Editar (Escritura) */}
+                            <button
+                              onClick={() =>
+                                navigate(
+                                  `/departamento/informe-sintetico/${inf.id}`
+                                )
+                              }
+                              className="text-indigo-600 hover:text-indigo-800 text-xs font-bold px-2 py-1 border border-indigo-100 bg-indigo-50 rounded"
+                            >
+                              Editar
+                            </button>
+                          </>
                         )}
                       </td>
                     </tr>

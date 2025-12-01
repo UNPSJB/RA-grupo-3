@@ -135,7 +135,7 @@ class InformeSinteticoInstancia(InstrumentoInstancia):
     }   
     informe_sintetico_id: Mapped[int] = mapped_column(ForeignKey("informe_sintetico.id"), nullable=False)
     informe_sintetico: Mapped["InformeSintetico"] = relationship(back_populates="instancias_sinteticas")
-
+    integrantes_comision: Mapped[str | None] = mapped_column(String, nullable=True)
     estado: Mapped[EstadoInforme] = mapped_column(
         SQLEnum(EstadoInforme, name="estado_informe_enum"), 
         default=EstadoInforme.PENDIENTE

@@ -36,11 +36,14 @@ export const VisualizadorInforme: React.FC<Props> = ({ datos, onVolver }) => {
       yPos = 35;
     }
 
-    // Metadata (ej: Año, Sede, Docente)
+    // Metadata (ej: Año, Sede, Docente, Comisión Asesora)
     doc.setFontSize(10);
     datos.metadata.forEach((meta) => {
-      doc.text(`${meta.label}: ${meta.value}`, 14, yPos);
-      yPos += 5;
+      // Usamos splitTextToSize para que si el texto es largo (ej: Comisión) no se salga de la hoja
+      const textoCompleto = `${meta.label}: ${meta.value}`;
+      const lineas = doc.splitTextToSize(textoCompleto, 180);
+      doc.text(lineas, 14, yPos);
+      yPos += 5 * lineas.length; // Ajustar posición según líneas ocupadas
     });
     yPos += 10;
 
@@ -106,11 +109,16 @@ export const VisualizadorInforme: React.FC<Props> = ({ datos, onVolver }) => {
 
           <div className="flex flex-wrap justify-center gap-4 text-sm text-slate-500 mt-4 border-t border-slate-200 pt-4">
             {datos.metadata.map((meta, idx) => (
-              <div key={idx} className="flex flex-col items-center px-4">
+              <div
+                key={idx}
+                className="flex flex-col items-center px-4 max-w-xs text-center"
+              >
                 <span className="font-bold text-slate-400 text-xs uppercase mb-1">
                   {meta.label}
                 </span>
-                <span className="font-medium text-slate-700">{meta.value}</span>
+                <span className="font-medium text-slate-700 break-words w-full">
+                  {meta.value}
+                </span>
               </div>
             ))}
           </div>

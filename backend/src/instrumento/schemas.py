@@ -89,8 +89,10 @@ class InformeRespondido(BaseModel):
     titulo: str
     departamento: str
     fecha: datetime
+    # --- CAMBIO AQUÍ: Agregamos este campo ---
+    integrantes_comision: Optional[str] = None 
+    # -----------------------------------------
     secciones: List[SeccionRespondida]
-
 #schemas para traernos los informes de actividad curricular
 class RespuestaSimple(BaseModel):
     pregunta_id: int
@@ -101,6 +103,7 @@ class RespuestaSimple(BaseModel):
 class InformeAsignaturaDetalle(BaseModel):
     id: int
     materia_nombre: str
+    materia_id: int
     docente_nombre: str
     respuestas: List[RespuestaSimple]
     

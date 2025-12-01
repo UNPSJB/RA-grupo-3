@@ -7,7 +7,12 @@ from src.encuestas.models import EncuestaInstancia
 from src.pregunta.models import Pregunta, Opcion, TipoPregunta
 from src.exceptions import NotFound, BadRequest, PermissionDenied
 from src.persona.models import Inscripcion
+import unicodedata
 
+def normalize_text(text: str) -> str:
+    if not text: return ""
+    return ''.join(c for c in unicodedata.normalize('NFD', text) 
+                   if unicodedata.category(c) != 'Mn').lower()
 
 def _procesar_y_guardar_respuestas(
     db: Session, 
@@ -21,9 +26,9 @@ def _procesar_y_guardar_respuestas(
     ids_preguntas_respondidas = set()
 
     for resp_data in lista_respuestas:
-        # 1. Evitar respuestas duplicadas para la misma pregunta
+        # 1. Evitar respuestas duplicadas para la misma pregunta en un mismo set
         if resp_data.pregunta_id in ids_preguntas_respondidas:
-             raise BadRequest(f"Se envió más de una respuesta para la pregunta ID {resp_data.pregunta_id}.")
+             continue 
         ids_preguntas_respondidas.add(resp_data.pregunta_id)
 
         # 2. Obtener pregunta
@@ -31,36 +36,36 @@ def _procesar_y_guardar_respuestas(
         if not pregunta:
             raise NotFound(f"Pregunta con id {resp_data.pregunta_id} no encontrada.")
 
+        nueva_respuesta = None
+
         # 3. Validar y crear objeto Respuesta según el tipo
         if pregunta.tipo == TipoPregunta.REDACCION:
-            if not resp_data.texto:
-                 # Opcional: Podrías permitir texto vacío si no es obligatoria, pero por ahora validamos que exista
-                 pass 
+            # Permitimos texto vacío si el usuario desea borrar contenido
+            texto_respuesta = resp_data.texto if resp_data.texto is not None else ""
             
             nueva_respuesta = respuesta_models.RespuestaRedaccion(
                 pregunta_id=pregunta.id,
                 respuesta_set_id=respuesta_set_id,
-                texto=resp_data.texto,
+                texto=texto_respuesta,
                 tipo=TipoPregunta.REDACCION
             )
 
         elif pregunta.tipo == TipoPregunta.MULTIPLE_CHOICE:
             # Validar que la opción exista y pertenezca a la pregunta
-            opcion = db.get(Opcion, resp_data.opcion_id)
-            if not opcion or opcion.pregunta_id != pregunta.id:
-                 raise NotFound(f"Opción con id {resp_data.opcion_id} no es válida para la pregunta {pregunta.id}.")
+            if resp_data.opcion_id:
+                opcion = db.get(Opcion, resp_data.opcion_id)
+                if not opcion or opcion.pregunta_id != pregunta.id:
+                     raise NotFound(f"Opción con id {resp_data.opcion_id} no es válida para la pregunta {pregunta.id}.")
 
-            nueva_respuesta = respuesta_models.RespuestaMultipleChoice(
-                pregunta_id=pregunta.id,
-                respuesta_set_id=respuesta_set_id,
-                opcion_id=resp_data.opcion_id,
-                tipo=TipoPregunta.MULTIPLE_CHOICE
-            )
-        else:
-             raise NotImplementedError(f"Tipo de pregunta no soportado: {pregunta.tipo}")
-
-        db.add(nueva_respuesta)
-
+                nueva_respuesta = respuesta_models.RespuestaMultipleChoice(
+                    pregunta_id=pregunta.id,
+                    respuesta_set_id=respuesta_set_id,
+                    opcion_id=resp_data.opcion_id,
+                    tipo=TipoPregunta.MULTIPLE_CHOICE
+                )
+        
+        if nueva_respuesta:
+            db.add(nueva_respuesta)
 
 
 def crear_submission_anonima( 
@@ -69,7 +74,10 @@ def crear_submission_anonima(
     alumno_id: int,
     respuestas_data: respuesta_schemas.RespuestaSetCreate
 ) -> respuesta_models.RespuestaSet:
-
+    """
+    Guarda las respuestas de una encuesta de alumno.
+    Aquí SÍ mantenemos la restricción: solo se puede responder si está ACTIVA.
+    """
     # 1. Validaciones Específicas (Alumno)
     instancia = db.get(EncuestaInstancia, instancia_id)
     if not instancia:
@@ -97,7 +105,6 @@ def crear_submission_anonima(
     db.commit()
     db.refresh(nuevo_set)
     return nuevo_set
-
 
 def crear_submission_profesor( 
     db: Session,
@@ -129,7 +136,6 @@ def crear_submission_profesor(
     db.refresh(nuevo_set)
     return nuevo_set
 
-
 def crear_submission_departamento( 
     db: Session,
     instancia_id: int,
@@ -142,23 +148,37 @@ def crear_submission_departamento(
     if not instancia:
         raise NotFound(f"Informe Sintético con id {instancia_id} no encontrado.")
     
-    # --- VALIDACIÓN DE DEPARTAMENTO ---
-    # Verificamos que la instancia pertenezca al departamento del usuario
     if instancia.departamento_id != departamento_id:
         raise PermissionDenied("No tienes permiso para completar un informe de otro departamento.")
-    # ----------------------------------
-    if instancia.estado == EstadoInforme.COMPLETADO:
-        raise BadRequest("Este informe ya fue completado.")
 
-    # 2. Crear RespuestaSet 
+    # --- LÓGICA DE INTERCEPCIÓN CORREGIDA ---
+    respuestas_comunes = []
+    texto_integrantes = None
+
+    for resp in respuestas_data.respuestas:
+        preg = db.get(Pregunta, resp.pregunta_id)
+        if not preg: continue
+        
+        t_norm = normalize_text(preg.texto)
+        
+        # CAMBIO: Solo interceptamos si dice "integrante" Y "comision"
+        # Esto evita que se confunda con "integrantes de cátedra" (Sección 3)
+        if "integrante" in t_norm and "comision" in t_norm:
+            texto_integrantes = resp.texto
+        else:
+            respuestas_comunes.append(resp)
+
+    if texto_integrantes is not None:
+        instancia.integrantes_comision = texto_integrantes
+        db.add(instancia)
+
+    # ... (resto de la función igual: Crear RespuestaSet, _procesar_y_guardar, etc.)
     nuevo_set = respuesta_models.RespuestaSet(instrumento_instancia_id=instancia_id)
     db.add(nuevo_set)
     db.flush() 
 
-    # 3. Usar lógica común
-    _procesar_y_guardar_respuestas(db, nuevo_set.id, respuestas_data.respuestas)
+    _procesar_y_guardar_respuestas(db, nuevo_set.id, respuestas_comunes)
 
-    # 4. Efecto Secundario Específico (Cambiar estado a COMPLETADO)
     instancia.estado = EstadoInforme.COMPLETADO
     db.add(instancia)
     
@@ -169,11 +189,11 @@ def crear_submission_departamento(
 
 def obtener_respuestas_por_instancia(db: Session, instancia_id: int) -> dict:
     """
-    Recupera las respuestas de la última versión (RespuestaSet) guardada para una instancia.
+    Recupera las respuestas de la última versión (RespuestaSet más reciente) guardada para una instancia.
     Devuelve un diccionario: { pregunta_id: valor }
     Donde valor es 'texto' (str) o 'opcion_id' (int).
     """
-    # 1. Buscar el último set de respuestas
+    # 1. Buscar el último set de respuestas (orden descendente por fecha)
     respuesta_set = db.query(respuesta_models.RespuestaSet).filter(
         respuesta_models.RespuestaSet.instrumento_instancia_id == instancia_id
     ).order_by(respuesta_models.RespuestaSet.created_at.desc()).first()
@@ -185,10 +205,8 @@ def obtener_respuestas_por_instancia(db: Session, instancia_id: int) -> dict:
     respuestas_dict = {}
     for r in respuesta_set.respuestas:
         if r.tipo == TipoPregunta.REDACCION:
-            # Casteamos a RespuestaRedaccion para acceder a .texto
             respuestas_dict[r.pregunta_id] = r.texto
         elif r.tipo == TipoPregunta.MULTIPLE_CHOICE:
-            # Casteamos a RespuestaMultipleChoice para acceder a .opcion_id
             respuestas_dict[r.pregunta_id] = r.opcion_id
     
     return respuestas_dict
