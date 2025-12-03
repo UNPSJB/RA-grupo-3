@@ -141,18 +141,16 @@ const NavigationMenuSecretaria: React.FC<NavigationMenuProps> = () => {
             </DesktopDropdown>
 
             <DesktopDropdown title="Encuestas">
-              <DropdownItem to="/secretaria/modelos">
-                Modelos
-              </DropdownItem>
+              
               <DropdownItem to="/secretaria/CicloVida">
                 Configurar Ciclos
               </DropdownItem>
               <DropdownItem to="/secretaria/plazos"> {/* Nuevo link */}
                 Ver Plazos Vigentes
               </DropdownItem>
-              <DropdownItem to="/secretaria/estadisticas">
+              {/* <DropdownItem to="/secretaria/estadisticas">
                 Estadisticas
-              </DropdownItem>
+              </DropdownItem> */}
             </DesktopDropdown>
 
           </div>

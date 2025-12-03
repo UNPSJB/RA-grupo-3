@@ -7,7 +7,7 @@ from locust import HttpUser, task, between
 # --- CONFIGURACIÓN PROFESORES ---
 # Profesores del 2 al 14 (Reservamos profesor1 para manual)
 profesores_queue = queue.Queue()
-for i in range(2, 15):
+for i in range(2, 61):
     profesores_queue.put(f"profesor{i}")
 
 class ProfesorUser(HttpUser):

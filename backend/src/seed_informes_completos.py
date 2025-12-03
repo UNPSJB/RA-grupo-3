@@ -17,7 +17,7 @@ from src.seccion.models import Seccion
 from src.pregunta.models import Pregunta, PreguntaRedaccion
 from src.respuesta.models import RespuestaSet, RespuestaRedaccion, RespuestaMultipleChoice
 from src.instrumento.models import ActividadCurricular, ActividadCurricularInstancia, InformeSintetico, InformeSinteticoInstancia
-from src.encuestas.models import EncuestaInstancia, Encuesta
+from src.encuestas.models import EncuestaInstancia, Encuesta, PeriodoEvaluacion
 from src.materia.models import Materia, Cursada, Cuatrimestre, Departamento, Carrera, Sede
 from src.persona.models import Profesor, Inscripcion, AdminDepartamento, Alumno
 from src.enumerados import EstadoInforme, TipoInstrumento, TipoPregunta, TipoCuatrimestre, EstadoInstancia
@@ -334,17 +334,22 @@ def seed_demo_pm(db: Session):
         print(f"   + Carrera '{carrera.nombre}' creada.")
 
     # --- Asegurar Usuario Admin ---
-    username_admin = "departamento_pm"
-    admin_tw = db.query(AdminDepartamento).filter_by(username=username_admin).first()
-    if not admin_tw:
-        admin_tw = AdminDepartamento(
+    # CAMBIO: Verificar si ya existe un admin para este departamento por ID
+    admin_existente = db.query(AdminDepartamento).filter_by(departamento_id=depto.id).first()
+    
+    if admin_existente:
+        print(f"   + Usuario Admin ya existente para el departamento (PM): {admin_existente.username}")
+    else:
+        # Si no existe, lo creamos (usando 'admin_pm' para consistencia con seed_data.py)
+        username_admin = "admin_pm"
+        admin_new = AdminDepartamento(
             nombre="Director Depto Madryn",
             username=username_admin,
             hashed_password=get_password_hash("123456"),
             departamento_id=depto.id,
             tipo="ADMIN_DEPARTAMENTO"
         )
-        db.add(admin_tw)
+        db.add(admin_new)
         db.commit()
         print(f"   + Usuario '{username_admin}' creado.")
 
@@ -373,15 +378,38 @@ def seed_demo_pm(db: Session):
     db.refresh(plantilla_ac)
     preguntas_ac = [p for s in plantilla_ac.secciones for p in s.preguntas]
 
+    # --- CORRECCIÓN CLAVE: Asegurar Periodo de Evaluación ---
+    # Esto es necesario porque EncuestaInstancia ahora tiene una foreign key NO NULA hacia PeriodoEvaluacion
+    periodo = db.query(PeriodoEvaluacion).filter_by(nombre="Periodo Demo 2025").first()
+    if not periodo:
+        print("   + Creando Periodo de Evaluación Dummy...")
+        periodo = PeriodoEvaluacion(
+            nombre="Periodo Demo 2025",
+            fecha_inicio_encuesta=datetime.now(),
+            fecha_fin_encuesta=datetime.now(),
+            fecha_limite_informe=datetime.now(),
+            fecha_limite_sintetico=datetime.now()
+        )
+        db.add(periodo)
+        db.commit()
+        db.refresh(periodo)
+
     informes_creados = []
 
     print(f"   Procesando {len(MATERIAS_DEMO)} materias...")
     
     for dato in MATERIAS_DEMO:
         # a. Materia
-        materia = db.query(Materia).filter(Materia.nombre == dato["nombre"]).first()
+        # CORRECCIÓN: Buscar por código para evitar duplicados o no-encontrados por mayúsculas/minúsculas
+        materia = db.query(Materia).filter(Materia.codigo == dato["codigo"]).first()
+        
         if not materia:
-            materia = Materia(nombre=dato["nombre"], descripcion=f"Código PDF: {dato['codigo']}")
+            # CORRECCIÓN: Agregar campo codigo al crear
+            materia = Materia(
+                nombre=dato["nombre"], 
+                codigo=dato["codigo"], 
+                descripcion=f"Código PDF: {dato['codigo']}"
+            )
             db.add(materia)
             db.commit()
         
@@ -421,8 +449,12 @@ def seed_demo_pm(db: Session):
              plantilla_enc = db.query(Encuesta).first()
              if plantilla_enc:
                 enc_inst = EncuestaInstancia(
-                    cursada_id=cursada.id, plantilla_id=plantilla_enc.id, 
-                    estado=EstadoInstancia.CERRADA, fecha_inicio=datetime.now(), fecha_fin=datetime.now()
+                    cursada_id=cursada.id, 
+                    plantilla_id=plantilla_enc.id,
+                    periodo_evaluacion_id=periodo.id, # <--- CAMBIO: Asignar ID del periodo
+                    estado=EstadoInstancia.CERRADA, 
+                    fecha_inicio=datetime.now(), 
+                    fecha_fin=datetime.now()
                 )
                 db.add(enc_inst)
                 db.commit()
@@ -527,7 +559,12 @@ def seed_demo_pm(db: Session):
     db.commit()
 
     print("\n✅ ¡Demo Puerto Madryn Full Lista!")
-    print(f"   Usuario: {username_admin} / 123456")
+    
+    # Comprobación final para imprimir qué usuario usar
+    if admin_existente:
+        print(f"   Usuario: {admin_existente.username} / 123456")
+    else:
+        print(f"   Usuario: admin_pm / 123456")
 
 if __name__ == "__main__":
     db = SessionLocal()

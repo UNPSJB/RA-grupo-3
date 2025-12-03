@@ -7,7 +7,7 @@ from locust import HttpUser, task, between
 # Cargamos los alumnos en la cola
 # CAMBIO: Empezamos desde el 2 para dejar 'alumno1' libre para la demo manual
 alumnos_queue = queue.Queue()
-for i in range(2, 201):  
+for i in range(2, 801):  
     alumnos_queue.put(f"alumno{i}")
 
 class AlumnoUser(HttpUser):

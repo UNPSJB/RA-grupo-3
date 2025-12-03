@@ -101,7 +101,7 @@ const DashboardGeneral: React.FC<{ stats: DashboardDepartamentoStats }> = ({
       </div>
 
       {/* Gráfico Barras */}
-      <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-200 flex flex-col">
+      {/* <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-200 flex flex-col">
         <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-2">
           Cobertura Curricular (Sec. 2.A)
         </h3>
@@ -134,7 +134,7 @@ const DashboardGeneral: React.FC<{ stats: DashboardDepartamentoStats }> = ({
             </BarChart>
           </ResponsiveContainer>
         </div>
-      </div>
+      </div> */}
 
       {/* Lista Alertas */}
       <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-200 flex flex-col">
