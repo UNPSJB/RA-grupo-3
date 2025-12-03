@@ -19,13 +19,12 @@ const shortcuts: Shortcut[] = [
     path: "/secretaria/plantillas/crear",
     active: true,
   },
-  { label: "Activar Encuestas", path: "/secretaria/modelos", active: true },
-  { label: "Gestion de Cuentas", path: "/secretaria/gestion", active: true },
-  {
-    label: "Estadísticas (Próx.)",
-    path: "/secretaria/estadisticas",
-    active: false,
-  },
+  { label: "Activar Encuestas", path: "/secretaria/CicloVida", active: true },
+  // {
+  //   label: "Estadísticas (Próx.)",
+  //   path: "/secretaria/estadisticas",
+  //   active: false,
+  // },
 ];
 // --- FIN DEL CAMBIO ---
 

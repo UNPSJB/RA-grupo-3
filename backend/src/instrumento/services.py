@@ -219,7 +219,8 @@ def get_plantilla_para_instancia_reporte(
 def generar_informe_sintetico_para_departamento(
     db: Session, 
     departamento_id: int,
-    fecha_fin_informe: datetime
+    fecha_fin_informe: datetime,
+    sintetico_existente: Optional[InformeSinteticoInstancia] = None # <--- PARÁMETRO NUEVO
 ) -> InformeSinteticoInstancia:
     
     departamento = db.get(Departamento, departamento_id)
@@ -228,15 +229,7 @@ def generar_informe_sintetico_para_departamento(
     
     anio_actual = datetime.now().year 
 
-    stmt_plantilla = select(InformeSintetico.id).where(
-        InformeSintetico.estado == EstadoInstrumento.PUBLICADA,
-        InformeSintetico.tipo == TipoInstrumento.INFORME_SINTETICO
-    ).limit(1)
-    
-    plantilla_sintetico_id = db.scalars(stmt_plantilla).first()
-    if not plantilla_sintetico_id:
-        raise BadRequest(detail="No se encontró una plantilla de 'Informe Sintético' publicada.")
-
+    # 1. Buscar informes de profesores que están "huérfanos" (no tienen sintético asignado)
     stmt_ac_completadas = (
         select(ActividadCurricularInstancia)
         .join(Cursada, ActividadCurricularInstancia.cursada_id == Cursada.id)
@@ -254,35 +247,57 @@ def generar_informe_sintetico_para_departamento(
     
     informes_a_resumir: List[ActividadCurricularInstancia] = db.scalars(stmt_ac_completadas).all()
 
+    # Si no hay nada nuevo que agregar:
     if not informes_a_resumir:
-        raise NotFound(detail=f"No se encontraron informes de actividad curricular 'Completados' del año {anio_actual} para el departamento '{departamento.nombre}'.")
+        if sintetico_existente:
+            # Si ya existía uno y no hay nada nuevo, simplemente devolvemos el existente sin cambios
+            return sintetico_existente
+        # Si no existía y no hay nada, lanzamos error como antes
+        raise NotFound(detail=f"No se encontraron informes para procesar.")
 
-    print(f"Generando informe sintético para Depto. {departamento_id} con {len(informes_a_resumir)} informes.")
+    print(f"Generando/Actualizando informe sintético para Depto. {departamento_id} con {len(informes_a_resumir)} nuevos informes.")
     
-    nueva_instancia_sintetica = InformeSinteticoInstancia(
-        informe_sintetico_id=plantilla_sintetico_id,
-        departamento_id=departamento_id,
-        tipo=TipoInstrumento.INFORME_SINTETICO,
-        fecha_inicio=datetime.now(),     
-        fecha_fin=fecha_fin_informe,
-        estado=EstadoInforme.PENDIENTE 
-    )
+    instancia_destino = None
 
+    # 2. Decidir si CREAR uno nuevo o USAR el existente
+    if sintetico_existente:
+        instancia_destino = sintetico_existente
+        # Opcional: Actualizar fecha de modificación si quisieras
+    else:
+        # Lógica de creación original
+        stmt_plantilla = select(InformeSintetico.id).where(
+            InformeSintetico.estado == EstadoInstrumento.PUBLICADA,
+            InformeSintetico.tipo == TipoInstrumento.INFORME_SINTETICO
+        ).limit(1)
+        
+        plantilla_sintetico_id = db.scalars(stmt_plantilla).first()
+        if not plantilla_sintetico_id:
+            raise BadRequest(detail="No se encontró una plantilla de 'Informe Sintético' publicada.")
+
+        instancia_destino = InformeSinteticoInstancia(
+            informe_sintetico_id=plantilla_sintetico_id,
+            departamento_id=departamento_id,
+            tipo=TipoInstrumento.INFORME_SINTETICO,
+            fecha_inicio=datetime.now(),     
+            fecha_fin=fecha_fin_informe,
+            estado=EstadoInforme.PENDIENTE 
+        )
+        db.add(instancia_destino)
+
+    # 3. Asociar los informes huérfanos a la instancia destino (sea nueva o vieja)
     for informe_ac in informes_a_resumir:
-        informe_ac.informe_sintetico_instancia = nueva_instancia_sintetica
+        informe_ac.informe_sintetico_instancia = instancia_destino
         informe_ac.estado = EstadoInforme.RESUMIDO
         db.add(informe_ac)
         
-    db.add(nueva_instancia_sintetica)
-    
     try:
         db.commit()
-        db.refresh(nueva_instancia_sintetica)
+        db.refresh(instancia_destino)
     except Exception as e:
         db.rollback()
         raise BadRequest(detail=f"Error al guardar en BBDD: {e}")
 
-    return nueva_instancia_sintetica
+    return instancia_destino
 
 
 def get_plantilla_para_instancia_sintetico(
@@ -802,6 +817,7 @@ def procesar_vencimiento_informes_profesores(db: Session):
     
     for depto_id in deptos_afectados:
         try:
+
             stmt_sintetico_existente = select(InformeSinteticoInstancia).where(
                 InformeSinteticoInstancia.departamento_id == depto_id,
                 InformeSinteticoInstancia.estado == EstadoInforme.PENDIENTE
@@ -809,15 +825,22 @@ def procesar_vencimiento_informes_profesores(db: Session):
             sintetico_existente = db.scalars(stmt_sintetico_existente).first()
             
             if sintetico_existente:
-                print(f"🔵 [AUTO] Actualizando Informe Sintético existente para Depto {depto_id}")
+                print(f"🔵 [AUTO] Actualizando Informe Sintético existente (ID: {sintetico_existente.id}) para Depto {depto_id}")
+
                 generar_informe_sintetico_para_departamento(
-                    db, depto_id, fecha_cierre_sintetico
+                    db, 
+                    depto_id, 
+                    fecha_cierre_sintetico,
+                    sintetico_existente=sintetico_existente 
                 )
 
             else:
                 print(f"fq [AUTO] Abriendo NUEVO Informe Sintético para Depto {depto_id}")
                 generar_informe_sintetico_para_departamento(
-                    db, depto_id, fecha_cierre_sintetico
+                    db, 
+                    depto_id, 
+                    fecha_cierre_sintetico,
+                    sintetico_existente=None # Explícitamente None
                 )
                 
         except Exception as e:
