@@ -97,17 +97,16 @@ def get_detalles_instancia_sintetico(
                     cuatri = f"{anio} - {periodo_str}"
 
 
-                lista_informes.append({
-                    "id": ac.id,
-                    "materia_nombre": mat_nom,
-                    "profesor_nombre": prof_nom,
-                    "cuatrimestre_info": str(cuatri),
-                    "equipamiento": "", 
-                    "bibliografia": "", 
-                    # --- CORRECCIÓN AQUÍ ---
-                    "estado": ac.estado.value  # Agregamos .value para pasar el string "resumido"
-                    # -----------------------
-                })
+                informe_obj = instrumento_schemas.InformeCurricularSimple(
+                    id=ac.id,
+                    materia_nombre=mat_nom,
+                    profesor_nombre=prof_nom,
+                    cuatrimestre_info=str(cuatri),
+                    equipamiento="", 
+                    bibliografia="", 
+                    estado=ac.estado 
+                )
+                lista_informes.append(informe_obj)
 
         # 4. Retorno
         respuesta = instrumento_schemas.InstrumentoCompleto.model_validate(plantilla)

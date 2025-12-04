@@ -58,7 +58,9 @@ const ResponderEncuesta: React.FC = () => {
   const totalPreguntas = useMemo(() => {
     if (!plantilla) return 0;
     return plantilla.secciones.reduce(
-      (acc, seccion) => acc + seccion.preguntas.length,
+      (acc, seccion) =>
+        acc +
+        seccion.preguntas.filter((p) => p.tipo === "MULTIPLE_CHOICE").length,
       0
     );
   }, [plantilla]);
@@ -71,15 +73,20 @@ const ResponderEncuesta: React.FC = () => {
 
   const isSeccionActualCompleta = useMemo(() => {
     if (!plantilla || !plantilla.secciones[activeTab]) return false;
-    const seccionActual = plantilla.secciones[activeTab];
-    //Filtramos las preguntas que son obligatorias
-    const preguntasObligatorias = seccionActual.preguntas.filter(
+
+    const seccion = plantilla.secciones[activeTab];
+
+    // Filtramos las preguntas obligatorias de la sección actual
+    const obligatorias = seccion.preguntas.filter(
       (p) => p.tipo === "MULTIPLE_CHOICE"
     );
-    //Veo si hay valor en el estado de respuestas
-    return preguntasObligatorias.every((p) => {
-      const valor = respuestas[p.id];
-      return valor !== undefined && valor !== null && valor !== "";
+
+    // Verificamos que todas tengan respuesta en el estado
+    return obligatorias.every((p) => {
+      const respuesta = respuestas[p.id];
+      // Verificamos que no sea undefined, null o string vacío
+      // (Nota: si el ID es 0, es un valor válido, por eso no usamos solo !respuesta)
+      return respuesta !== undefined && respuesta !== null && respuesta !== "";
     });
   }, [plantilla, activeTab, respuestas]);
 

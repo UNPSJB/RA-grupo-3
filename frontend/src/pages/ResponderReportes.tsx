@@ -5,22 +5,20 @@ import autoTable from "jspdf-autotable";
 import ResumenEncuesta from "../components/estadisticas/ResumenEncuesta";
 import { useAuth } from "../auth/AuthContext";
 import BarraProgreso from "../components/estadisticas/BarraProgreso";
+import { ModalConfirmacion } from "../components/ModalConfirmacion";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
 
 // --- Interfaces ---
-
 interface AuxiliarEvaluacion {
   nombre: string;
   calificacion: string;
   justificacion: string;
 }
-
 interface Opcion {
   id: number;
   texto: string;
 }
-
 interface Pregunta {
   id: number;
   texto: string;
@@ -28,13 +26,11 @@ interface Pregunta {
   opciones?: Opcion[];
   origen_datos?: string;
 }
-
 interface Seccion {
   id: number;
   nombre: string;
   preguntas: Pregunta[];
 }
-
 interface PlantillaReporte {
   id: number;
   titulo: string;
@@ -47,7 +43,6 @@ interface PlantillaReporte {
   docente_responsable: string;
   cantidad_inscriptos?: number;
 }
-
 interface ResultadoOpcion {
   opcion_id: number;
   opcion_texto: string;
@@ -92,8 +87,16 @@ const ResponderReportes: React.FC<ResponderReportesProps> = ({
   const [errorPreguntaId, setErrorPreguntaId] = useState<number | null>(null);
   const [resumenParaCopiar, setResumenParaCopiar] = useState<string>("");
 
-  // --- CARGA DE DATOS ---
+  // Estado para el Modal
+  const [modal, setModal] = useState<{
+    open: boolean;
+    type: "success" | "confirm" | "error";
+    title: string;
+    message: string;
+    onConfirm?: () => void;
+  }>({ open: false, type: "success", title: "", message: "" });
 
+  // --- CARGA DE DATOS ---
   useEffect(() => {
     if (!token) return;
     let isMounted = true;
@@ -149,7 +152,6 @@ const ResponderReportes: React.FC<ResponderReportesProps> = ({
 
   useEffect(() => {
     if (!token || !readOnly || !instanciaId) return;
-
     const fetchRespuestasGuardadas = async () => {
       try {
         const res = await fetch(
@@ -184,21 +186,16 @@ const ResponderReportes: React.FC<ResponderReportesProps> = ({
   }, [plantilla, readOnly]);
 
   // --- PARSEADORES Y HELPERS ---
-
   const parseAuxiliaresData = (
     valorRaw: string | number
   ): AuxiliarEvaluacion[] => {
     const strVal = String(valorRaw || "");
     if (!strVal) return [];
-
     try {
       if (strVal.trim().startsWith("[")) {
         return JSON.parse(strVal);
       }
-    } catch (e) {
-      // Fallback
-    }
-
+    } catch (e) {}
     if (strVal.includes(" ||| ")) {
       const [calif, just] = strVal.split(" ||| ");
       return [
@@ -209,7 +206,6 @@ const ResponderReportes: React.FC<ResponderReportesProps> = ({
         },
       ];
     }
-
     return [];
   };
 
@@ -246,13 +242,10 @@ const ResponderReportes: React.FC<ResponderReportesProps> = ({
     if (!plantilla) return false;
     const seccion = plantilla.secciones[activeTab];
     if (!seccion) return false;
-
     const obligatorias = seccion.preguntas.filter(isPreguntaObligatoria);
-
     return obligatorias.every((p) => {
       const val = respuestas[p.id];
       const valStr = String(val || "");
-
       if (p.texto.startsWith("4.")) {
         const auxList = parseAuxiliaresData(valStr);
         if (auxList.length === 0) return false;
@@ -260,7 +253,6 @@ const ResponderReportes: React.FC<ResponderReportesProps> = ({
           (a) => a.nombre.trim() !== "" && a.calificacion.trim() !== ""
         );
       }
-
       if (valStr.includes(" ||| ")) {
         const [calif] = valStr.split(" ||| ");
         return calif.trim() !== "";
@@ -270,7 +262,6 @@ const ResponderReportes: React.FC<ResponderReportesProps> = ({
   }, [plantilla, activeTab, respuestas, readOnly]);
 
   // --- HANDLERS ---
-
   const handleChange = (preguntaId: number, value: string | number) => {
     if (readOnly) return;
     setRespuestas((prev) => ({ ...prev, [preguntaId]: value }));
@@ -292,10 +283,8 @@ const ResponderReportes: React.FC<ResponderReportesProps> = ({
         ? valorActual.split(" ||| ")
         : ["", ""];
       let [calificacion, justificacion] = parts;
-
       if (tipo === "calificacion") calificacion = valor;
       if (tipo === "justificacion") justificacion = valor;
-
       return { ...prev, [preguntaId]: `${calificacion} ||| ${justificacion}` };
     });
   };
@@ -355,14 +344,27 @@ const ResponderReportes: React.FC<ResponderReportesProps> = ({
     }
   };
 
-  const handleSubmit = async (e?: React.FormEvent) => {
+  // Lógica del Modal
+  const confirmarEnvio = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (readOnly) return;
     if (!token || !instanciaId || !plantilla) return;
-    if (!confirm("¿Estás seguro de enviar el reporte?")) return;
+
+    setModal({
+      open: true,
+      type: "confirm",
+      title: "Enviar Informe",
+      message:
+        "¿Estás seguro de que deseas finalizar y enviar este reporte? Esta acción no se puede deshacer.",
+      onConfirm: ejecutarEnvio,
+    });
+  };
+
+  const ejecutarEnvio = async () => {
+    setModal((prev) => ({ ...prev, open: false }));
     setCargandoEnvio(true);
 
-    const allPreguntas = plantilla.secciones.flatMap((s) => s.preguntas);
+    const allPreguntas = plantilla!.secciones.flatMap((s) => s.preguntas);
     const payloadRespuestas = Object.entries(respuestas)
       .map(([pid, val]) => {
         const preguntaId = Number(pid);
@@ -386,10 +388,20 @@ const ResponderReportes: React.FC<ResponderReportesProps> = ({
           body: JSON.stringify({ respuestas: payloadRespuestas }),
         }
       );
-      if (response.ok) setReporteCompletado(true);
-      else throw new Error("Error al enviar.");
+      if (response.ok) {
+        setReporteCompletado(true);
+      } else {
+        throw new Error("Error al enviar.");
+      }
     } catch (error) {
       setMensaje("Error al enviar el reporte.");
+      setModal({
+        open: true,
+        type: "error",
+        title: "Error",
+        message: "Hubo un problema al enviar el reporte. Intente nuevamente.",
+        onConfirm: () => setModal((prev) => ({ ...prev, open: false })),
+      });
     } finally {
       setCargandoEnvio(false);
     }
@@ -424,7 +436,6 @@ const ResponderReportes: React.FC<ResponderReportesProps> = ({
         },
       ]);
       seccion.preguntas.forEach((pregunta) => {
-        // --- LOGICA AUXILIARES EN PDF ---
         if (pregunta.texto.startsWith("4.")) {
           bodyData.push([pregunta.texto, "Ver detalle abajo"]);
           const auxList = parseAuxiliaresData(respuestas[pregunta.id]);
@@ -437,12 +448,13 @@ const ResponderReportes: React.FC<ResponderReportesProps> = ({
               .join("\n\n");
             bodyData.push(["Detalle Auxiliares:", auxText]);
           } else {
-            bodyData.push(["Detalle Auxiliares:", "Sin auxiliares registrados."]);
+            bodyData.push([
+              "Detalle Auxiliares:",
+              "Sin auxiliares registrados.",
+            ]);
           }
           return;
         }
-        // --------------------------------
-
         let respuestaTexto = "No respondida";
         const val = respuestas[pregunta.id];
         if (typeof val === "string" && val.includes(" ||| ")) {
@@ -462,9 +474,9 @@ const ResponderReportes: React.FC<ResponderReportesProps> = ({
   };
 
   // --- RENDER ---
-
   if (loading)
     return <div className="p-10 text-center animate-pulse">Cargando...</div>;
+
   if (reporteCompletado)
     return (
       <div className="text-center p-10 bg-white rounded shadow max-w-lg mx-auto mt-10">
@@ -488,6 +500,7 @@ const ResponderReportes: React.FC<ResponderReportesProps> = ({
         </div>
       </div>
     );
+
   if (!plantilla)
     return (
       <div className="text-center p-10 text-red-500">
@@ -501,6 +514,15 @@ const ResponderReportes: React.FC<ResponderReportesProps> = ({
 
   return (
     <div className="max-w-4xl mx-auto bg-white p-6 sm:p-8 rounded-lg shadow-md mt-6 mb-8 border border-gray-200">
+      <ModalConfirmacion
+        isOpen={modal.open}
+        type={modal.type}
+        title={modal.title}
+        message={modal.message}
+        onClose={() => setModal((prev) => ({ ...prev, open: false }))}
+        onConfirm={modal.onConfirm}
+      />
+
       <div className="pb-4 mb-4 border-b border-gray-200 text-center">
         <h1 className="text-2xl font-bold text-indigo-800">
           {plantilla.materia_nombre}
@@ -588,20 +610,6 @@ const ResponderReportes: React.FC<ResponderReportesProps> = ({
               const esPreguntaCorta = pregunta.texto.startsWith("Cantidad");
               const obligatorio = isPreguntaObligatoria(pregunta);
 
-              // Opciones para calificación de auxiliares
-              const opcionesCalificacion = [
-                "Excelente (E)",
-                "Muy Bueno (MB)",
-                "Bueno (B)",
-                "Regular (R)",
-                "Insuficiente (I)",
-                "No corresponde",
-              ];
-
-              const placeholderTextarea =
-                "Justifique (si es necesario)...";
-              const labelDropdown = "Porcentaje Alcanzado";
-
               return (
                 <div
                   key={pregunta.id}
@@ -612,7 +620,6 @@ const ResponderReportes: React.FC<ResponderReportesProps> = ({
                     {obligatorio && <span className="text-red-500">*</span>}
                   </p>
 
-                  {/* CASO: PREGUNTA 4 (AUXILIARES - TABLA DINÁMICA) */}
                   {esPregunta4 ? (
                     <div className="space-y-4">
                       {parseAuxiliaresData(respuestas[pregunta.id]).map(
@@ -622,7 +629,6 @@ const ResponderReportes: React.FC<ResponderReportesProps> = ({
                             className="bg-white p-4 rounded border border-gray-200 shadow-sm relative"
                           >
                             <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-start">
-                              {/* Nombre */}
                               <div className="md:col-span-4">
                                 <label className="block text-xs font-bold text-gray-500 uppercase mb-1">
                                   Nombre y Apellido
@@ -643,8 +649,6 @@ const ResponderReportes: React.FC<ResponderReportesProps> = ({
                                   }
                                 />
                               </div>
-
-                              {/* Calificación */}
                               <div className="md:col-span-3">
                                 <label className="block text-xs font-bold text-gray-500 uppercase mb-1">
                                   Calificación
@@ -663,15 +667,24 @@ const ResponderReportes: React.FC<ResponderReportesProps> = ({
                                   }
                                 >
                                   <option value="">Seleccionar...</option>
-                                  {opcionesCalificacion.map((op) => (
-                                    <option key={op} value={op}>
-                                      {op}
-                                    </option>
-                                  ))}
+                                  <option value="Excelente (E)">
+                                    Excelente (E)
+                                  </option>
+                                  <option value="Muy Bueno (MB)">
+                                    Muy Bueno (MB)
+                                  </option>
+                                  <option value="Bueno (B)">Bueno (B)</option>
+                                  <option value="Regular (R)">
+                                    Regular (R)
+                                  </option>
+                                  <option value="Insuficiente (I)">
+                                    Insuficiente (I)
+                                  </option>
+                                  <option value="No corresponde">
+                                    No corresponde
+                                  </option>
                                 </select>
                               </div>
-
-                              {/* Justificación */}
                               <div className="md:col-span-4">
                                 <label className="block text-xs font-bold text-gray-500 uppercase mb-1">
                                   Justificación
@@ -692,8 +705,6 @@ const ResponderReportes: React.FC<ResponderReportesProps> = ({
                                   }
                                 />
                               </div>
-
-                              {/* Botón Eliminar */}
                               {!readOnly && (
                                 <div className="md:col-span-1 flex justify-center mt-6">
                                   <button
@@ -702,7 +713,6 @@ const ResponderReportes: React.FC<ResponderReportesProps> = ({
                                       removeAuxiliar(pregunta.id, idx)
                                     }
                                     className="text-red-500 hover:text-red-700 p-1 rounded hover:bg-red-50"
-                                    title="Eliminar Auxiliar"
                                   >
                                     <svg
                                       xmlns="http://www.w3.org/2000/svg"
@@ -725,7 +735,6 @@ const ResponderReportes: React.FC<ResponderReportesProps> = ({
                           </div>
                         )
                       )}
-
                       {!readOnly && (
                         <button
                           type="button"
@@ -743,25 +752,18 @@ const ResponderReportes: React.FC<ResponderReportesProps> = ({
                               d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z"
                               clipRule="evenodd"
                             />
-                          </svg>
+                          </svg>{" "}
                           Agregar Auxiliar
                         </button>
                       )}
-
-                      {parseAuxiliaresData(respuestas[pregunta.id]).length ===
-                        0 && (
-                        <p className="text-sm text-gray-500 italic">
-                          No se han agregado auxiliares.
-                        </p>
-                      )}
                     </div>
                   ) : esPreguntaPorcentaje ? (
-                    // CASO: PREGUNTA PORCENTAJES (INPUT NUMÉRICO 0-100)
+                    // --- AQUÍ ESTÁ EL CAMBIO DE VALIDACIÓN ---
                     <div className="space-y-4">
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div className="md:col-span-1">
                           <label className="block text-xs font-bold text-gray-500 uppercase mb-1">
-                            {labelDropdown}
+                            Porcentaje Alcanzado
                           </label>
                           <div className="relative">
                             <input
@@ -774,8 +776,14 @@ const ResponderReportes: React.FC<ResponderReportesProps> = ({
                               value={getCombinedValues(
                                 pregunta.id
                               ).calificacion.replace("%", "")}
+                              // 1. Bloquear caracteres no numéricos
+                              onKeyDown={(e) =>
+                                ["e", "E", "+", "-", "."].includes(e.key) &&
+                                e.preventDefault()
+                              }
                               onChange={(e) => {
                                 let val = e.target.value;
+                                // 2. Validar Rango 0-100
                                 if (val !== "") {
                                   let num = parseInt(val);
                                   if (isNaN(num)) num = 0;
@@ -803,7 +811,7 @@ const ResponderReportes: React.FC<ResponderReportesProps> = ({
                             rows={2}
                             disabled={readOnly}
                             className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 disabled:bg-gray-100 disabled:text-gray-500"
-                            placeholder={placeholderTextarea}
+                            placeholder="Justifique..."
                             value={getCombinedValues(pregunta.id).justificacion}
                             onChange={(e) =>
                               handleCombinedChange(
@@ -817,7 +825,6 @@ const ResponderReportes: React.FC<ResponderReportesProps> = ({
                       </div>
                     </div>
                   ) : (
-                    // CASO: RESTO DE PREGUNTAS
                     <>
                       {pregunta.tipo === "REDACCION" && (
                         <>
@@ -843,7 +850,12 @@ const ResponderReportes: React.FC<ResponderReportesProps> = ({
                             )}
                           {esPreguntaCorta ? (
                             <input
-                              type="text"
+                              type="number"
+                              min="0"
+                              onKeyDown={(e) =>
+                                ["e", "E", "+", "-", "."].includes(e.key) &&
+                                e.preventDefault()
+                              }
                               disabled={
                                 readOnly ||
                                 pregunta.texto
@@ -915,6 +927,19 @@ const ResponderReportes: React.FC<ResponderReportesProps> = ({
         ))}
       </div>
 
+      {mensaje && (
+        <div
+          className={`text-center font-medium p-4 rounded border ${
+            mensaje.toLowerCase().includes("error") ||
+            mensaje.includes("Faltan")
+              ? "text-red-700 bg-red-100 border-red-300"
+              : "text-green-700 bg-green-100 border-green-300"
+          }`}
+        >
+          {mensaje}
+        </div>
+      )}
+
       <div className="flex justify-between items-center pt-8 mt-8 border-t border-gray-200">
         <button
           onClick={handlePrev}
@@ -927,7 +952,7 @@ const ResponderReportes: React.FC<ResponderReportesProps> = ({
         >
           Anterior
         </button>
-        {activeTab < (plantilla?.secciones.length || 0) - 1 ? (
+        {activeTab < (plantilla.secciones.length || 0) - 1 ? (
           <button
             onClick={handleNext}
             disabled={!isSeccionActualValida}
@@ -939,28 +964,25 @@ const ResponderReportes: React.FC<ResponderReportesProps> = ({
           >
             Siguiente
           </button>
+        ) : readOnly ? (
+          <button
+            onClick={() => navigate("/profesores/reportes")}
+            className="px-8 py-2.5 rounded-lg font-bold text-white shadow-md bg-gray-600 hover:bg-gray-700 transition-all"
+          >
+            Volver al Listado
+          </button>
         ) : (
-          // Botón dinámico (Enviar o Volver)
-          readOnly ? (
-            <button
-              onClick={() => navigate("/profesores/reportes")}
-              className="px-8 py-2.5 rounded-lg font-bold text-white shadow-md bg-gray-600 hover:bg-gray-700 transition-all"
-            >
-              Volver al Listado
-            </button>
-          ) : (
-            <button
-              onClick={(e) => handleSubmit(e)}
-              disabled={cargandoEnvio || !isSeccionActualValida}
-              className={`px-8 py-2.5 rounded-lg font-bold text-white shadow-md transition-all ${
-                cargandoEnvio || !isSeccionActualValida
-                  ? "bg-gray-400 cursor-not-allowed"
-                  : "bg-green-600 hover:bg-green-700"
-              }`}
-            >
-              {cargandoEnvio ? "Enviando..." : "Finalizar"}
-            </button>
-          )
+          <button
+            onClick={(e) => confirmarEnvio(e)}
+            disabled={cargandoEnvio || !isSeccionActualValida}
+            className={`px-8 py-2.5 rounded-lg font-bold text-white shadow-md transition-all ${
+              cargandoEnvio || !isSeccionActualValida
+                ? "bg-gray-400 cursor-not-allowed"
+                : "bg-green-600 hover:bg-green-700"
+            }`}
+          >
+            {cargandoEnvio ? "Enviando..." : "Finalizar y Enviar"}
+          </button>
         )}
       </div>
     </div>

@@ -31,13 +31,13 @@ async def db_creation_lifespan(app: FastAPI):
     ModeloBase.metadata.create_all(bind=engine)
     
     # 2. Iniciar el Scheduler
-    scheduler = BackgroundScheduler()
+    # scheduler = BackgroundScheduler()
     
-    # Configurar la tarea: Ejecutar cada 1 minuto
-    scheduler.add_job(check_ciclo_vida_encuestas, 'interval', minutes=1)
+    # # Configurar la tarea: Ejecutar cada 1 minuto
+    # scheduler.add_job(check_ciclo_vida_encuestas, 'interval', minutes=1)
     
-    scheduler.start()
-    print("⏰ Scheduler de Ciclo de Vida iniciado (Revisión cada 1 min).")
+    # scheduler.start()
+    # print("⏰ Scheduler de Ciclo de Vida iniciado (Revisión cada 1 min).")
     
     yield
     

@@ -65,9 +65,9 @@ const DashboardGeneral: React.FC<{ stats: DashboardDepartamentoStats }> = ({
   }
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-10">
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-10 items-stretch">
       {/* Gráfico Donut */}
-      <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-200 flex flex-col">
+      <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-200 flex flex-col h-full">
         <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-4">
           Estado de Informes
         </h3>
@@ -100,45 +100,9 @@ const DashboardGeneral: React.FC<{ stats: DashboardDepartamentoStats }> = ({
         </div>
       </div>
 
-      {/* Gráfico Barras */}
-      {/* <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-200 flex flex-col">
-        <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-2">
-          Cobertura Curricular (Sec. 2.A)
-        </h3>
-        <div className="flex-grow min-h-[220px]">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart
-              data={stats.cobertura_contenidos}
-              layout="vertical"
-              margin={{ top: 5, right: 30, left: 10, bottom: 20 }}
-            >
-              <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-              <XAxis
-                type="number"
-                allowDecimals={false}
-                tick={{ fontSize: 10 }}
-              />
-              <YAxis
-                dataKey="label"
-                type="category"
-                width={70}
-                tick={{ fontSize: 10 }}
-              />
-              <RechartsTooltip cursor={{ fill: "#F3F4F6" }} />
-              <Bar
-                dataKey="value"
-                fill={COLORS.azul}
-                radius={[0, 4, 4, 0]}
-                barSize={24}
-              />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      </div> */}
-
       {/* Lista Alertas */}
-      <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-200 flex flex-col">
-        <div className="flex justify-between items-center mb-4">
+      <div className="lg:col-span-2 bg-white p-5 rounded-xl shadow-sm border border-gray-200 flex flex-col h-full">
+        <div className="flex justify-between items-center mb-4 shrink-0">
           <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider">
             Necesidades Recientes
           </h3>
@@ -146,11 +110,13 @@ const DashboardGeneral: React.FC<{ stats: DashboardDepartamentoStats }> = ({
             {stats.necesidades_recientes.length}
           </span>
         </div>
-        <div className="flex-grow overflow-y-auto max-h-[200px] space-y-3">
+        <div className="flex-grow overflow-y-auto h-0 min-h-[250px] space-y-3 pr-2">
           {stats.necesidades_recientes.length === 0 ? (
-            <p className="text-sm text-gray-400 italic text-center mt-10">
-              Sin requerimientos.
-            </p>
+            <div className="h-full flex items-center justify-center">
+              <p className="text-sm text-gray-400 italic">
+                Sin requerimientos.
+              </p>
+            </div>
           ) : (
             stats.necesidades_recientes.map((req, idx) => (
               <div

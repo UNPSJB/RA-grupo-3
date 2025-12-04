@@ -27,13 +27,6 @@ from src.auth.services import get_password_hash
 
 INTEGRANTES_COMISION = "Carlos Buckle, Leonardo Ordinez, Francisco Páez, Rodrigo Tolosa, Lucas Abella, Joaquín Lima y Romina Stickar"
 
-OBSERVACIONES_FINALES = """a) La cobertura lograda en las asignaturas y la percepción de logros alcanzados en el proceso de aprendizaje se considera muy buena.
-b) Las encuestas de alumnos han arrojado resultados tendientes a Bueno Muy Bueno, de todas maneras hay aspectos mejorables que han sido detectados por las cátedras en los informes y para los cuales la mayoría propone estrategias alternativas para abordar los problemas.
-c) Es URGENTE que se designe a un JTP para la asignatura Análisis y Diseño de Sistemas.
-d) Se deja constancia que solo una minoría de docentes no realizan actividades diferentes a la docencia.
-e) El 64% de los docentes del Departamento ha realizado tareas de capacitación. Se considera un muy buen porcentaje pero ha disminuido con respecto al año anterior.
-f) Se sugiere agregar al Informe Anual de cátedra, que se informe la cantidad de horas dedicadas a capacitación, investigación, extensión y gestión."""
-
 # --- BASE DE DATOS COMPLETA DE MATERIAS ---
 MATERIAS_DEMO = [
     {
@@ -283,7 +276,6 @@ def responder_pregunta_texto(db: Session, rset_id: int, texto_pregunta_clave: li
 
     pregunta_encontrada = None
     for p in preguntas_todas:
-        # Buscamos si ALGUNA clave está en el texto de la pregunta
         if any(clave.lower() in p.texto.lower() for clave in texto_pregunta_clave):
             pregunta_encontrada = p
             break
@@ -298,7 +290,7 @@ def responder_pregunta_texto(db: Session, rset_id: int, texto_pregunta_clave: li
         db.add(resp)
 
 def seed_demo_pm(db: Session):
-    print("\n🚀 Iniciando generación de DEMO PUERTO MADRYN COMPLETA (14 Materias)...")
+    print("\n🚀 Iniciando generación de DEMO PUERTO MADRYN - Estado: SINTÉTICO PENDIENTE...")
     
     # 1. Configuración Base
     anio_actual = datetime.now().year
@@ -312,7 +304,6 @@ def seed_demo_pm(db: Session):
         db.add(sede)
         db.commit()
         db.refresh(sede)
-        print(f"   + Sede '{sede_nombre}' creada.")
 
     # --- Asegurar Departamento ---
     depto = db.scalars(select(Departamento).where(Departamento.nombre == depto_nombre)).first()
@@ -321,26 +312,18 @@ def seed_demo_pm(db: Session):
         db.add(depto)
         db.commit()
         db.refresh(depto)
-        print(f"   + Departamento '{depto_nombre}' creado.")
 
     # --- Asegurar Carrera ---
-    # Buscamos la carrera globalmente antes del loop para evitar errores
     carrera_nombre = "Licenciatura en Informática (PM)"
     carrera = db.scalars(select(Carrera).where(Carrera.nombre == carrera_nombre)).first()
     if not carrera:
         carrera = Carrera(nombre=carrera_nombre, departamento_id=depto.id)
         db.add(carrera)
         db.commit()
-        print(f"   + Carrera '{carrera.nombre}' creada.")
 
     # --- Asegurar Usuario Admin ---
-    # CAMBIO: Verificar si ya existe un admin para este departamento por ID
     admin_existente = db.query(AdminDepartamento).filter_by(departamento_id=depto.id).first()
-    
-    if admin_existente:
-        print(f"   + Usuario Admin ya existente para el departamento (PM): {admin_existente.username}")
-    else:
-        # Si no existe, lo creamos (usando 'admin_pm' para consistencia con seed_data.py)
+    if not admin_existente:
         username_admin = "admin_pm"
         admin_new = AdminDepartamento(
             nombre="Director Depto Madryn",
@@ -351,7 +334,6 @@ def seed_demo_pm(db: Session):
         )
         db.add(admin_new)
         db.commit()
-        print(f"   + Usuario '{username_admin}' creado.")
 
     # --- Cuatrimestre ---
     cuatri = db.query(Cuatrimestre).filter_by(anio=anio_actual, periodo=TipoCuatrimestre.PRIMERO).first()
@@ -378,11 +360,9 @@ def seed_demo_pm(db: Session):
     db.refresh(plantilla_ac)
     preguntas_ac = [p for s in plantilla_ac.secciones for p in s.preguntas]
 
-    # --- CORRECCIÓN CLAVE: Asegurar Periodo de Evaluación ---
-    # Esto es necesario porque EncuestaInstancia ahora tiene una foreign key NO NULA hacia PeriodoEvaluacion
+    # --- Periodo Evaluación ---
     periodo = db.query(PeriodoEvaluacion).filter_by(nombre="Periodo Demo 2025").first()
     if not periodo:
-        print("   + Creando Periodo de Evaluación Dummy...")
         periodo = PeriodoEvaluacion(
             nombre="Periodo Demo 2025",
             fecha_inicio_encuesta=datetime.now(),
@@ -394,17 +374,54 @@ def seed_demo_pm(db: Session):
         db.commit()
         db.refresh(periodo)
 
+    # -------------------------------------------------------------------------
+    # 2. LIMPIEZA PREVIA (Borrar sintético anterior para regenerar escenario)
+    # -------------------------------------------------------------------------
+    print("   Limpiando datos anteriores...")
+    sintetico_viejo = db.query(InformeSinteticoInstancia).filter_by(
+        departamento_id=depto.id, informe_sintetico_id=plantilla_sintetico.id
+    ).first()
+    
+    if sintetico_viejo:
+        # Desvincular informes hijos antes de borrar
+        hijos = db.query(ActividadCurricularInstancia).filter_by(
+            informe_sintetico_instancia_id=sintetico_viejo.id
+        ).all()
+        for h in hijos: 
+            h.informe_sintetico_instancia_id = None
+            db.add(h)
+        db.delete(sintetico_viejo)
+        db.commit()
+
+    # -------------------------------------------------------------------------
+    # 3. CREAR EL INFORME SINTÉTICO (EN ESTADO PENDIENTE)
+    # -------------------------------------------------------------------------
+    print("   Creando Informe Sintético (Estado: PENDIENTE)...")
+    
+    sintetico = InformeSinteticoInstancia(
+        informe_sintetico_id=plantilla_sintetico.id,
+        departamento_id=depto.id,
+        tipo=TipoInstrumento.INFORME_SINTETICO,
+        fecha_inicio=datetime.now(),
+        fecha_fin=datetime.now(),
+        estado=EstadoInforme.PENDIENTE, # <--- ESTO HABILITA EL BOTÓN 'COMPLETAR'
+        integrantes_comision="" # Vacío para que lo llene el usuario
+    )
+    db.add(sintetico)
+    db.commit()
+    db.refresh(sintetico)
+
+    # -------------------------------------------------------------------------
+    # 4. CREAR MATERIAS E INFORMES DE CÁTEDRA (YA VINCULADOS)
+    # -------------------------------------------------------------------------
+    print(f"   Procesando {len(MATERIAS_DEMO)} materias y vinculándolas...")
+    
     informes_creados = []
 
-    print(f"   Procesando {len(MATERIAS_DEMO)} materias...")
-    
     for dato in MATERIAS_DEMO:
         # a. Materia
-        # CORRECCIÓN: Buscar por código para evitar duplicados o no-encontrados por mayúsculas/minúsculas
         materia = db.query(Materia).filter(Materia.codigo == dato["codigo"]).first()
-        
         if not materia:
-            # CORRECCIÓN: Agregar campo codigo al crear
             materia = Materia(
                 nombre=dato["nombre"], 
                 codigo=dato["codigo"], 
@@ -431,18 +448,6 @@ def seed_demo_pm(db: Session):
             db.add(cursada)
             db.commit()
         
-        # Dummy Inscripciones
-        cant_actual = db.query(Inscripcion).filter_by(cursada_id=cursada.id).count()
-        if cant_actual == 0:
-             alumno_dummy = db.query(Alumno).first()
-             if not alumno_dummy:
-                 alumno_dummy = Alumno(nombre="Alumno Dummy", username="alumno.dummy", hashed_password="x", tipo="ALUMNO")
-                 db.add(alumno_dummy)
-                 db.commit()
-             insc = Inscripcion(alumno_id=alumno_dummy.id, cursada_id=cursada.id, ha_respondido=True)
-             db.add(insc)
-             db.commit()
-
         # d. Encuesta Dummy Cerrada
         enc_inst = db.query(EncuestaInstancia).filter_by(cursada_id=cursada.id).first()
         if not enc_inst:
@@ -451,7 +456,7 @@ def seed_demo_pm(db: Session):
                 enc_inst = EncuestaInstancia(
                     cursada_id=cursada.id, 
                     plantilla_id=plantilla_enc.id,
-                    periodo_evaluacion_id=periodo.id, # <--- CAMBIO: Asignar ID del periodo
+                    periodo_evaluacion_id=periodo.id,
                     estado=EstadoInstancia.CERRADA, 
                     fecha_inicio=datetime.now(), 
                     fecha_fin=datetime.now()
@@ -461,110 +466,62 @@ def seed_demo_pm(db: Session):
         
         if not enc_inst: continue 
 
-        # e. INFORME DE CÁTEDRA (ACI)
+        # e. INFORME DE CÁTEDRA (ACI) - RECREACIÓN LIMPIA
         aci = db.query(ActividadCurricularInstancia).filter_by(cursada_id=cursada.id).first()
         if aci:
              db.query(RespuestaSet).filter(RespuestaSet.instrumento_instancia_id == aci.id).delete()
              db.delete(aci)
              db.commit()
 
+        # Crear el informe y VINCULARLO AL SINTÉTICO CREADO ARRIBA
         aci = ActividadCurricularInstancia(
             actividad_curricular_id=plantilla_ac.id,
             cursada_id=cursada.id,
             encuesta_instancia_id=enc_inst.id,
             profesor_id=profesor.id,
-            estado=EstadoInforme.COMPLETADO,
+            estado=EstadoInforme.RESUMIDO, # <--- Ya está 'tomado' por el sintético
             tipo=TipoInstrumento.ACTIVIDAD_CURRICULAR,
             fecha_inicio=datetime.now(),
-            fecha_fin=datetime.now()
+            fecha_fin=datetime.now(),
+            informe_sintetico_instancia_id=sintetico.id # <--- VINCULACIÓN IMPORTANTE
         )
         db.add(aci)
         db.commit()
 
-        # f. LLENAR RESPUESTAS
+        # f. LLENAR RESPUESTAS DEL PROFESOR
         rset = RespuestaSet(instrumento_instancia_id=aci.id)
         db.add(rset)
         db.commit()
 
-        # --- RESPUESTAS SECCIÓN 0 (AGREGADO) ---
+        # Respuestas...
         responder_pregunta_texto(db, rset.id, ["alumnos inscriptos"], dato["alumnos"], preguntas_ac)
         responder_pregunta_texto(db, rset.id, ["comisiones de clases teóricas", "clases teóricas"], dato["comisiones_t"], preguntas_ac)
         responder_pregunta_texto(db, rset.id, ["comisiones de clases prácticas", "clases prácticas"], dato["comisiones_p"], preguntas_ac)
-
-        # Seccion 1
         responder_pregunta_texto(db, rset.id, ["equipamiento", "insumos"], dato["equipamiento"], preguntas_ac)
         responder_pregunta_texto(db, rset.id, ["bibliografía", "bibliografia"], dato["bibliografia"], preguntas_ac)
-        
-        # Seccion 2 (Horas)
         responder_pregunta_texto(db, rset.id, ["teóricas dictadas"], dato["horas"], preguntas_ac) 
         responder_pregunta_texto(db, rset.id, ["prácticas dictadas"], dato["horas"], preguntas_ac)
-        # --- AGREGADO: Justificación ---
         responder_pregunta_texto(db, rset.id, ["justificación"], "Sin justificación requerida", preguntas_ac)
-        
-        # Seccion 2.A (Contenidos)
         responder_pregunta_texto(db, rset.id, ["contenidos planificados"], dato["contenido"], preguntas_ac)
         responder_pregunta_texto(db, rset.id, ["estrategias propuestas"], dato["estrategias"], preguntas_ac)
-
-        # Seccion 2.B (Encuestas + Juicio)
+        
         texto_2b = f"Resultados Encuesta:\n{dato['encuesta_stats']}\n\nJuicio de Valor:\n{dato['juicio']}"
         responder_pregunta_texto(db, rset.id, ["juicio de valor", "2.b"], texto_2b, preguntas_ac)
-        
-        # Seccion 2.C
         responder_pregunta_texto(db, rset.id, ["aspectos positivos"], "El grupo tuvo un avance progresivo. Buena comunicación.", preguntas_ac)
-
-        # Seccion 3
+        
         texto_actividades = "Capacitación: SI | Investigación: SI | Extensión: SI | Gestión: NO\nComentario: Participación activa en proyectos."
         responder_pregunta_texto(db, rset.id, ["actividades de capacitación", "3."], texto_actividades, preguntas_ac)
-
-        # Seccion 4
         responder_pregunta_texto(db, rset.id, ["desempeño de los jtp", "4."], dato["auxiliar"], preguntas_ac)
 
         db.commit()
         informes_creados.append(aci)
-        print(f"   + Informe COMPLETADO: {materia.nombre}")
+        print(f"   + Informe Cátedra (vinculado): {materia.nombre}")
 
-    # 3. Informe Sintético
-    print("   Generando Informe Sintético...")
-    sintetico_viejo = db.query(InformeSinteticoInstancia).filter_by(
-        departamento_id=depto.id, informe_sintetico_id=plantilla_sintetico.id
-    ).first()
-    if sintetico_viejo:
-        db.delete(sintetico_viejo)
-        db.commit()
-
-    sintetico = InformeSinteticoInstancia(
-        informe_sintetico_id=plantilla_sintetico.id,
-        departamento_id=depto.id,
-        tipo=TipoInstrumento.INFORME_SINTETICO,
-        fecha_inicio=datetime.now(),
-        fecha_fin=datetime.now(),
-        estado=EstadoInforme.COMPLETADO, 
-        integrantes_comision=INTEGRANTES_COMISION 
-    )
-    db.add(sintetico)
-    db.commit()
-
-    for aci in informes_creados:
-        aci.informe_sintetico_instancia_id = sintetico.id
-        aci.estado = EstadoInforme.RESUMIDO
-        db.add(aci)
-    
-    rset_sint = RespuestaSet(instrumento_instancia_id=sintetico.id)
-    db.add(rset_sint)
-    db.commit()
-    
-    preguntas_sint = [p for s in plantilla_sintetico.secciones for p in s.preguntas]
-    responder_pregunta_texto(db, rset_sint.id, ["comentarios que desee expresar"], OBSERVACIONES_FINALES, preguntas_sint)
-    
-    db.commit()
-
-    print("\n✅ ¡Demo Puerto Madryn Full Lista!")
-    
-    # Comprobación final para imprimir qué usuario usar
-    if admin_existente:
-        print(f"   Usuario: {admin_existente.username} / 123456")
-    else:
-        print(f"   Usuario: admin_pm / 123456")
+    print("\n✅ ¡Escenario Listo!") 
+    print(f"   - Se creó 1 Informe Sintético (ID: {sintetico.id}) en estado 'PENDIENTE'.")
+    print(f"   - Se vincularon {len(MATERIAS_DEMO)} informes de cátedra dentro de él.")
+    print("   -> Ahora entra al Frontend como 'admin_pm' / '123456'.")
+    print("   -> Verás el informe en la tabla con el botón 'Completar'.")
 
 if __name__ == "__main__":
     db = SessionLocal()
